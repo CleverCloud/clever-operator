@@ -6,7 +6,7 @@ use std::{convert::TryFrom, error::Error, path::PathBuf, sync::Arc};
 
 use slog::{o, Drain, Level, LevelFilter, Logger};
 use slog_async::Async;
-use slog_scope::{set_global_logger, GlobalLoggerGuard as Guard};
+use slog_scope::{debug, info, set_global_logger, GlobalLoggerGuard as Guard};
 use slog_term::{FullFormat, TermDecorator};
 use structopt::StructOpt;
 use svc::cfg::Configuration;
@@ -36,6 +36,9 @@ pub struct Args {
     /// Specify location of configuration
     #[structopt(short = "c", long = "config", global = true)]
     pub config: Option<PathBuf>,
+    /// Check if configuration is healthy
+    #[structopt(short = "t", long = "check", global = true)]
+    pub check: bool,
 }
 
 #[paw::main]
@@ -47,5 +50,12 @@ async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>> {
         None => Configuration::try_default()?,
     });
 
+    if args.check {
+        debug!("{:#?}", config);
+        info!("Configuration is healthy!");
+        return Ok(());
+    }
+
+    info!("{} halted!", env!("CARGO_PKG_NAME"));
     Ok(())
 }
