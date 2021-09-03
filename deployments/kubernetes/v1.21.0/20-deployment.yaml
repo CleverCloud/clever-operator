@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clever-operator-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: clever-operator
+  name: clever-operator
+  namespace: clever-operator-system
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: clever-operator
+  namespace: clever-operator-system
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: clever-operator
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clever-operator
+  namespace: clever-operator-system
+spec:
+  podSelector:
+    matchLabels:
+      app: clever-operator
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: clever-operator-system
+  name: clever-operator
+  labels:
+    app: clever-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clever-operator
+  template:
+    metadata:
+      labels:
+        app: clever-operator
+    spec:
+      serviceAccountName: clever-operator
+      automountServiceAccountToken: false
+      containers:
+        - image: clevercloud/clever-operator:v0.1.0
+          imagePullPolicy: Always
+          name: clever-operator
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+            limits:
+              memory: 64M
+              cpu: 100m
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+              name: observability
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /metrics
+              port: observability
+              scheme: HTTP
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: observability
+              scheme: HTTP
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsGroup: 25000
+            runAsUser: 20000
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

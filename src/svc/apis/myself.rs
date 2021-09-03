@@ -2,9 +2,11 @@
 //!
 //! This module provide strutures and helpers to interact with the
 //! clever-cloud's self api.
+
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use slog_scope::debug;
 
 use crate::svc::{
     apis::{Client, ClientError, RestClient},
@@ -50,9 +52,14 @@ pub struct Myself {
     pub has_password: bool,
 }
 
+// -----------------------------------------------------------------------------
+// Helpers functions
+
+/// returns information about the person logged in
 #[allow(dead_code)]
-pub async fn get(config: Arc<Configuration>, client: Arc<Client>) -> Result<Myself, ClientError> {
-    Ok(client
-        .get(&format!("{}/self", config.clever_cloud.api.endpoint))
-        .await?)
+pub async fn get(config: Arc<Configuration>, client: Client) -> Result<Myself, ClientError> {
+    let path = format!("{}/v2/self", config.api.endpoint);
+
+    debug!("execute a request to get information about the logged in user"; "path" => &path);
+    Ok(client.get(&path).await?)
 }

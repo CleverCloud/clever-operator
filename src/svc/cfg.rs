@@ -4,8 +4,16 @@
 
 use std::{convert::TryFrom, path::PathBuf};
 
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
+
+// -----------------------------------------------------------------------------
+// Constants
+
+pub const PUBLIC_ENDPOINT: &str = "https://api.clever-cloud.com";
+
+// -----------------------------------------------------------------------------
+// Api structure
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Api {
@@ -21,19 +29,8 @@ pub struct Api {
     pub consumer_secret: String,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct CleverCloud {
-    #[serde(rename = "organisations")]
-    pub organisations: Vec<String>,
-    #[serde(rename = "api")]
-    pub api: Api,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Configuration {
-    #[serde(rename = "clevercloud")]
-    pub clever_cloud: CleverCloud,
-}
+// -----------------------------------------------------------------------------
+// ConfigurationError enum
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigurationError {
@@ -43,6 +40,17 @@ pub enum ConfigurationError {
     Cast(ConfigError),
     #[error("failed to set default for key '{0}', {1}")]
     Default(String, ConfigError),
+    #[error("failed to set environment source, {0}")]
+    Environment(ConfigError),
+}
+
+// -----------------------------------------------------------------------------
+// Configuration structures
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+pub struct Configuration {
+    #[serde(rename = "api")]
+    pub api: Api,
 }
 
 impl TryFrom<PathBuf> for Configuration {
@@ -52,11 +60,14 @@ impl TryFrom<PathBuf> for Configuration {
         let mut config = Config::default();
 
         config
-            .set_default(
-                "clevercloud.api.endpoint",
-                "https://api.clever-cloud.com/v2",
-            )
-            .map_err(|err| ConfigurationError::Default("clevercloud.api.endpoint".into(), err))?;
+            .set_default("api.endpoint", PUBLIC_ENDPOINT)
+            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
+
+        config
+            .merge(Environment::with_prefix(
+                &env!("CARGO_PKG_NAME").replace("-", "_"),
+            ))
+            .map_err(ConfigurationError::Environment)?;
 
         config
             .merge(File::from(path.to_owned()).required(true))
@@ -71,11 +82,14 @@ impl Configuration {
         let mut config = Config::default();
 
         config
-            .set_default(
-                "clevercloud.api.endpoint",
-                "https://api.clever-cloud.com/v2",
-            )
-            .map_err(|err| ConfigurationError::Default("clevercloud.api.endpoint".into(), err))?;
+            .set_default("api.endpoint", PUBLIC_ENDPOINT)
+            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
+
+        config
+            .merge(Environment::with_prefix(
+                &env!("CARGO_PKG_NAME").replace("-", "_"),
+            ))
+            .map_err(ConfigurationError::Environment)?;
 
         let path = PathBuf::from(format!("/usr/share/{}/config", env!("CARGO_PKG_NAME")));
         config

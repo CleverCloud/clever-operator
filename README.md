@@ -47,7 +47,7 @@ registry and then deploy it into your kubernetes cluster.
 To build the binary, you can use the following command:
 
 ```
-$ cargo build --release
+$ make build
 ```
 
 The operator binary will be located under the folder `target/release/clever-operator`. Then, you can run it.
@@ -61,20 +61,20 @@ $ target/release/clever-operator
 To build the docker image, you can use the following command:
 
 ```
-$ docker build -t <your-registry>/<your-namespace>/clever-operator:latest .
+$ DOCKER_IMG=<your-registry>/<your-namespace>/clever-operator:latest make docker-build
 ```
 
 Then, push it to your registry.
 
 ```
-$ docker push <your-registry>/<your-namespace>/clever-operator:latest
+$ DOCKER_IMG=<your-registry>/<your-namespace>/clever-operator:latest make docker-push
 ```
 
 Then, update the kubernetes deployment script to deploy your docker image in your kubernetes cluster. Finally, apply
 the deployment script.
 
 ```
-$ kubectl apply -f deploy/kubernetes
+$ make deploy-kubernetes
 ```
 
 ### From dockerhub
@@ -83,7 +83,7 @@ The docker image will be provided by the dockerhub account of Clever-Cloud and y
 script.
 
 ```
-$ kubectl apply -f deploy/kubernetes
+$ make deploy-kubernetes
 ```
 
 ## License

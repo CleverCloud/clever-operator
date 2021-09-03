@@ -21,11 +21,12 @@ use hyper::{
 use hyper_tls::HttpsConnector;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::Sha512;
-use slog_scope::error;
+use slog_scope::{error, trace};
 use uuid::Uuid;
 
 use crate::svc::cfg::{Api, Configuration};
 
+pub mod addon;
 pub mod myself;
 
 // -----------------------------------------------------------------------------
@@ -103,7 +104,7 @@ impl From<&Api> for ClientCredentials {
 
 impl From<Arc<Configuration>> for ClientCredentials {
     fn from(configuration: Arc<Configuration>) -> Self {
-        Self::from(&configuration.clever_cloud.api)
+        Self::from(&configuration.api)
     }
 }
 
@@ -350,9 +351,10 @@ impl Request for Client {
         let req = builder
             .method(method)
             .uri(endpoint)
-            .body(Body::from(buf))
+            .body(Body::from(buf.to_owned()))
             .map_err(ClientError::RequestBuilder)?;
 
+        trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => String::from_utf8_lossy(&buf).to_string());
         let res = self
             .inner
             .request(req)
@@ -364,6 +366,7 @@ impl Request for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
+        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
@@ -383,6 +386,7 @@ impl RestClient for Client {
     where
         T: DeserializeOwned + Send + Sync,
     {
+        let method = &Method::GET;
         let mut builder = hyper::Request::builder();
         if let Some(credentials) = &self.credentials {
             let signer = Signer::try_from(credentials.to_owned()).map_err(ClientError::Signer)?;
@@ -390,17 +394,18 @@ impl RestClient for Client {
             builder = builder.header(
                 header::AUTHORIZATION,
                 signer
-                    .sign(Method::GET.as_str(), endpoint)
+                    .sign(method.as_str(), endpoint)
                     .map_err(ClientError::Digest)?,
             );
         }
 
         let req = builder
-            .method(Method::GET)
+            .method(method)
             .uri(endpoint)
             .body(Body::empty())
             .map_err(ClientError::RequestBuilder)?;
 
+        trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => "<none>");
         let res = self
             .inner
             .request(req)
@@ -412,6 +417,7 @@ impl RestClient for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
+        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
@@ -447,6 +453,7 @@ impl RestClient for Client {
     }
 
     async fn delete(&self, endpoint: &str) -> Result<(), Self::Error> {
+        let method = &Method::DELETE;
         let mut builder = hyper::Request::builder();
         if let Some(credentials) = &self.credentials {
             let signer = Signer::try_from(credentials.to_owned()).map_err(ClientError::Signer)?;
@@ -454,17 +461,18 @@ impl RestClient for Client {
             builder = builder.header(
                 header::AUTHORIZATION,
                 signer
-                    .sign(Method::DELETE.as_str(), endpoint)
+                    .sign(method.as_str(), endpoint)
                     .map_err(ClientError::Digest)?,
             );
         }
 
         let req = builder
-            .method(Method::DELETE)
+            .method(method)
             .uri(endpoint)
             .body(Body::empty())
             .map_err(ClientError::RequestBuilder)?;
 
+        trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => "<none>");
         let res = self
             .inner
             .request(req)
@@ -476,6 +484,7 @@ impl RestClient for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
+        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
