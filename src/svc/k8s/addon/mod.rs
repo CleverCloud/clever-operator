@@ -28,7 +28,7 @@ pub struct Instance {
 }
 
 // -----------------------------------------------------------------------------
-// Addon trait
+// AddonExt trait
 
 #[async_trait]
 pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {

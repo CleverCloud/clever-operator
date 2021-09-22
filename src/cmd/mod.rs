@@ -29,30 +29,6 @@ pub trait Executor {
 }
 
 // -----------------------------------------------------------------------------
-// CustomResourceDefinition enum
-
-#[derive(StructOpt, Clone, Debug)]
-pub enum CustomResourceDefinition {
-    /// View custom resource definition
-    #[structopt(name = "view", aliases = &["v"])]
-    View,
-}
-
-#[async_trait]
-impl Executor for CustomResourceDefinition {
-    type Error = CommandError;
-
-    async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
-        match self {
-            Self::View => crd::view(config)
-                .await
-                .map_err(CommandError::CustomResourceDefinition)
-                .map_err(|err| CommandError::Execution("view".into(), Arc::new(err))),
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------
 // CommandError enum
 
 #[derive(thiserror::Error, Debug)]
@@ -70,7 +46,7 @@ pub enum CommandError {
 pub enum Command {
     /// Interact with custom resource definition
     #[structopt(name = "custom-resource-definition", aliases= &["crd"])]
-    CustomResourceDefinition(CustomResourceDefinition),
+    CustomResourceDefinition(crd::CustomResourceDefinition),
 }
 
 #[async_trait]
@@ -79,9 +55,13 @@ impl Executor for Command {
 
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
-            Self::CustomResourceDefinition(crd) => crd.execute(config).await.map_err(|err| {
-                CommandError::Execution("custom-resource-definition".into(), Arc::new(err))
-            }),
+            Self::CustomResourceDefinition(crd) => crd
+                .execute(config)
+                .await
+                .map_err(CommandError::CustomResourceDefinition)
+                .map_err(|err| {
+                    CommandError::Execution("custom-resource-definition".into(), Arc::new(err))
+                }),
         }
     }
 }

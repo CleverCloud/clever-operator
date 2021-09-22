@@ -115,5 +115,5 @@ jobs:
       - uses: actions/checkout@v2
       - uses: piraces/kube-score-ga@v0.1.2
         with:
-          manifests-folders: 'deployments/kubernetes/*.yml'
+          manifests-folders: 'deployments/kubernetes/v1.21.0/*.yml'
 ...

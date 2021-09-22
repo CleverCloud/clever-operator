@@ -26,7 +26,7 @@ kube-derive = "^0.60.0"
 kube-runtime = "^0.60.0"
 k8s-openapi = { version = "^0.13.0", features = ["v1_21"] }
 paw = "^1.0.0"
-schemars = { version = "^0.8.3", features = [ "chrono", "indexmap", "uuid", "bytes", "url" ] }
+schemars = { version = "^0.8.5", features = [ "chrono", "indexmap", "uuid", "bytes", "url" ] }
 serde = { version = "^1.0.130", features = ["derive"] }
 serde_json = { version = "^1.0.68", features = ["preserve_order", "float_roundtrip"] }
 serde_repr = "^0.1.7"
@@ -38,6 +38,6 @@ slog-term = "^2.8.0"
 slog-scope = "^4.4.0"
 structopt = { version = "^0.3.23", features = ["paw"] }
 thiserror = "^1.0.29"
-tokio = { version = "^1.11.0", features = ["full"] }
+tokio = { version = "^1.12.0", features = ["full"] }
 urlencoding = "^2.1.0"
 uuid = { version = "^0.8.2", features = ["serde", "v4"] }
