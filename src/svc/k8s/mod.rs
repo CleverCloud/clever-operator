@@ -62,19 +62,10 @@ where
 }
 
 // -----------------------------------------------------------------------------
-// ReconcilerError enum
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum RequeueAction {
-    Requeue(Duration),
-    NoRequeue,
-}
-
-// -----------------------------------------------------------------------------
 // Reconciler trait
 
-/// provides two method which is given to a kubenetes
-/// controller [`Controller<T>`]
+/// provides two method which is given to a kubenetes controller
+/// [`Controller<T>`]
 #[async_trait]
 pub trait Reconciler<T>
 where

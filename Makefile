@@ -1,23 +1,28 @@
 # ------------------------------------------------------------------------------
 # Define variables
-DIST			?= $(PWD)/target/release
+DIST				?= $(PWD)/target/release
 
-NAME			?= clever-operator
-VERSION			?= $(shell git describe --candidates 1 --tags HEAD 2>/dev/null || echo HEAD)
+NAME				?= clever-operator
+VERSION				?= $(shell git describe --candidates 1 --tags HEAD 2>/dev/null || echo HEAD)
 
-DOCKER			?= $(shell which docker)
-DOCKER_OPTS		?= --log-level debug
-DOCKER_IMG		?= clevercloud/$(NAME):$(VERSION)
+DOCKER				?= $(shell which docker)
+DOCKER_OPTS			?= --log-level debug
+DOCKER_IMG			?= clevercloud/$(NAME):$(VERSION)
 
-KUBE			?= $(shell which kubectl)
-KUBE_SCORE		?= $(shell which kube-score)
-KUBE_VERSION	?= v1.21.0
-KUBE_DEPLOY 	?= $(PWD)/deployments/kubernetes/$(KUBE_VERSION)
+KUBE				?= $(shell which kubectl)
+KUBE_SCORE			?= $(shell which kube-score)
+KUBE_VERSION		?= v1.21.0
 
-FIND 			?= $(shell which find)
+OLM_SDK		    	?= $(shell which operator-sdk)
+OLM_VERSION			?= v0.1.0
 
-CARGO			?= $(shell which cargo)
-CARGO_OPTS		?= --verbose
+DEPLOY_KUBE			?= deployments/kubernetes/$(KUBE_VERSION)
+DEPLOY_OLM			?= deployments/operator-lifecycle-manager/$(OLM_VERSION)
+
+FIND 				?= $(shell which find)
+
+CARGO				?= $(shell which cargo)
+CARGO_OPTS			?= --verbose
 
 # ------------------------------------------------------------------------------
 # Build operator
@@ -40,29 +45,47 @@ docker-push: docker-build
 # ------------------------------------------------------------------------------
 # Kubernetes deployment
 .PHONY: crd
-crd: build $(shell $(FIND) -type f -name '*.rs') $(KUBE_DEPLOY)/10-custom-resource-definition.yaml
+crd: build $(shell $(FIND) -type f -name '*.rs') $(DEPLOY_KUBE)/10-custom-resource-definition.yaml $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
 
-$(KUBE_DEPLOY)/10-custom-resource-definition.yaml:
-	$(DIST)/$(NAME) custom-resource-definition view > $(KUBE_DEPLOY)/10-custom-resource-definition.yaml
+$(DEPLOY_KUBE)/10-custom-resource-definition.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view > $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
 
+$(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view postgresql > $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+
+.PHONY: validate
 validate: $(shell $(FIND) -type f -name '*.yaml')
-	$(KUBE_SCORE) score $(shell $(FIND) $(KUBE_DEPLOY) -type f -name '*.yaml')
+	$(KUBE_SCORE) score $(shell $(FIND) $(DEPLOY_KUBE) -type f -name '*.yaml')
+	$(OLM_SDK) bundle validate $(DEPLOY_OLM)
 
 .PHONY: deploy-kubernetes-crd
-deploy-kubernetes-crd: crd validate $(KUBE_DEPLOY)/10-custom-resource-definition.yaml
-	$(KUBE) apply -f $(KUBE_DEPLOY)/10-custom-resource-definition.yaml
+deploy-kubernetes-crd: crd validate $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
+	$(KUBE) apply -f $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
 
 .PHONY: deploy-kubernetes
 deploy-kubernetes: crd validate deploy-kubernete-crd
-	$(KUBE) apply -f $(KUBE_DEPLOY)
+	$(KUBE) apply -f $(DEPLOY_KUBE)
+
+.PHONY: deploy-olm-crd
+deploy-olm-crd: crd validate $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+	$(KUBE) apply -f $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+
+.PHONY: deploy-olm
+deploy-olm: crd validate deploy-olm-crd
+	$(KUBE) apply -f $(DEPLOY_OLM)
 
 # ------------------------------------------------------------------------------
 # Clean up
 .PHONY: clean
 clean:
 	$(CARGO) clean $(CARGO_OPTS)
-	rm $(KUBE_DEPLOY)/10-custom-resource-definition.yaml
+	rm $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
+	rm $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
 
 .PHONY: clean-kubernetes
 clean-kubernetes:
-	$(KUBE) delete -f $(KUBE_DEPLOY)
+	$(KUBE) delete -f $(DEPLOY_KUBE)
+
+.PHONY: clean-olm
+clean-olm:
+	$(KUBE) delete -f $(DEPLOY_OLM)
