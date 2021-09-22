@@ -10,7 +10,7 @@ RUN cargo build --release
 FROM debian:bullseye-slim
 
 RUN rm -rf /var/lib/apt/lists/*
-RUN groupadd --system clever && useradd --system clever -g clever
+RUN groupadd -g 25000 --system clever && useradd -u 20000 --system clever -g clever
 
 USER clever:clever
 COPY --from=builder /usr/src/clever-operator/target/release/clever-operator /usr/local/bin

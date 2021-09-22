@@ -1,0 +1,14 @@
+---
+apiVersion: api.clever-cloud.com/v1
+kind: PostgreSql
+metadata:
+  namespace: default
+  name: postgresql
+spec:
+  organisation: orga_xxxx
+  options:
+    version: 13
+    encryption: false
+  instance:
+    region: par
+    plan: plan_xxxx
