@@ -75,16 +75,17 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
         config: Arc<Configuration>,
         client: &Client,
     ) -> Result<Addon, Self::Error> {
-        match self.get(config.to_owned(), client).await? {
-            Some(addon) => Ok(addon),
-            None => Ok(addon::create(
-                config,
-                client,
-                &self.organisation(),
-                &self.to_owned().into(),
-            )
-            .await?),
+        if let Some(addon) = self.get(config.to_owned(), client).await? {
+            return Ok(addon);
         }
+
+        Ok(addon::create(
+            config,
+            client,
+            &self.organisation(),
+            &self.to_owned().into(),
+        )
+        .await?)
     }
 
     async fn delete(&self, config: Arc<Configuration>, client: &Client) -> Result<(), Self::Error> {
