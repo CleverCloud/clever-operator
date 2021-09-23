@@ -3,7 +3,7 @@
 //! This module provide the clever-cloud api client, resources models and helpers
 
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     error::Error,
     fmt::{self, Display, Formatter},
@@ -125,7 +125,7 @@ pub trait OAuth1 {
     type Error;
 
     // `params` returns OAuth1 parameters without the signature one
-    fn params(&self) -> HashMap<String, String>;
+    fn params(&self) -> BTreeMap<String, String>;
 
     // `signature` returns the computed signature from given parameters
     fn signature(&self, method: &str, endpoint: &str) -> Result<String, Self::Error>;
@@ -201,8 +201,8 @@ pub struct Signer {
 impl OAuth1 for Signer {
     type Error = SignerError;
 
-    fn params(&self) -> HashMap<String, String> {
-        let mut params = HashMap::new();
+    fn params(&self) -> BTreeMap<String, String> {
+        let mut params = BTreeMap::new();
 
         params.insert(
             OAUTH1_CONSUMER_KEY.to_string(),
@@ -230,9 +230,11 @@ impl OAuth1 for Signer {
     fn signature(&self, method: &str, endpoint: &str) -> Result<String, Self::Error> {
         let (host, query) = match endpoint.find(|c| '?' == c) {
             None => (endpoint, ""),
+            // split one character further to not get the '?' character
             Some(position) => endpoint.split_at(position),
         };
 
+        let query = query.strip_prefix('?').unwrap_or(query);
         let mut params = self.params();
 
         if !query.is_empty() {
@@ -242,14 +244,14 @@ impl OAuth1 for Signer {
                 })?);
 
                 if !params.contains_key(k) {
-                    params.insert(k.to_string(), v.to_string());
+                    params.insert(k.to_string(), v.strip_prefix('=').unwrap_or(v).to_owned());
                 }
             }
         }
 
         let mut params = params
             .iter()
-            .map(|(k, v)| format!("{}={}", k, urlencoding::encode(v)))
+            .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>();
 
         params.sort();

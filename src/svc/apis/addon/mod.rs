@@ -21,7 +21,7 @@ pub mod provider;
 // -----------------------------------------------------------------------------
 // Provider structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct Provider {
     #[serde(rename = "id")]
     pub id: String,
@@ -56,7 +56,7 @@ pub struct Provider {
 // -----------------------------------------------------------------------------
 // Feature structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct Feature {
     #[serde(rename = "name")]
     pub name: String,
@@ -73,7 +73,7 @@ pub struct Feature {
 // -----------------------------------------------------------------------------
 // Plan structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct Plan {
     #[serde(rename = "id")]
     pub id: String,
@@ -94,7 +94,7 @@ pub struct Plan {
 // -----------------------------------------------------------------------------
 // Addon structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct Addon {
     #[serde(rename = "id")]
     pub id: String,
@@ -140,7 +140,7 @@ impl From<PostgreSqlOpts> for AddonOpts {
 // -----------------------------------------------------------------------------
 // CreateAddonOpts structure
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct CreateAddonOpts {
     #[serde(rename = "name")]
     pub name: String,
@@ -173,7 +173,7 @@ impl From<PostgreSql> for CreateAddonOpts {
 // -----------------------------------------------------------------------------
 // EnvironmentVariable struct
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug)]
 pub struct EnvironmentVariable {
     #[serde(rename = "name")]
     pub name: String,

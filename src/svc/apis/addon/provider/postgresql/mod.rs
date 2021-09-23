@@ -1,10 +1,11 @@
-//! # Addon provider module
+//! # Postgresql addon provider module
 //!
-//! This module provide structures and helpers to interact with clever-cloud's
-//! addon-provider
+//! This module provide helpers and structures to interact with the postgresql
+//! addon provider
 
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     error::Error,
     fmt::{self, Display, Formatter},
     str::FromStr,
@@ -17,20 +18,14 @@ use serde_repr::{Deserialize_repr as DeserializeRepr, Serialize_repr as Serializ
 use slog_scope::debug;
 
 use crate::svc::{
-    apis::{Client, ClientError, RestClient},
+    apis::{
+        addon::{AddonProviderId, Feature},
+        Client, ClientError, RestClient,
+    },
     cfg::Configuration,
 };
 
-// -----------------------------------------------------------------------------
-// Feature structure
-
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct Feature {
-    #[serde(rename = "name")]
-    pub name: String,
-    #[serde(rename = "enabled")]
-    pub enabled: bool,
-}
+pub mod plan;
 
 // -----------------------------------------------------------------------------
 // Version enum
@@ -49,7 +44,7 @@ pub struct Feature {
 )]
 #[serde(untagged)]
 #[repr(u8)]
-pub enum PostgreSqlVersion {
+pub enum Version {
     V13 = 13,
     V12 = 12,
     V11 = 11,
@@ -57,7 +52,7 @@ pub enum PostgreSqlVersion {
     V9dot6 = 96,
 }
 
-impl FromStr for PostgreSqlVersion {
+impl FromStr for Version {
     type Err = Box<dyn Error + Send + Sync>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -74,7 +69,22 @@ impl FromStr for PostgreSqlVersion {
     }
 }
 
-impl Display for PostgreSqlVersion {
+impl TryFrom<String> for Version {
+    type Error = Box<dyn Error + Send + Sync>;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::from_str(&s)
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<String> for Version {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
+impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::V13 => write!(f, "13"),
@@ -90,7 +100,7 @@ impl Display for PostgreSqlVersion {
 // Cluster structure
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PostgreSqlCluster {
+pub struct Cluster {
     #[serde(rename = "id")]
     pub id: String,
     #[serde(rename = "label")]
@@ -98,7 +108,7 @@ pub struct PostgreSqlCluster {
     #[serde(rename = "zone")]
     pub zone: String,
     #[serde(rename = "version")]
-    pub version: PostgreSqlVersion,
+    pub version: Version,
     #[serde(rename = "features")]
     pub features: Vec<Feature>,
 }
@@ -107,55 +117,25 @@ pub struct PostgreSqlCluster {
 // AddonProvider structure
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PostgreSqlAddonProvider {
+pub struct AddonProvider {
     #[serde(rename = "providerId")]
     pub provider_id: AddonProviderId,
     #[serde(rename = "clusters")]
-    pub clusters: Vec<PostgreSqlCluster>,
+    pub clusters: Vec<Cluster>,
     #[serde(rename = "dedicated")]
-    pub dedicated: HashMap<PostgreSqlVersion, Vec<Feature>>,
+    pub dedicated: HashMap<Version, Vec<Feature>>,
     #[serde(rename = "defaultDedicatedVersion")]
-    pub default: PostgreSqlVersion,
-}
-
-// -----------------------------------------------------------------------------
-// AddonProviderName structure
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-#[serde(untagged)]
-pub enum AddonProviderId {
-    PostgreSql,
-}
-
-impl FromStr for AddonProviderId {
-    type Err = Box<dyn Error + Send + Sync>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "postgresql-addon" => Self::PostgreSql,
-            _ => {
-                return Err(format!("failed to parse addon provider identifier {}, available option is 'postgresql-addon'", s).into())
-            }
-        })
-    }
-}
-
-impl Display for AddonProviderId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::PostgreSql => write!(f, "postgresql-addon"),
-        }
-    }
+    pub default: Version,
 }
 
 // -----------------------------------------------------------------------------
 // Helpers functions
 
 /// returns information about the postgresql addon provider
-pub async fn get_postgresql_addon_provider(
+pub async fn get(
     config: Arc<Configuration>,
     client: &Client,
-) -> Result<PostgreSqlAddonProvider, ClientError> {
+) -> Result<AddonProvider, ClientError> {
     let path = format!(
         "{}/v4/addon-providers/{}",
         config.api.endpoint,
