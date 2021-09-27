@@ -2,6 +2,8 @@
 //!
 //! This module provide the postgresql custom resource and its definition
 
+use std::fmt::{self, Display, Formatter};
+
 use async_trait::async_trait;
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
@@ -12,14 +14,14 @@ use kube_runtime::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use slog_scope::{error, info};
+use slog_scope::{debug, error, info};
 
 use crate::svc::{
     apis::{addon::provider::postgresql, ClientError},
     k8s::{
         self,
         addon::{AddonExt, Instance},
-        finalizer, resource, secret, ControllerBuilder, State,
+        finalizer, recorder, resource, secret, ControllerBuilder, State,
     },
 };
 
@@ -112,6 +114,32 @@ impl PostgreSql {
 }
 
 // -----------------------------------------------------------------------------
+// PostgreSqlAction structure
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
+pub enum PostgreSqlAction {
+    UpsertFinalizer,
+    UpsertAddon,
+    UpsertSecret,
+    OverridesInstancePlan,
+    DeleteFinalizer,
+    DeleteAddon,
+}
+
+impl Display for PostgreSqlAction {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
+            Self::UpsertAddon => write!(f, "UpsertAddon"),
+            Self::UpsertSecret => write!(f, "UpsertSecret"),
+            Self::OverridesInstancePlan => write!(f, "OverridesInstancePlan"),
+            Self::DeleteFinalizer => write!(f, "DeleteFinalizer"),
+            Self::DeleteAddon => write!(f, "DeleteAddon"),
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
 // ReconcilerError enum
 
 #[derive(thiserror::Error, Debug)]
@@ -124,6 +152,8 @@ pub enum ReconcilerError {
     KubeClient(kube::Error),
     #[error("failed to compute diff between the original and modified object, {0}")]
     Diff(serde_json::Error),
+    #[error("requeue is needed")]
+    Requeue,
 }
 
 impl From<kube::Error> for ReconcilerError {
@@ -161,23 +191,31 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
     type Error = ReconcilerError;
 
     async fn upsert(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
-        let state = ctx.get_ref();
+        let State { kube, apis, config } = ctx.get_ref();
         let (namespace, name) = resource::namespaced_name(origin);
 
         // ---------------------------------------------------------------------
         // Step 1: set finalizer
-        info!("Set finalizer on custom resource"; "kind" => &origin.kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
-        let mut modified = finalizer::add(origin.to_owned(), POSTGRESQL_ADDON_FINALIZER);
 
-        // we could defer the patch request as this step as no side effects
+        info!("Set finalizer on custom resource"; "kind" => &origin.kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
+        let modified = finalizer::add(origin.to_owned(), POSTGRESQL_ADDON_FINALIZER);
+
+        debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
+
+        let action = &PostgreSqlAction::UpsertFinalizer;
+        let message = &format!("Create finalizer '{}'", POSTGRESQL_ADDON_FINALIZER);
+        recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 2: create the addon
+        // Step 2: translate plan
+
         if !modified.spec.instance.plan.starts_with("plan_") {
             info!("Resolve plan for postgresql addon provider"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
             let plan = postgresql::plan::find(
-                state.config.to_owned(),
-                &state.apis,
+                config.to_owned(),
+                apis,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
             )
@@ -188,28 +226,49 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             // avoided or done with caution.
             if let Some(plan) = plan {
                 info!("Override plan for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "plan" => &plan.id);
-                modified.spec.instance.plan = plan.id;
+                let oplan = modified.spec.instance.plan.to_owned();
+                modified.spec.instance.plan = plan.id.to_owned();
+
+                debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+                let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+                let modified =
+                    resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
+
+                let action = &PostgreSqlAction::OverridesInstancePlan;
+                let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
+                info!("Create '{}' event for resource", action; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
+                recorder::normal(kube.to_owned(), &modified, action, message).await?;
             }
+
+            // require a requeue
+            return Err(ReconcilerError::Requeue);
         }
 
+        // ---------------------------------------------------------------------
+        // Step 3: upsert addon
+
         info!("Upsert addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let addon = modified
-            .upsert(state.config.to_owned(), &state.apis)
-            .await?;
+        let addon = modified.upsert(config.to_owned(), apis).await?;
 
-        modified.set_addon_id(Some(addon.id));
+        modified.set_addon_id(Some(addon.id.to_owned()));
 
-        info!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
-        let modified = resource::patch(state.kube.to_owned(), &modified, patch.to_owned())
-            .and_then(|modified| resource::patch_status(state.kube.to_owned(), modified, patch))
+        let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+            .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
+
+        let action = &PostgreSqlAction::UpsertAddon;
+        let message = &format!(
+            "Create managed postgresql instance on clever-cloud '{}'",
+            addon.id
+        );
+        recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 3: create the secret
-        let secrets = modified
-            .secrets(state.config.to_owned(), &state.apis)
-            .await?;
+        // Step 4: create the secret
+
+        let secrets = modified.secrets(config.to_owned(), apis).await?;
 
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
@@ -217,27 +276,37 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
 
             info!("Upsert kubernetes secret resource for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
-            secret::upsert(state.kube.to_owned(), &modified, &s).await?;
+            let secret = resource::upsert(kube.to_owned(), &s, false).await?;
+
+            let action = &PostgreSqlAction::UpsertSecret;
+            let message = &format!("Create kubernetes secret '{}'", secret.name());
+            recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
 
         Ok(())
     }
 
     async fn delete(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
-        let state = ctx.get_ref();
+        let State { apis, kube, config } = ctx.get_ref();
         let mut modified = origin.to_owned();
         let (namespace, name) = resource::namespaced_name(origin);
 
         // ---------------------------------------------------------------------
         // Step 1: delete the addon
-        info!("Delete addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        modified
-            .delete(state.config.to_owned(), &state.apis)
-            .await?;
 
+        info!("Delete addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        modified.delete(config.to_owned(), apis).await?;
         modified.set_addon_id(None);
 
-        // we could defer the patch request as the next step cannot failed
+        debug!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+            .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
+            .await?;
+
+        let action = &PostgreSqlAction::DeleteAddon;
+        let message = "Delete managed postgresql instance on clever-cloud";
+        recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
         // Step 2: remove the finalizer
@@ -245,9 +314,13 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, POSTGRESQL_ADDON_FINALIZER);
 
-        info!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        let action = &PostgreSqlAction::DeleteFinalizer;
+        let message = "Delete finalizer from custom resource";
+        recorder::normal(kube.to_owned(), &modified, action, message).await?;
+
+        debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
-        resource::patch(state.kube.to_owned(), &modified, patch.to_owned()).await?;
+        resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
         Ok(())
     }
