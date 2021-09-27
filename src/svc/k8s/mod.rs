@@ -21,6 +21,7 @@ use crate::svc::{apis, cfg::Configuration};
 pub mod addon;
 pub mod client;
 pub mod finalizer;
+pub mod recorder;
 pub mod resource;
 pub mod secret;
 
