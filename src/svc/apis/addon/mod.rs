@@ -5,7 +5,7 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use kube::{core::object::HasSpec, ResourceExt};
+use kube::core::object::HasSpec;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slog_scope::debug;
@@ -13,7 +13,10 @@ use slog_scope::debug;
 use crate::svc::{
     apis::{addon::provider::AddonProviderId, Client, ClientError, RestClient},
     cfg::Configuration,
-    k8s::addon::postgresql::{PostgreSql, PostgreSqlOpts},
+    k8s::addon::{
+        postgresql::{PostgreSql, PostgreSqlOpts},
+        AddonExt,
+    },
 };
 
 pub mod provider;
@@ -159,9 +162,7 @@ impl From<PostgreSql> for CreateAddonOpts {
         let spec = postgresql.spec();
 
         Self {
-            name: postgresql
-                .uid()
-                .expect("expect all resources in kubernetes to have an identifier"),
+            name: postgresql.name(),
             region: spec.instance.region.to_owned(),
             provider_id: AddonProviderId::PostgreSql.to_string(),
             plan: spec.instance.plan.to_owned(),

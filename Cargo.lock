@@ -181,7 +181,9 @@ dependencies = [
  "kube",
  "kube-derive",
  "kube-runtime",
+ "lazy_static",
  "paw",
+ "prometheus",
  "schemars",
  "serde 1.0.130",
  "serde_json",
@@ -1313,6 +1315,27 @@ checksum = "b9f5105d4fdaab20335ca9565e106a5d9b82b6219b5ba735731124ac6711d23d"
 dependencies = [
  "unicode-xid",
 ]
+
+[[package]]
+name = "prometheus"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f64969ffd5dd8f39bd57a68ac53c163a095ed9d0fb707146da1b27025a3504"
+dependencies = [
+ "cfg-if",
+ "fnv",
+ "lazy_static",
+ "memchr",
+ "parking_lot",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
+name = "protobuf"
+version = "2.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23129d50f2c9355ced935fce8a08bd706ee2e7ce2b3b33bf61dace0e379ac63a"
 
 [[package]]
 name = "quote"

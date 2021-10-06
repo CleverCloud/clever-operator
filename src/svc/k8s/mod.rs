@@ -12,6 +12,8 @@ use kube_runtime::{
     controller::{self, Context, ReconcilerAction},
     watcher, Controller,
 };
+use lazy_static::lazy_static;
+use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
 use slog_scope::{debug, error, info, trace};
 use tokio::time::{sleep_until, Instant};
@@ -24,6 +26,50 @@ pub mod finalizer;
 pub mod recorder;
 pub mod resource;
 pub mod secret;
+
+// -----------------------------------------------------------------------------
+// constants
+
+pub const RECONCILIATION_UPSERT_EVENT: &str = "upsert";
+pub const RECONCILIATION_DELETE_EVENT: &str = "delete";
+
+// -----------------------------------------------------------------------------
+// Telemetry
+
+lazy_static! {
+    static ref RECONCILIATION_SUCCESS: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_operator_reconciliation_success",
+            "number of successful reconciliation"
+        ),
+        &["kind"]
+    )
+    .expect("metrics 'kubernetes_operator_reconciliation_success' to not be already initialized");
+    static ref RECONCILIATION_FAILED: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_operator_reconciliation_failed",
+            "number of failed reconciliation"
+        ),
+        &["kind"]
+    )
+    .expect("metrics 'kubernetes_operator_reconciliation_failed' to not be already initialized");
+    static ref RECONCILIATION_EVENT: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_operator_reconciliation_event",
+            "number of usert event",
+        ),
+        &["kind", "namespace", "event"]
+    )
+    .expect("metrics 'kubernetes_operator_reconciliation_event' to not be already initialized");
+    static ref RECONCILIATION_DURATION: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_operator_reconciliation_duration",
+            "duration of reconciliation",
+        ),
+        &["kind", "unit"]
+    )
+    .expect("metrics 'kubernetes_operator_reconciliation_duration' to not be already initialized");
+}
 
 // -----------------------------------------------------------------------------
 // State structure
@@ -99,12 +145,20 @@ where
 
         if resource::deleted(&obj) {
             info!("Received deletion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace);
+            RECONCILIATION_EVENT
+                .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
+                .inc();
+
             if let Err(err) = Self::delete(&ctx, &obj).await {
                 error!("Failed to delete custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
                 return Err(err);
             }
         } else {
             info!("Received upsertion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &obj.meta().name, "namespace" => &obj.meta().namespace);
+            RECONCILIATION_EVENT
+                .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
+                .inc();
+
             if let Err(err) = Self::upsert(&ctx, &obj).await {
                 error!("Failed to upsert custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
                 return Err(err);
@@ -162,7 +216,7 @@ where
             .boxed();
 
         loop {
-            let instant = Instant::now() + Duration::from_millis(100);
+            let instant = Instant::now();
 
             match stream.try_next().await {
                 Ok(None) => {
@@ -171,14 +225,30 @@ where
                 }
                 Ok(Some((obj, ReconcilerAction { requeue_after }))) => {
                     info!("Successfully reconcile resource"; "requeue" => requeue_after.map(|d| d.as_millis()), "kind" => &api_resource.kind, "name" => &obj.name, "namespace" => &obj.namespace);
+                    RECONCILIATION_SUCCESS
+                        .with_label_values(&[&api_resource.kind])
+                        .inc();
+                }
+                Err(controller::Error::ObjectNotFound { obj_ref, .. }) => {
+                    debug!("Received an event about an already deleted resource"; "name" => &obj_ref.name, "namespace" => &obj_ref.namespace);
+                    RECONCILIATION_SUCCESS
+                        .with_label_values(&[&api_resource.kind])
+                        .inc();
                 }
                 Err(err) => {
                     error!("Failed to reconcile resource"; "kind" => &api_resource.kind, "error" => err.to_string());
+                    RECONCILIATION_FAILED
+                        .with_label_values(&[&api_resource.kind])
+                        .inc();
                 }
             }
 
-            trace!("Put watch event loop to bed"; "kind" => &api_resource.kind, "duration" => instant.checked_duration_since(Instant::now()).map(|d| d.as_millis()).unwrap_or_else(|| 0));
-            sleep_until(instant).await;
+            trace!("Put watch event loop to bed"; "kind" => &api_resource.kind, "duration" => Instant::now().checked_duration_since(instant+Duration::from_millis(100)).map(|d| d.as_millis()).unwrap_or_else(|| 0));
+            RECONCILIATION_DURATION
+                .with_label_values(&[&api_resource.kind, "us"])
+                .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+            sleep_until(instant + Duration::from_millis(100)).await;
         }
     }
 }

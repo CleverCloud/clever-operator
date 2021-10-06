@@ -11,6 +11,16 @@ use serde::{Deserialize, Serialize};
 // Constants
 
 pub const PUBLIC_ENDPOINT: &str = "https://api.clever-cloud.com";
+pub const OPERATOR_LISTEN: &str = "0.0.0.0:7080";
+
+// -----------------------------------------------------------------------------
+// Operator structure
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+pub struct Operator {
+    #[serde(rename = "listen")]
+    pub listen: String,
+}
 
 // -----------------------------------------------------------------------------
 // Api structure
@@ -51,6 +61,8 @@ pub enum ConfigurationError {
 pub struct Configuration {
     #[serde(rename = "api")]
     pub api: Api,
+    #[serde(rename = "operator")]
+    pub operator: Operator,
 }
 
 impl TryFrom<PathBuf> for Configuration {
@@ -62,6 +74,10 @@ impl TryFrom<PathBuf> for Configuration {
         config
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
             .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
+
+        config
+            .set_default("operator.listen", OPERATOR_LISTEN)
+            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
 
         config
             .merge(Environment::with_prefix(
@@ -84,6 +100,10 @@ impl Configuration {
         config
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
             .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
+
+        config
+            .set_default("operator.listen", OPERATOR_LISTEN)
+            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
 
         config
             .merge(Environment::with_prefix(

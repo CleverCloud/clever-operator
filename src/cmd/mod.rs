@@ -1,9 +1,13 @@
 //! # Command module
 //!
 //! This module provide command line interface structures and helpers
-use std::{io, path::PathBuf, process::abort, sync::Arc};
+use std::{error::Error, io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
 
 use async_trait::async_trait;
+use hyper::{
+    service::{make_service_fn, service_fn},
+    Server,
+};
 use slog_scope::{crit, error, info};
 use structopt::StructOpt;
 
@@ -13,6 +17,7 @@ use crate::{
         apis,
         cfg::Configuration,
         k8s::{addon::postgresql, client, State, Watcher},
+        telemetry::router,
     },
 };
 
@@ -93,6 +98,8 @@ pub struct Args {
 
 #[derive(thiserror::Error, Debug)]
 pub enum DaemonError {
+    #[error("failed to parse listen address '{0}', {1}")]
+    Listen(String, AddrParseError),
     #[error("failed to handle termintion signal, {0}")]
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
@@ -119,7 +126,7 @@ pub async fn daemon(
 
     // -------------------------------------------------------------------------
     // Create state to give to each reconciler
-    let state = State::new(kube_client, clever_client, config);
+    let state = State::new(kube_client, clever_client, config.to_owned());
 
     // -------------------------------------------------------------------------
     // Create reconcilers
@@ -135,6 +142,35 @@ pub async fn daemon(
     })];
 
     // -------------------------------------------------------------------------
+    // Create http server
+    let addr = config
+        .operator
+        .listen
+        .parse()
+        .map_err(|err| DaemonError::Listen(config.operator.listen.to_owned(), err))?;
+
+    let server = tokio::spawn(async move {
+        let builder = match Server::try_bind(&addr) {
+            Ok(builder) => builder,
+            Err(err) => {
+                crit!("Could not bind http server"; "error" => err.to_string());
+                abort();
+            }
+        };
+
+        let server = builder.serve(make_service_fn(|_| async {
+            Ok::<_, Box<dyn Error + Send + Sync>>(service_fn(router))
+        }));
+
+        info!("Start to listen for http request on {}", addr);
+        if let Err(err) = server.await {
+            crit!("Could not serve http server"; "error" => err.to_string());
+        }
+
+        abort()
+    });
+
+    // -------------------------------------------------------------------------
     // Wait for termination signal
     tokio::signal::ctrl_c()
         .await
@@ -147,8 +183,17 @@ pub async fn daemon(
     for handle in handles {
         if let Err(err) = handle.await {
             if !err.is_cancelled() {
-                error!("could not wait for the task to complete"; "error" => err.to_string());
+                error!("Could not wait for the task to complete"; "error" => err.to_string());
             }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Cancel http server
+    server.abort();
+    if let Err(err) = server.await {
+        if !err.is_cancelled() {
+            error!("Could not wait for the http server to gracefully close"; "error" => err.to_string());
         }
     }
 

@@ -2,7 +2,7 @@
 //!
 //! This module provide helpers on kubernetes [`Resource`]
 
-use std::fmt::Debug;
+use std::{fmt::Debug, time::Instant};
 
 use k8s_openapi::{
     api::core::v1::ObjectReference, apimachinery::pkg::apis::meta::v1::OwnerReference,
@@ -11,9 +11,41 @@ use kube::{
     api::{ListParams, Patch, PatchParams, PostParams},
     Api, Client, CustomResourceExt, Resource, ResourceExt,
 };
+use lazy_static::lazy_static;
 
+use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
 use slog_scope::{debug, trace};
+
+// -----------------------------------------------------------------------------
+// Telemetry
+
+lazy_static! {
+    static ref CLIENT_REQUEST_SUCCESS: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_client_request_success",
+            "number of successful kubernetes request",
+        ),
+        &["action", "namespace"]
+    )
+    .expect("metrics 'kubernetes_client_request_success' to not be already registered");
+    static ref CLIENT_REQUEST_FAILURE: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_client_request_failure",
+            "number of failed kubernetes request",
+        ),
+        &["action", "namespace"]
+    )
+    .expect("metrics 'kubernetes_client_request_failure' to not be already registered");
+    static ref CLIENT_REQUEST_DURATION: CounterVec = register_counter_vec!(
+        opts!(
+            "kubernetes_client_request_duration",
+            "duration of kubernetes request",
+        ),
+        &["action", "namespace", "unit"]
+    )
+    .expect("metrics 'kubernetes_client_request_duration' to not be already registered");
+}
 
 // -----------------------------------------------------------------------------
 // Helpers functions
@@ -68,9 +100,26 @@ where
     }
 
     trace!("execute patch request on resource"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
-    Api::namespaced(client, &namespace)
+    let instant = Instant::now();
+    let result = Api::namespaced(client, &namespace)
         .patch(&name, &PatchParams::default(), &Patch::Json::<T>(patch))
-        .await
+        .await;
+
+    if result.is_ok() {
+        CLIENT_REQUEST_SUCCESS
+            .with_label_values(&["PATCH", &namespace])
+            .inc();
+    } else {
+        CLIENT_REQUEST_FAILURE
+            .with_label_values(&["PATCH", &namespace])
+            .inc();
+    }
+
+    CLIENT_REQUEST_DURATION
+        .with_label_values(&["PATCH", &namespace, "us"])
+        .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+    result
 }
 
 /// make a patch request on the given resource's status using the given patch
@@ -91,9 +140,26 @@ where
     }
 
     trace!("execute patch request on resource's status"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
-    Api::namespaced(client, &namespace)
+    let instant = Instant::now();
+    let result = Api::namespaced(client, &namespace)
         .patch_status(&name, &PatchParams::default(), &Patch::Json::<T>(patch))
-        .await
+        .await;
+
+    if result.is_ok() {
+        CLIENT_REQUEST_SUCCESS
+            .with_label_values(&["PATCH", &namespace])
+            .inc();
+    } else {
+        CLIENT_REQUEST_FAILURE
+            .with_label_values(&["PATCH", &namespace])
+            .inc();
+    }
+
+    CLIENT_REQUEST_DURATION
+        .with_label_values(&["PATCH", &namespace, "us"])
+        .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+    result
 }
 
 /// returns the list of resources matching the query
@@ -103,10 +169,26 @@ where
     <T as Resource>::DynamicType: Default,
 {
     trace!("execute a request to find by labels resources"; "namespace" => ns, "query" => query);
-    Ok(Api::namespaced(client, ns)
+    let instant = Instant::now();
+    let result = Api::namespaced(client, ns)
         .list(&ListParams::default().labels(query))
-        .await?
-        .items)
+        .await;
+
+    if result.is_ok() {
+        CLIENT_REQUEST_SUCCESS
+            .with_label_values(&["LIST", ns])
+            .inc();
+    } else {
+        CLIENT_REQUEST_FAILURE
+            .with_label_values(&["LIST", ns])
+            .inc();
+    }
+
+    CLIENT_REQUEST_DURATION
+        .with_label_values(&["LIST", ns, "us"])
+        .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+    Ok(result?.items)
 }
 
 /// returns the object using namespace and name by asking kubernetes
@@ -118,10 +200,32 @@ where
     let api: Api<T> = Api::namespaced(client, ns);
 
     trace!("execute a request to retrieve resource"; "namespace" => ns, "name" => name);
+    let instant = Instant::now();
     match api.get(name).await {
-        Ok(r) => Ok(Some(r)),
-        Err(kube::Error::Api(err)) if err.code == 404 => Ok(None),
-        Err(err) => Err(err),
+        Ok(r) => {
+            CLIENT_REQUEST_SUCCESS.with_label_values(&["GET", ns]).inc();
+            CLIENT_REQUEST_DURATION
+                .with_label_values(&["GET", ns, "us"])
+                .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+            Ok(Some(r))
+        }
+        Err(kube::Error::Api(err)) if err.code == 404 => {
+            CLIENT_REQUEST_SUCCESS.with_label_values(&["GET", ns]).inc();
+            CLIENT_REQUEST_DURATION
+                .with_label_values(&["GET", ns, "us"])
+                .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+            Ok(None)
+        }
+        Err(err) => {
+            CLIENT_REQUEST_FAILURE.with_label_values(&["GET", ns]).inc();
+            CLIENT_REQUEST_DURATION
+                .with_label_values(&["GET", ns, "us"])
+                .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+            Err(err)
+        }
     }
 }
 
@@ -135,9 +239,26 @@ where
     let (namespace, name) = namespaced_name(obj);
 
     trace!("execute a request to create a resource"; "namespace" => &namespace, "name" => &name);
-    Api::namespaced(client, &namespace)
+    let instant = Instant::now();
+    let result = Api::namespaced(client, &namespace)
         .create(&PostParams::default(), obj)
-        .await
+        .await;
+
+    if result.is_ok() {
+        CLIENT_REQUEST_SUCCESS
+            .with_label_values(&["POST", &namespace])
+            .inc();
+    } else {
+        CLIENT_REQUEST_FAILURE
+            .with_label_values(&["POST", &namespace])
+            .inc();
+    }
+
+    CLIENT_REQUEST_DURATION
+        .with_label_values(&["POST", &namespace, "us"])
+        .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
+    result
 }
 
 /// upsert the given kubernetes object, get it and create it, if it does not
