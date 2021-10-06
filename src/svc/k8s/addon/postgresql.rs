@@ -92,8 +92,10 @@ impl AddonExt for PostgreSql {
     }
 
     fn name(&self) -> String {
-        self.uid()
-            .expect("expect all resources in kubernetes to have an identifier")
+        "kubernetes_".to_string()
+            + &self
+                .uid()
+                .expect("expect all resources in kubernetes to have an identifier")
     }
 }
 
@@ -152,8 +154,6 @@ pub enum ReconcilerError {
     KubeClient(kube::Error),
     #[error("failed to compute diff between the original and modified object, {0}")]
     Diff(serde_json::Error),
-    #[error("requeue is needed")]
-    Requeue,
 }
 
 impl From<kube::Error> for ReconcilerError {
@@ -240,8 +240,9 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
                 recorder::normal(kube.to_owned(), &modified, action, message).await?;
             }
 
-            // require a requeue
-            return Err(ReconcilerError::Requeue);
+            // Stop reconciliation here and wait for next iteration, already
+            // triggered by the above patch request
+            return Ok(());
         }
 
         // ---------------------------------------------------------------------
@@ -269,7 +270,6 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // Step 4: create the secret
 
         let secrets = modified.secrets(config.to_owned(), apis).await?;
-
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);

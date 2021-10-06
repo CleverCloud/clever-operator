@@ -5,3 +5,4 @@
 pub mod apis;
 pub mod cfg;
 pub mod k8s;
+pub mod telemetry;

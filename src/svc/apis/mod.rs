@@ -8,7 +8,7 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     sync::Arc,
-    time::{SystemTime, SystemTimeError},
+    time::{Instant, SystemTime, SystemTimeError},
 };
 
 use async_trait::async_trait;
@@ -19,6 +19,8 @@ use hyper::{
     header, Body, Method, StatusCode,
 };
 use hyper_tls::HttpsConnector;
+use lazy_static::lazy_static;
+use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::Sha512;
 use slog_scope::{error, trace};
@@ -28,6 +30,28 @@ use crate::svc::cfg::{Api, Configuration};
 
 pub mod addon;
 pub mod myself;
+
+// -----------------------------------------------------------------------------
+// Telemetry
+
+lazy_static! {
+    static ref CLIENT_REQUEST: CounterVec = register_counter_vec!(
+        opts!(
+            "clever_cloud_client_request",
+            "number of request on clever cloud's apis"
+        ),
+        &["endpoint", "method", "status"]
+    )
+    .expect("metrics 'clever_cloud_client_request' to not be initialized");
+    static ref CLIENT_REQUEST_DURATION: CounterVec = register_counter_vec!(
+        opts!(
+            "clever_cloud_client_request_duration",
+            "duration of request on clever cloud's apis"
+        ),
+        &["endpoint", "method", "status", "unit"]
+    )
+    .expect("metrics 'clever_cloud_client_request_duration' to not be initialized");
+}
 
 // -----------------------------------------------------------------------------
 // Types
@@ -357,6 +381,7 @@ impl Request for Client {
             .map_err(ClientError::RequestBuilder)?;
 
         trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => String::from_utf8_lossy(&buf).to_string());
+        let instant = Instant::now();
         let res = self
             .inner
             .request(req)
@@ -368,7 +393,20 @@ impl Request for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
-        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        trace!("received response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        CLIENT_REQUEST
+            .with_label_values(&[endpoint, &method.to_string(), &status.as_u16().to_string()])
+            .inc();
+
+        CLIENT_REQUEST_DURATION
+            .with_label_values(&[
+                endpoint,
+                &method.to_string(),
+                &status.as_u16().to_string(),
+                "us",
+            ])
+            .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
@@ -408,6 +446,7 @@ impl RestClient for Client {
             .map_err(ClientError::RequestBuilder)?;
 
         trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => "<none>");
+        let instant = Instant::now();
         let res = self
             .inner
             .request(req)
@@ -419,7 +458,20 @@ impl RestClient for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
-        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        trace!("received response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        CLIENT_REQUEST
+            .with_label_values(&[endpoint, &method.to_string(), &status.as_u16().to_string()])
+            .inc();
+
+        CLIENT_REQUEST_DURATION
+            .with_label_values(&[
+                endpoint,
+                &method.to_string(),
+                &status.as_u16().to_string(),
+                "us",
+            ])
+            .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
@@ -475,6 +527,7 @@ impl RestClient for Client {
             .map_err(ClientError::RequestBuilder)?;
 
         trace!("execute request"; "endpoint" => endpoint, "method" => method.to_string(), "body" => "<none>");
+        let instant = Instant::now();
         let res = self
             .inner
             .request(req)
@@ -486,7 +539,20 @@ impl RestClient for Client {
             .await
             .map_err(ClientError::BodyAggregation)?;
 
-        trace!("got response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        trace!("received response"; "endpoint" => endpoint, "method" => method.to_string(), "status" => status.as_u16());
+        CLIENT_REQUEST
+            .with_label_values(&[endpoint, &method.to_string(), &status.as_u16().to_string()])
+            .inc();
+
+        CLIENT_REQUEST_DURATION
+            .with_label_values(&[
+                endpoint,
+                &method.to_string(),
+                &status.as_u16().to_string(),
+                "us",
+            ])
+            .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
+
         if !status.is_success() {
             return Err(ClientError::StatusCode(
                 status,
