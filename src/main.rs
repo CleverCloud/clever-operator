@@ -32,6 +32,11 @@ pub(crate) fn initialize(verbosity: &usize) -> Guard {
 #[tokio::main]
 pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>> {
     let _guard = initialize(&args.verbosity);
+    if let Err(err) = slog_stdlog::init() {
+        crit!("Could not initialize standard logger"; "error" => err.to_string());
+        return Err(err.into());
+    }
+
     let config = Arc::new(match &args.config {
         Some(path) => Configuration::try_from(path.to_owned())?,
         None => Configuration::try_default()?,
