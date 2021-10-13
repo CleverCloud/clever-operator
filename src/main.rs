@@ -32,6 +32,8 @@ pub(crate) fn initialize(verbosity: &usize) -> Guard {
 #[tokio::main]
 pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>> {
     let _guard = initialize(&args.verbosity);
+
+    #[cfg(feature = "logging")]
     if let Err(err) = slog_stdlog::init() {
         crit!("Could not initialize standard logger"; "error" => err.to_string());
         return Err(err.into());

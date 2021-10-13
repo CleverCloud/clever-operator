@@ -4,6 +4,7 @@
 use std::{error::Error, io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
 
 use async_trait::async_trait;
+use clevercloud_sdk::{oauth10a::Credentials, Client};
 use hyper::{
     service::{make_service_fn, service_fn},
     Server,
@@ -14,7 +15,6 @@ use structopt::StructOpt;
 use crate::{
     cmd::crd::CustomResourceDefinitionError,
     svc::{
-        apis,
         cfg::Configuration,
         k8s::{addon::postgresql, client, State, Watcher},
         telemetry::router,
@@ -122,7 +122,8 @@ pub async fn daemon(
 
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
-    let clever_client = apis::Client::from(config.to_owned());
+    let credentials: Credentials = config.api.to_owned().into();
+    let clever_client = Client::from(credentials);
 
     // -------------------------------------------------------------------------
     // Create state to give to each reconciler

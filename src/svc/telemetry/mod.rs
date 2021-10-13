@@ -9,15 +9,19 @@ use hyper::{
     header::{self, HeaderValue},
     Body, Method, Request, Response, StatusCode,
 };
+#[cfg(feature = "metrics")]
 use lazy_static::lazy_static;
+#[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use slog_scope::info;
 
+#[cfg(feature = "metrics")]
 pub mod metrics;
 
 // -----------------------------------------------------------------------------
 // Telemetry
 
+#[cfg(feature = "metrics")]
 lazy_static! {
     static ref SERVER_REQUEST_SUCCESS: CounterVec = register_counter_vec!(
         opts!(
@@ -50,6 +54,7 @@ lazy_static! {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[cfg(feature = "metrics")]
     #[error("{0}")]
     Metrics(metrics::Error),
     #[error("failed to serialize payload, {0}")]
@@ -66,6 +71,7 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
     // Basic routing
     let result = match (req.method(), req.uri().path()) {
         (&Method::GET, "/healthz") => healthz(&req).await,
+        #[cfg(feature = "metrics")]
         (&Method::GET, "/metrics") => metrics::handler(&req).await.map_err(Error::Metrics),
         _ => not_found(&req).await,
     };
@@ -77,6 +83,7 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
     match result {
         Ok(res) => {
             info!("receive request"; "method" => req.method().as_str(), "path" => req.uri().path(), "host" => req.uri().host(), "status" => res.status().as_u16(), "duration" => format!("{}us", duration));
+            #[cfg(feature = "metrics")]
             SERVER_REQUEST_SUCCESS
                 .with_label_values(&[
                     req.method().as_str(),
@@ -85,6 +92,7 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
                 ])
                 .inc();
 
+            #[cfg(feature = "metrics")]
             SERVER_REQUEST_DURATION
                 .with_label_values(&[
                     req.method().as_str(),
@@ -120,6 +128,8 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
                 Body::from(serde_json::to_string_pretty(&map).map_err(Error::Serialize)?);
 
             info!("receive request"; "method" => req.method().as_str(), "path" => req.uri().path(), "host" => req.uri().host(), "status" => res.status().as_u16(), "duration" => format!("{}us", duration));
+
+            #[cfg(feature = "metrics")]
             SERVER_REQUEST_FAILURE
                 .with_label_values(&[
                     req.method().as_str(),
@@ -128,6 +138,7 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
                 ])
                 .inc();
 
+            #[cfg(feature = "metrics")]
             SERVER_REQUEST_DURATION
                 .with_label_values(&[
                     req.method().as_str(),

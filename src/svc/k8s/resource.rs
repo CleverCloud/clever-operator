@@ -2,7 +2,9 @@
 //!
 //! This module provide helpers on kubernetes [`Resource`]
 
-use std::{fmt::Debug, time::Instant};
+use std::fmt::Debug;
+#[cfg(feature = "metrics")]
+use std::time::Instant;
 
 use k8s_openapi::{
     api::core::v1::ObjectReference, apimachinery::pkg::apis::meta::v1::OwnerReference,
@@ -11,8 +13,9 @@ use kube::{
     api::{ListParams, Patch, PatchParams, PostParams},
     Api, Client, CustomResourceExt, Resource, ResourceExt,
 };
+#[cfg(feature = "metrics")]
 use lazy_static::lazy_static;
-
+#[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
 use slog_scope::{debug, trace};
@@ -20,6 +23,7 @@ use slog_scope::{debug, trace};
 // -----------------------------------------------------------------------------
 // Telemetry
 
+#[cfg(feature = "metrics")]
 lazy_static! {
     static ref CLIENT_REQUEST_SUCCESS: CounterVec = register_counter_vec!(
         opts!(
@@ -100,11 +104,13 @@ where
     }
 
     trace!("execute patch request on resource"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
+    #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)
         .patch(&name, &PatchParams::default(), &Patch::Json::<T>(patch))
         .await;
 
+    #[cfg(feature = "metrics")]
     if result.is_ok() {
         CLIENT_REQUEST_SUCCESS
             .with_label_values(&["PATCH", &namespace])
@@ -115,6 +121,7 @@ where
             .inc();
     }
 
+    #[cfg(feature = "metrics")]
     CLIENT_REQUEST_DURATION
         .with_label_values(&["PATCH", &namespace, "us"])
         .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -140,11 +147,13 @@ where
     }
 
     trace!("execute patch request on resource's status"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
+    #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)
         .patch_status(&name, &PatchParams::default(), &Patch::Json::<T>(patch))
         .await;
 
+    #[cfg(feature = "metrics")]
     if result.is_ok() {
         CLIENT_REQUEST_SUCCESS
             .with_label_values(&["PATCH", &namespace])
@@ -155,6 +164,7 @@ where
             .inc();
     }
 
+    #[cfg(feature = "metrics")]
     CLIENT_REQUEST_DURATION
         .with_label_values(&["PATCH", &namespace, "us"])
         .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -169,11 +179,13 @@ where
     <T as Resource>::DynamicType: Default,
 {
     trace!("execute a request to find by labels resources"; "namespace" => ns, "query" => query);
+    #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, ns)
         .list(&ListParams::default().labels(query))
         .await;
 
+    #[cfg(feature = "metrics")]
     if result.is_ok() {
         CLIENT_REQUEST_SUCCESS
             .with_label_values(&["LIST", ns])
@@ -184,6 +196,7 @@ where
             .inc();
     }
 
+    #[cfg(feature = "metrics")]
     CLIENT_REQUEST_DURATION
         .with_label_values(&["LIST", ns, "us"])
         .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -200,10 +213,13 @@ where
     let api: Api<T> = Api::namespaced(client, ns);
 
     trace!("execute a request to retrieve resource"; "namespace" => ns, "name" => name);
+    #[cfg(feature = "metrics")]
     let instant = Instant::now();
     match api.get(name).await {
         Ok(r) => {
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_SUCCESS.with_label_values(&["GET", ns]).inc();
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_DURATION
                 .with_label_values(&["GET", ns, "us"])
                 .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -211,7 +227,9 @@ where
             Ok(Some(r))
         }
         Err(kube::Error::Api(err)) if err.code == 404 => {
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_SUCCESS.with_label_values(&["GET", ns]).inc();
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_DURATION
                 .with_label_values(&["GET", ns, "us"])
                 .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -219,7 +237,9 @@ where
             Ok(None)
         }
         Err(err) => {
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_FAILURE.with_label_values(&["GET", ns]).inc();
+            #[cfg(feature = "metrics")]
             CLIENT_REQUEST_DURATION
                 .with_label_values(&["GET", ns, "us"])
                 .inc_by(Instant::now().duration_since(instant).as_micros() as f64);
@@ -239,11 +259,13 @@ where
     let (namespace, name) = namespaced_name(obj);
 
     trace!("execute a request to create a resource"; "namespace" => &namespace, "name" => &name);
+    #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)
         .create(&PostParams::default(), obj)
         .await;
 
+    #[cfg(feature = "metrics")]
     if result.is_ok() {
         CLIENT_REQUEST_SUCCESS
             .with_label_values(&["POST", &namespace])
@@ -254,6 +276,7 @@ where
             .inc();
     }
 
+    #[cfg(feature = "metrics")]
     CLIENT_REQUEST_DURATION
         .with_label_values(&["POST", &namespace, "us"])
         .inc_by(Instant::now().duration_since(instant).as_micros() as f64);

@@ -5,6 +5,11 @@
 use std::fmt::{self, Display, Formatter};
 
 use async_trait::async_trait;
+use clevercloud_sdk::{
+    oauth10a::ClientError,
+    v2::addon::{AddonOpts, CreateAddonOpts},
+    v4::addon_provider::{postgresql, AddonProviderId},
+};
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
 use kube_derive::CustomResource;
@@ -16,13 +21,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slog_scope::{debug, error, info};
 
-use crate::svc::{
-    apis::{addon::provider::postgresql, ClientError},
-    k8s::{
-        self,
-        addon::{AddonExt, Instance},
-        finalizer, recorder, resource, secret, ControllerBuilder, State,
-    },
+use crate::svc::k8s::{
+    self,
+    addon::{AddonExt, Instance},
+    finalizer, recorder, resource, secret, ControllerBuilder, State,
 };
 
 // -----------------------------------------------------------------------------
@@ -39,6 +41,16 @@ pub struct PostgreSqlOpts {
     pub version: postgresql::Version,
     #[serde(rename = "encryption")]
     pub encryption: bool,
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<AddonOpts> for PostgreSqlOpts {
+    fn into(self) -> AddonOpts {
+        AddonOpts::PostgreSql {
+            version: self.version.to_string(),
+            encryption: self.encryption.to_string(),
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -75,6 +87,19 @@ pub struct PostgreSqlStatus {
 
 // -----------------------------------------------------------------------------
 // PostgreSql implementation
+
+#[allow(clippy::from_over_into)]
+impl Into<CreateAddonOpts> for PostgreSql {
+    fn into(self) -> CreateAddonOpts {
+        CreateAddonOpts {
+            name: AddonExt::name(&self),
+            region: self.spec.instance.region.to_owned(),
+            provider_id: AddonProviderId::PostgreSql.to_string(),
+            plan: self.spec.instance.plan.to_owned(),
+            options: self.spec.options.into(),
+        }
+    }
+}
 
 impl AddonExt for PostgreSql {
     type Error = ReconcilerError;
@@ -191,7 +216,11 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
     type Error = ReconcilerError;
 
     async fn upsert(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
-        let State { kube, apis, config } = ctx.get_ref();
+        let State {
+            kube,
+            apis,
+            config: _,
+        } = ctx.get_ref();
         let (namespace, name) = resource::namespaced_name(origin);
 
         // ---------------------------------------------------------------------
@@ -214,7 +243,6 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         if !modified.spec.instance.plan.starts_with("plan_") {
             info!("Resolve plan for postgresql addon provider"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
             let plan = postgresql::plan::find(
-                config.to_owned(),
                 apis,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
@@ -249,7 +277,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // Step 3: upsert addon
 
         info!("Upsert addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let addon = modified.upsert(config.to_owned(), apis).await?;
+        let addon = modified.upsert(apis).await?;
 
         modified.set_addon_id(Some(addon.id.to_owned()));
 
@@ -269,7 +297,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 4: create the secret
 
-        let secrets = modified.secrets(config.to_owned(), apis).await?;
+        let secrets = modified.secrets(apis).await?;
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
@@ -287,7 +315,11 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
     }
 
     async fn delete(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
-        let State { apis, kube, config } = ctx.get_ref();
+        let State {
+            apis,
+            kube,
+            config: _,
+        } = ctx.get_ref();
         let mut modified = origin.to_owned();
         let (namespace, name) = resource::namespaced_name(origin);
 
@@ -295,7 +327,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // Step 1: delete the addon
 
         info!("Delete addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        modified.delete(config.to_owned(), apis).await?;
+        modified.delete(apis).await?;
         modified.set_addon_id(None);
 
         debug!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
