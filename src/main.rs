@@ -50,6 +50,17 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
         return Ok(());
     }
 
+    #[cfg(feature = "tracker")]
+    if let Some(dsn) = config.sentry.dsn.to_owned() {
+        let _sguard = sentry::init((
+            dsn,
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                ..Default::default()
+            },
+        ));
+    }
+
     let result: Result<_, Box<dyn Error + Send + Sync>> = match &args.command {
         Some(cmd) => cmd.execute(config).await.map_err(Into::into),
         None => daemon(args.kubeconfig, config).await.map_err(Into::into),

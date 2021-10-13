@@ -27,6 +27,7 @@ lazy_static = { version = "^1.4.0", optional = true }
 paw = "^1.0.0"
 prometheus = { version = "^0.13.0", optional = true }
 schemars = { version = "^0.8.6", features = [ "chrono", "indexmap", "uuid", "bytes", "url" ] }
+sentry = { version = "^0.23.0", optional = true }
 serde = { version = "^1.0.130", features = ["derive"] }
 serde_json = { version = "^1.0.68", features = ["preserve_order", "float_roundtrip"] }
 serde_yaml = "^0.8.21"
@@ -43,6 +44,7 @@ tokio = { version = "^1.12.0", features = ["full"] }
 default = ["metrics", "release-log-debug", "debug-log-trace"]
 logging = ["slog-stdlog"]
 metrics = ["lazy_static", "prometheus"]
+tracker = ["sentry"]
 
 release-log-off     = ["slog/release_max_level_off"]
 release-log-error   = ["slog/release_max_level_error"]

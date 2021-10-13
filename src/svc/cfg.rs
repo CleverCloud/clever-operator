@@ -67,6 +67,16 @@ pub enum ConfigurationError {
 }
 
 // -----------------------------------------------------------------------------
+// Sentry structure
+
+#[cfg(feature = "tracker")]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
+pub struct Sentry {
+    #[serde(rename = "dsn")]
+    pub dsn: Option<String>,
+}
+
+// -----------------------------------------------------------------------------
 // Configuration structures
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
@@ -75,6 +85,9 @@ pub struct Configuration {
     pub api: Api,
     #[serde(rename = "operator")]
     pub operator: Operator,
+    #[cfg(feature = "tracker")]
+    #[serde(rename = "sentry", default = "Default::default")]
+    pub sentry: Sentry,
 }
 
 impl TryFrom<PathBuf> for Configuration {
