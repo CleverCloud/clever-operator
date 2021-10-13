@@ -22,7 +22,6 @@ use tokio::time::{sleep_until, Instant};
 
 use crate::svc::cfg::Configuration;
 
-pub mod addon;
 pub mod client;
 pub mod finalizer;
 pub mod recorder;

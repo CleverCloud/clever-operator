@@ -21,10 +21,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slog_scope::{debug, error, info};
 
-use crate::svc::k8s::{
-    self,
-    addon::{AddonExt, Instance},
-    finalizer, recorder, resource, secret, ControllerBuilder, State,
+use crate::svc::{
+    clevercloud::ext::AddonExt,
+    k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
 };
 
 // -----------------------------------------------------------------------------
@@ -51,6 +50,15 @@ impl Into<AddonOpts> for PostgreSqlOpts {
             encryption: self.encryption.to_string(),
         }
     }
+}
+
+// -----------------------------------------------------------------------------
+// Instance structure
+
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub struct Instance {
+    pub region: String,
+    pub plan: String,
 }
 
 // -----------------------------------------------------------------------------
