@@ -12,13 +12,15 @@ use kube_runtime::{
     controller::{self, Context, ReconcilerAction},
     watcher, Controller,
 };
+#[cfg(feature = "metrics")]
 use lazy_static::lazy_static;
+#[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
 use slog_scope::{debug, error, info, trace};
 use tokio::time::{sleep_until, Instant};
 
-use crate::svc::{apis, cfg::Configuration};
+use crate::svc::cfg::Configuration;
 
 pub mod addon;
 pub mod client;
@@ -36,6 +38,7 @@ pub const RECONCILIATION_DELETE_EVENT: &str = "delete";
 // -----------------------------------------------------------------------------
 // Telemetry
 
+#[cfg(feature = "metrics")]
 lazy_static! {
     static ref RECONCILIATION_SUCCESS: CounterVec = register_counter_vec!(
         opts!(
@@ -78,18 +81,20 @@ lazy_static! {
 #[derive(Clone)]
 pub struct State {
     pub kube: kube::Client,
-    pub apis: apis::Client,
+    pub apis: clevercloud_sdk::Client,
     pub config: Arc<Configuration>,
 }
 
-impl From<(kube::Client, apis::Client, Arc<Configuration>)> for State {
-    fn from((kube, apis, config): (kube::Client, apis::Client, Arc<Configuration>)) -> Self {
+impl From<(kube::Client, clevercloud_sdk::Client, Arc<Configuration>)> for State {
+    fn from(
+        (kube, apis, config): (kube::Client, clevercloud_sdk::Client, Arc<Configuration>),
+    ) -> Self {
         Self { kube, apis, config }
     }
 }
 
 impl State {
-    pub fn new(k: kube::Client, a: apis::Client, c: Arc<Configuration>) -> Self {
+    pub fn new(k: kube::Client, a: clevercloud_sdk::Client, c: Arc<Configuration>) -> Self {
         Self::from((k, a, c))
     }
 }
@@ -145,6 +150,7 @@ where
 
         if resource::deleted(&obj) {
             info!("Received deletion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace);
+            #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
                 .inc();
@@ -155,6 +161,7 @@ where
             }
         } else {
             info!("Received upsertion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &obj.meta().name, "namespace" => &obj.meta().namespace);
+            #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
                 .inc();
@@ -225,18 +232,21 @@ where
                 }
                 Ok(Some((obj, ReconcilerAction { requeue_after }))) => {
                     info!("Successfully reconcile resource"; "requeue" => requeue_after.map(|d| d.as_millis()), "kind" => &api_resource.kind, "name" => &obj.name, "namespace" => &obj.namespace);
+                    #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
                         .inc();
                 }
                 Err(controller::Error::ObjectNotFound { obj_ref, .. }) => {
                     debug!("Received an event about an already deleted resource"; "name" => &obj_ref.name, "namespace" => &obj_ref.namespace);
+                    #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
                         .inc();
                 }
                 Err(err) => {
                     error!("Failed to reconcile resource"; "kind" => &api_resource.kind, "error" => err.to_string());
+                    #[cfg(feature = "metrics")]
                     RECONCILIATION_FAILED
                         .with_label_values(&[&api_resource.kind])
                         .inc();
@@ -244,6 +254,7 @@ where
             }
 
             trace!("Put watch event loop to bed"; "kind" => &api_resource.kind, "duration" => Instant::now().checked_duration_since(instant+Duration::from_millis(100)).map(|d| d.as_millis()).unwrap_or_else(|| 0));
+            #[cfg(feature = "metrics")]
             RECONCILIATION_DURATION
                 .with_label_values(&[&api_resource.kind, "us"])
                 .inc_by(Instant::now().duration_since(instant).as_micros() as f64);

@@ -4,13 +4,13 @@
 
 use std::{convert::TryFrom, path::PathBuf};
 
+use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const PUBLIC_ENDPOINT: &str = "https://api.clever-cloud.com";
 pub const OPERATOR_LISTEN: &str = "0.0.0.0:7080";
 
 // -----------------------------------------------------------------------------
@@ -37,6 +37,18 @@ pub struct Api {
     pub consumer_key: String,
     #[serde(rename = "consumerSecret")]
     pub consumer_secret: String,
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<Credentials> for Api {
+    fn into(self) -> Credentials {
+        Credentials {
+            token: self.token.to_owned(),
+            secret: self.secret.to_owned(),
+            consumer_key: self.consumer_key.to_owned(),
+            consumer_secret: self.consumer_secret,
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------

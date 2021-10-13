@@ -3,9 +3,9 @@
 //! This module provide an alternative to the golang EventRecorder structure
 //!
 //! See following links for more details:
-//! - https://book-v1.book.kubebuilder.io/beyond_basics/creating_events.html
-//! - https://github.com/kubernetes/client-go/blob/master/tools/record/event.go#L56
-//! - https://docs.openshift.com/online/pro/rest_api/core/event-core-v1.html
+//! - <https://book-v1.book.kubebuilder.io/beyond_basics/creating_events.html>
+//! - <https://github.com/kubernetes/client-go/blob/master/tools/record/event.go#L56>
+//! - <https://docs.openshift.com/online/pro/rest_api/core/event-core-v1.html>
 
 use std::{
     convert::TryFrom,

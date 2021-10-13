@@ -167,15 +167,12 @@ name = "clever-operator"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "base64",
- "bytes",
  "chrono",
+ "clevercloud-sdk",
  "config",
  "futures",
- "hmac",
  "hostname",
  "hyper",
- "hyper-tls",
  "json-patch",
  "k8s-openapi",
  "kube",
@@ -187,9 +184,7 @@ dependencies = [
  "schemars",
  "serde 1.0.130",
  "serde_json",
- "serde_repr",
  "serde_yaml",
- "sha2",
  "slog",
  "slog-async",
  "slog-scope",
@@ -198,8 +193,21 @@ dependencies = [
  "structopt",
  "thiserror",
  "tokio",
- "urlencoding",
- "uuid",
+]
+
+[[package]]
+name = "clevercloud-sdk"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ccdbe1372667e853e55ec57dc9a13a204506abcb81219d5962f5084e0743a30"
+dependencies = [
+ "async-trait",
+ "hyper",
+ "log",
+ "oauth10a",
+ "schemars",
+ "serde 1.0.130",
+ "serde_repr",
 ]
 
 [[package]]
@@ -560,25 +568,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h2"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c06815895acec637cd6ed6e9662c935b866d20a106f8361892893a7d9234964"
-dependencies = [
- "bytes",
- "fnv",
- "futures-core",
- "futures-sink",
- "futures-util",
- "http",
- "indexmap",
- "slab",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -667,7 +656,6 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2",
  "http",
  "http-body",
  "httparse",
@@ -1075,6 +1063,29 @@ checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
 dependencies = [
  "hermit-abi",
  "libc",
+]
+
+[[package]]
+name = "oauth10a"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16037ec7d3911360d6cdcf3a703451057fabc244847b01463da70639f2643d4e"
+dependencies = [
+ "async-trait",
+ "base64",
+ "bytes",
+ "hmac",
+ "hyper",
+ "hyper-tls",
+ "lazy_static",
+ "log",
+ "prometheus",
+ "serde 1.0.130",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "urlencoding",
+ "uuid",
 ]
 
 [[package]]

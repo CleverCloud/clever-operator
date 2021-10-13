@@ -3,20 +3,18 @@
 //! This module provide structure, custom resource and their definition for addon
 pub mod postgresql;
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 use async_trait::async_trait;
+use clevercloud_sdk::{
+    oauth10a::ClientError,
+    v2::addon::{self, Addon, CreateAddonOpts},
+    Client,
+};
 use hyper::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::svc::{
-    apis::{
-        addon::{self, Addon, CreateAddonOpts},
-        Client, ClientError,
-    },
-    cfg::Configuration,
-};
+use slog_scope::{debug, trace};
 
 // -----------------------------------------------------------------------------
 // Instance structure
@@ -40,13 +38,10 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
 
     fn name(&self) -> String;
 
-    async fn get(
-        &self,
-        config: Arc<Configuration>,
-        client: &Client,
-    ) -> Result<Option<Addon>, Self::Error> {
+    async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
-            match addon::get(config.to_owned(), client, &self.organisation(), id).await {
+            trace!("Retrieve the addon from the identifier"; "id" => &id, "name" => self.name());
+            match addon::get(client, &self.organisation(), id).await {
                 Ok(addon) => {
                     return Ok(Some(addon));
                 }
@@ -54,7 +49,8 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
                     if StatusCode::NOT_FOUND.as_u16() == code.as_u16() =>
                 {
                     // try to retrieve the addon from the name
-                    return Ok(addon::list(config, client, &self.organisation())
+                    trace!("Trying to retrieve the addon by name for the addon"; "id" => &id, "name" => self.name());
+                    return Ok(addon::list(client, &self.organisation())
                         .await
                         .map_err(Into::into)?
                         .iter()
@@ -67,30 +63,23 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
             }
         }
 
+        trace!("No such identifier to retrieve crate"; "name" => self.name());
         Ok(None)
     }
 
-    async fn upsert(
-        &self,
-        config: Arc<Configuration>,
-        client: &Client,
-    ) -> Result<Addon, Self::Error> {
-        if let Some(addon) = self.get(config.to_owned(), client).await? {
+    async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
+        debug!("Try to retrieve the addon, before creating a new one"; "id" => &self.id(), "name" => self.name());
+        if let Some(addon) = self.get(client).await? {
             return Ok(addon);
         }
 
-        Ok(addon::create(
-            config,
-            client,
-            &self.organisation(),
-            &self.to_owned().into(),
-        )
-        .await?)
+        debug!("Creating a new addon"; "id" => &self.id(), "name" => self.name());
+        Ok(addon::create(client, &self.organisation(), &self.to_owned().into()).await?)
     }
 
-    async fn delete(&self, config: Arc<Configuration>, client: &Client) -> Result<(), Self::Error> {
-        if let Some(a) = self.get(config.to_owned(), client).await? {
-            addon::delete(config, client, &self.organisation(), &a.id).await?;
+    async fn delete(&self, client: &Client) -> Result<(), Self::Error> {
+        if let Some(a) = self.get(client).await? {
+            addon::delete(client, &self.organisation(), &a.id).await?;
         }
 
         Ok(())
@@ -98,12 +87,11 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
 
     async fn secrets(
         &self,
-        config: Arc<Configuration>,
         client: &Client,
     ) -> Result<Option<BTreeMap<String, String>>, Self::Error> {
         if let Some(id) = &self.id() {
             return Ok(Some(
-                addon::environment(config, client, &self.organisation(), id).await?,
+                addon::environment(client, &self.organisation(), id).await?,
             ));
         }
 
