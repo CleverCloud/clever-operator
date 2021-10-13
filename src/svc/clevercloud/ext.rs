@@ -1,7 +1,7 @@
-//! # Addon module
+//! # Extensions module
 //!
-//! This module provide structure, custom resource and their definition for addon
-pub mod postgresql;
+//! This module provide extensions to help building custom resource reconciler
+//! loop
 
 use std::collections::BTreeMap;
 
@@ -12,25 +12,14 @@ use clevercloud_sdk::{
     Client,
 };
 use hyper::StatusCode;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use slog_scope::{debug, trace};
-
-// -----------------------------------------------------------------------------
-// Instance structure
-
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct Instance {
-    pub region: String,
-    pub plan: String,
-}
 
 // -----------------------------------------------------------------------------
 // AddonExt trait
 
 #[async_trait]
 pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
-    type Error: From<ClientError> + Send;
+    type Error: From<ClientError> + Sync + Send;
 
     fn id(&self) -> Option<String>;
 

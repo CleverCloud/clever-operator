@@ -16,7 +16,8 @@ use crate::{
     cmd::crd::CustomResourceDefinitionError,
     svc::{
         cfg::Configuration,
-        k8s::{addon::postgresql, client, State, Watcher},
+        crd::postgresql,
+        k8s::{client, State, Watcher},
         telemetry::router,
     },
 };

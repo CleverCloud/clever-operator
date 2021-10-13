@@ -11,7 +11,7 @@ use structopt::StructOpt;
 
 use crate::{
     cmd::Executor,
-    svc::{cfg::Configuration, k8s::addon::postgresql::PostgreSql},
+    svc::{cfg::Configuration, crd::postgresql::PostgreSql},
 };
 
 // -----------------------------------------------------------------------------
