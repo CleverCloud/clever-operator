@@ -40,6 +40,19 @@ spec:
   egress:
     - {}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: clever-operator-system
+  name: clever-operator-configuration
+data:
+  config.toml: |
+    [api]
+    token = ""
+    secret = ""
+    consumerKey = ""
+    consumerSecret = ""
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -61,11 +74,22 @@ spec:
         app: clever-operator
     spec:
       serviceAccountName: clever-operator
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
+      volumes:
+      - name: config
+        configMap:
+          name: clever-operator-configuration
+          items:
+          - key: "config.toml"
+            path: "config.toml"
       containers:
         - image: clevercloud/clever-operator:v0.1.0
           imagePullPolicy: Always
           name: clever-operator
+          volumeMounts:
+          - name: config
+            mountPath: "/etc/clever-operator"
+            readOnly: true
           resources:
             requests:
               memory: 64M
@@ -77,15 +101,6 @@ spec:
             - containerPort: 7080
               protocol: TCP
               name: observability
-          livenessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /healthz
-              port: observability
-              scheme: HTTP
-            periodSeconds: 30
-            successThreshold: 1
-            timeoutSeconds: 1
           readinessProbe:
             failureThreshold: 3
             httpGet:
