@@ -13,49 +13,86 @@ keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 [dependencies]
 async-trait = "^0.1.51"
 chrono = "^0.4.19"
-clevercloud-sdk = { version = "^0.1.1", features = ["jsonschemas", "logging", "metrics"] }
+clevercloud-sdk = { version = "^0.2.0", features = ["jsonschemas"] }
 config = "^0.11.0"
 futures = "^0.3.17"
 hostname = "^0.3.1"
 hyper = { version = "^0.14.13", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.61.0", default-features = false, features = ["client", "rustls-tls", "ws", "gzip", "derive", "jsonpatch"] }
+kube = { version = "^0.61.0", default-features = false, features = [
+    "client",
+    "rustls-tls",
+    "ws",
+    "gzip",
+    "derive",
+    "jsonpatch",
+] }
 kube-derive = "^0.61.0"
 kube-runtime = "^0.61.0"
-k8s-openapi = { version = "^0.13.0", default-features = false, features = ["v1_21"] }
+k8s-openapi = { version = "^0.13.0", default-features = false, features = [
+    "v1_21",
+] }
 lazy_static = { version = "^1.4.0", optional = true }
+opentelemetry = { version = "^0.16.0", features = [
+    "rt-tokio",
+], optional = true }
+opentelemetry-jaeger = { version = "^0.15.0", features = [
+    "rt-tokio",
+    "collector_client",
+], optional = true }
 paw = "^1.0.0"
 prometheus = { version = "^0.13.0", optional = true }
-schemars = { version = "^0.8.6", features = [ "chrono", "indexmap", "uuid", "bytes", "url" ] }
+schemars = { version = "^0.8.6", features = [
+    "chrono",
+    "indexmap",
+    "uuid",
+    "bytes",
+    "url",
+] }
 sentry = { version = "^0.23.0", optional = true }
 serde = { version = "^1.0.130", features = ["derive"] }
-serde_json = { version = "^1.0.68", features = ["preserve_order", "float_roundtrip"] }
+serde_json = { version = "^1.0.68", features = [
+    "preserve_order",
+    "float_roundtrip",
+] }
 serde_yaml = "^0.8.21"
 slog = { version = "^2.7.0" }
 slog-async = "^2.7.0"
 slog-term = "^2.8.0"
 slog-scope = "^4.4.0"
 slog-stdlog = { version = "^4.1.0", optional = true }
-structopt = { version = "^0.3.23", features = ["paw"] }
+structopt = { version = "^0.3.25", features = ["paw"] }
 thiserror = "^1.0.29"
 tokio = { version = "^1.12.0", features = ["full"] }
+tracing = { version = "^0.1.29", optional = true }
+tracing-futures = { version = "^0.2.5", features = ["tokio"], optional = true }
+tracing-subscriber = { version = "^0.2.25", features = [
+    "chrono",
+], optional = true }
+tracing-opentelemetry = { version = "^0.15.0", optional = true }
 
 [features]
-default = ["metrics", "release-log-debug", "debug-log-trace"]
-logging = ["slog-stdlog"]
-metrics = ["lazy_static", "prometheus"]
+default = [
+    "metrics",
+    "trace",
+    "tracker",
+    "slog/release_max_level_debug",
+    "slog/max_level_trace",
+]
+logging = [
+    "clevercloud-sdk/logging",
+    "tracing-subscriber/tracing-log",
+    "slog-stdlog",
+]
+metrics = ["clevercloud-sdk/metrics", "lazy_static", "prometheus"]
 tracker = ["sentry"]
-
-release-log-off     = ["slog/release_max_level_off"]
-release-log-error   = ["slog/release_max_level_error"]
-release-log-warning = ["slog/release_max_level_warn"]
-release-log-info    = ["slog/release_max_level_info"]
-release-log-debug   = ["slog/release_max_level_debug"]
-release-log-trace   = ["slog/release_max_level_trace"]
-
-debug-log-off     = ["slog/max_level_off"]
-debug-log-error   = ["slog/max_level_error"]
-debug-log-warning = ["slog/max_level_warn"]
-debug-log-info    = ["slog/max_level_info"]
-debug-log-debug   = ["slog/max_level_debug"]
-debug-log-trace   = ["slog/max_level_trace"]
+trace = [
+    "clevercloud-sdk/trace",
+    "clevercloud-sdk/tokio",
+    "tracing",
+    "tracing-futures",
+    "tracing-subscriber",
+    "tracing-opentelemetry",
+    "opentelemetry",
+    "opentelemetry-jaeger",
+]

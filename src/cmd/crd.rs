@@ -25,6 +25,7 @@ pub enum CustomResource {
 impl FromStr for CustomResource {
     type Err = Box<dyn Error + Send + Sync>;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "postgresql" => Ok(Self::PostgreSql),
@@ -59,6 +60,7 @@ pub enum CustomResourceDefinition {
 impl Executor for CustomResourceDefinition {
     type Error = CustomResourceDefinitionError;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::View { custom_resource } => view(config, custom_resource).await,
@@ -69,6 +71,7 @@ impl Executor for CustomResourceDefinition {
 // -----------------------------------------------------------------------------
 // view function
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 pub async fn view(
     _config: Arc<Configuration>,
     custom_resource: &Option<CustomResource>,

@@ -19,6 +19,8 @@ use lazy_static::lazy_static;
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
 use slog_scope::{debug, trace};
+#[cfg(feature = "trace")]
+use tracing::Instrument;
 
 // -----------------------------------------------------------------------------
 // Telemetry
@@ -54,14 +56,16 @@ lazy_static! {
 // -----------------------------------------------------------------------------
 // Helpers functions
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns if the resource is considered from kubernetes point of view as deleted
 pub fn deleted<T>(obj: &T) -> bool
 where
-    T: Resource,
+    T: Resource + Debug,
 {
     obj.meta().deletion_timestamp.is_some()
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns the namespace and name of the kubernetes resource.
 ///
 /// # Panic
@@ -70,7 +74,7 @@ where
 /// is created
 pub fn namespaced_name<T>(obj: &T) -> (String, String)
 where
-    T: ResourceExt,
+    T: ResourceExt + Debug,
 {
     (
         obj.namespace()
@@ -79,10 +83,11 @@ where
     )
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns differnce between the two given object serialize as json patch
 pub fn diff<T>(origin: &T, modified: &T) -> Result<json_patch::Patch, serde_json::Error>
 where
-    T: Serialize,
+    T: Serialize + Debug,
 {
     Ok(json_patch::diff(
         &serde_json::to_value(origin)?,
@@ -90,8 +95,29 @@ where
     ))
 }
 
+#[cfg(not(feature = "trace"))]
 /// make a patch request on the given resource using the given patch
 pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
+where
+    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ipatch(client, obj, patch).await
+}
+
+#[cfg(feature = "trace")]
+/// make a patch request on the given resource using the given patch
+pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
+where
+    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ipatch(client, obj, patch)
+        .instrument(tracing::info_span!("resource::patch"))
+        .await
+}
+
+async fn ipatch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
     T: Resource + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
@@ -129,8 +155,38 @@ where
     result
 }
 
+#[cfg(not(feature = "trace"))]
 /// make a patch request on the given resource's status using the given patch
 pub async fn patch_status<T>(
+    client: Client,
+    obj: T,
+    patch: json_patch::Patch,
+) -> Result<T, kube::Error>
+where
+    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ipatch_status(client, obj, patch).await
+}
+
+#[cfg(feature = "trace")]
+/// make a patch request on the given resource's status using the given patch
+pub async fn patch_status<T>(
+    client: Client,
+    obj: T,
+    patch: json_patch::Patch,
+) -> Result<T, kube::Error>
+where
+    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ipatch_status(client, obj, patch)
+        .instrument(tracing::info_span!("resource::patch_status"))
+        .await
+}
+
+/// make a patch request on the given resource's status using the given patch
+async fn ipatch_status<T>(
     client: Client,
     obj: T,
     patch: json_patch::Patch,
@@ -172,8 +228,30 @@ where
     result
 }
 
+#[cfg(not(feature = "trace"))]
 /// returns the list of resources matching the query
 pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
+where
+    T: Resource + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ifind_by_labels(client, ns, query).await
+}
+
+#[cfg(feature = "trace")]
+/// returns the list of resources matching the query
+pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
+where
+    T: Resource + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    ifind_by_labels(client, ns, query)
+        .instrument(tracing::info_span!("resource::find_by_labels"))
+        .await
+}
+
+/// returns the list of resources matching the query
+async fn ifind_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
     T: Resource + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
@@ -204,8 +282,29 @@ where
     Ok(result?.items)
 }
 
+#[cfg(not(feature = "trace"))]
 /// returns the object using namespace and name by asking kubernetes
 pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
+where
+    T: Resource + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    iget(client, ns, name).await
+}
+
+#[cfg(feature = "trace")]
+/// returns the object using namespace and name by asking kubernetes
+pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
+where
+    T: Resource + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    iget(client, ns, name)
+        .instrument(tracing::info_span!("resource::get"))
+        .await
+}
+
+async fn iget<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
     T: Resource + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
@@ -249,9 +348,33 @@ where
     }
 }
 
+#[cfg(not(feature = "trace"))]
 /// create the given kubernetes object and return it completed by kubernetes,
 /// this function should be avoid in favor of the [`upsert`] one
 pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
+where
+    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    icreate(client, obj).await
+}
+
+#[cfg(feature = "trace")]
+/// create the given kubernetes object and return it completed by kubernetes,
+/// this function should be avoid in favor of the [`upsert`] one
+pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
+where
+    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    icreate(client, obj)
+        .instrument(tracing::info_span!("resource::create"))
+        .await
+}
+
+/// create the given kubernetes object and return it completed by kubernetes,
+/// this function should be avoid in favor of the [`upsert`] one
+async fn icreate<T>(client: Client, obj: &T) -> Result<T, kube::Error>
 where
     T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
@@ -284,9 +407,33 @@ where
     result
 }
 
+#[cfg(not(feature = "trace"))]
 /// upsert the given kubernetes object, get it and create it, if it does not
 /// exist or else patch it
 pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
+where
+    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    iupsert(client, obj, status).await
+}
+
+#[cfg(feature = "trace")]
+/// upsert the given kubernetes object, get it and create it, if it does not
+/// exist or else patch it
+pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
+where
+    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    <T as Resource>::DynamicType: Default,
+{
+    iupsert(client, obj, status)
+        .instrument(tracing::info_span!("resource::upsert"))
+        .await
+}
+
+/// upsert the given kubernetes object, get it and create it, if it does not
+/// exist or else patch it
+async fn iupsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
 where
     T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
@@ -307,10 +454,11 @@ where
     create(client, obj).await
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns a owner reference object pointing to the given resource
 pub fn owner_reference<T>(obj: &T) -> OwnerReference
 where
-    T: ResourceExt + CustomResourceExt,
+    T: ResourceExt + CustomResourceExt + Debug,
 {
     let api_resource = T::api_resource();
 
@@ -326,10 +474,11 @@ where
     }
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns a object reference pointing to the given resource
 pub fn object_reference<T>(obj: &T) -> ObjectReference
 where
-    T: ResourceExt + CustomResourceExt,
+    T: ResourceExt + CustomResourceExt + Debug,
 {
     let api_resource = T::api_resource();
 

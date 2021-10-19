@@ -19,6 +19,8 @@ use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
 use slog_scope::{debug, error, info, trace};
 use tokio::time::{sleep_until, Instant};
+#[cfg(feature = "trace")]
+use tracing::Instrument;
 
 use crate::svc::cfg::Configuration;
 
@@ -120,7 +122,7 @@ where
 #[async_trait]
 pub trait Reconciler<T>
 where
-    T: ResourceExt + CustomResourceExt + Send + Sync + 'static,
+    T: ResourceExt + CustomResourceExt + Debug + Send + Sync + 'static,
 {
     type Error: Error + Send + Sync;
 
@@ -154,7 +156,14 @@ where
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
                 .inc();
 
-            if let Err(err) = Self::delete(&ctx, &obj).await {
+            #[cfg(not(feature = "trace"))]
+            let result = Self::delete(&ctx, &obj).await;
+            #[cfg(feature = "trace")]
+            let result = Self::delete(&ctx, &obj)
+                .instrument(tracing::info_span!("Reconciler::delete"))
+                .await;
+
+            if let Err(err) = result {
                 error!("Failed to delete custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
                 return Err(err);
             }
@@ -165,7 +174,14 @@ where
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
                 .inc();
 
-            if let Err(err) = Self::upsert(&ctx, &obj).await {
+            #[cfg(not(feature = "trace"))]
+            let result = Self::upsert(&ctx, &obj).await;
+            #[cfg(feature = "trace")]
+            let result = Self::upsert(&ctx, &obj)
+                .instrument(tracing::info_span!("Reconciler::upsert"))
+                .await;
+
+            if let Err(err) = result {
                 error!("Failed to upsert custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
                 return Err(err);
             }

@@ -3,7 +3,7 @@
 //! This module provide extensions to help building custom resource reconciler
 //! loop
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Debug};
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
@@ -18,7 +18,7 @@ use slog_scope::{debug, trace};
 // AddonExt trait
 
 #[async_trait]
-pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
+pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
     type Error: From<ClientError> + Sync + Send;
 
     fn id(&self) -> Option<String>;
@@ -27,6 +27,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
 
     fn name(&self) -> String;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!("Retrieve the addon from the identifier"; "id" => &id, "name" => self.name());
@@ -56,6 +57,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
         Ok(None)
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
         debug!("Try to retrieve the addon, before creating a new one"; "id" => &self.id(), "name" => self.name());
         if let Some(addon) = self.get(client).await? {
@@ -66,6 +68,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
         Ok(addon::create(client, &self.organisation(), &self.to_owned().into()).await?)
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn delete(&self, client: &Client) -> Result<(), Self::Error> {
         if let Some(a) = self.get(client).await? {
             addon::delete(client, &self.organisation(), &a.id).await?;
@@ -74,6 +77,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Sync + Send {
         Ok(())
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn secrets(
         &self,
         client: &Client,

@@ -59,6 +59,7 @@ pub enum Command {
 impl Executor for Command {
     type Error = CommandError;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::CustomResourceDefinition(crd) => crd
@@ -110,6 +111,7 @@ pub enum DaemonError {
 // -----------------------------------------------------------------------------
 // daemon function
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 pub async fn daemon(
     kubeconfig: Option<PathBuf>,
     config: Arc<Configuration>,

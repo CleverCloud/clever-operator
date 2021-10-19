@@ -9,6 +9,7 @@ use kube::{
     Config,
 };
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns a new kubernetes client from the given path if defined
 /// or retrieve it from environment or defaults paths
 pub async fn try_new(path: Option<PathBuf>) -> Result<kube::Client, kube::Error> {
@@ -20,5 +21,5 @@ pub async fn try_new(path: Option<PathBuf>) -> Result<kube::Client, kube::Error>
     let opts = KubeConfigOptions::default();
     let config = Config::from_custom_kubeconfig(kubeconfig, &opts).await?;
 
-    Ok(kube::Client::try_from(config)?)
+    kube::Client::try_from(config)
 }
