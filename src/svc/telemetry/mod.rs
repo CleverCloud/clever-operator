@@ -64,6 +64,7 @@ pub enum Error {
 // -----------------------------------------------------------------------------
 // Helper methods
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
     let begin = Instant::now();
 
@@ -153,6 +154,7 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
     }
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 pub async fn healthz(_req: &Request<Body>) -> Result<Response<Body>, Error> {
     let mut res = Response::default();
 
@@ -161,6 +163,7 @@ pub async fn healthz(_req: &Request<Body>) -> Result<Response<Body>, Error> {
     Ok(res)
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 pub async fn not_found(_req: &Request<Body>) -> Result<Response<Body>, Error> {
     let mut res = Response::default();
 

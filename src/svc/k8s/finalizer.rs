@@ -3,12 +3,15 @@
 //! This module provide helpers methods to interact with kubernetes' resource
 //! finalizer
 
+use std::fmt::Debug;
+
 use kube::Resource;
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns if there is the given finalizer on the resource
 pub fn contains<T>(obj: &T, finalizer: &str) -> bool
 where
-    T: Resource,
+    T: Resource + Debug,
 {
     if let Some(finalizers) = &obj.meta().finalizers {
         finalizers.iter().any(|f| finalizer == f)
@@ -17,10 +20,11 @@ where
     }
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// add finalizer to the resource
 pub fn add<T>(mut obj: T, finalizer: &str) -> T
 where
-    T: Resource,
+    T: Resource + Debug,
 {
     if (&obj.meta().finalizers).is_some() {
         if !contains(&obj, finalizer) {
@@ -36,10 +40,11 @@ where
     obj
 }
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// remove finalizer from the resource
 pub fn remove<T>(mut obj: T, finalizer: &str) -> T
 where
-    T: Resource,
+    T: Resource + Debug,
 {
     if let Some(finalizers) = &obj.meta().finalizers {
         obj.meta_mut().finalizers = Some(

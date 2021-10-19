@@ -98,6 +98,7 @@ pub struct PostgreSqlStatus {
 
 #[allow(clippy::from_over_into)]
 impl Into<CreateAddonOpts> for PostgreSql {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> CreateAddonOpts {
         CreateAddonOpts {
             name: AddonExt::name(&self),
@@ -112,6 +113,7 @@ impl Into<CreateAddonOpts> for PostgreSql {
 impl AddonExt for PostgreSql {
     type Error = ReconcilerError;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn id(&self) -> Option<String> {
         if let Some(status) = &self.status {
             return status.addon.to_owned();
@@ -120,10 +122,12 @@ impl AddonExt for PostgreSql {
         None
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn organisation(&self) -> String {
         self.spec.organisation.to_owned()
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn name(&self) -> String {
         "kubernetes_".to_string()
             + &self
@@ -133,6 +137,7 @@ impl AddonExt for PostgreSql {
 }
 
 impl PostgreSql {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let mut status = self.status.get_or_insert_with(PostgreSqlStatus::default);
 
@@ -140,6 +145,7 @@ impl PostgreSql {
         self.status = Some(status.to_owned());
     }
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn get_addon_id(&self) -> Option<String> {
         self.status
             .to_owned()
@@ -190,18 +196,21 @@ pub enum ReconcilerError {
 }
 
 impl From<kube::Error> for ReconcilerError {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from(err: kube::Error) -> Self {
         Self::KubeClient(err)
     }
 }
 
 impl From<ClientError> for ReconcilerError {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from(err: ClientError) -> Self {
         Self::CleverClient(err)
     }
 }
 
 impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from(err: controller::Error<ReconcilerError, watcher::Error>) -> Self {
         Self::Reconcile(err.to_string())
     }

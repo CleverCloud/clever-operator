@@ -4,10 +4,16 @@
 //! resource definition
 use std::{convert::TryFrom, error::Error, sync::Arc};
 
+#[cfg(feature = "trace")]
+use opentelemetry::global;
+#[cfg(feature = "trace")]
+use opentelemetry_jaeger::Propagator;
 use slog::{o, Drain, Level, LevelFilter, Logger};
 use slog_async::Async;
 use slog_scope::{crit, debug, info, set_global_logger, GlobalLoggerGuard as Guard};
 use slog_term::{FullFormat, TermDecorator};
+#[cfg(feature = "trace")]
+use tracing_subscriber::{layer::SubscriberExt, Registry};
 
 use crate::{
     cmd::{daemon, Args, Executor},
@@ -51,14 +57,36 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
     }
 
     #[cfg(feature = "tracker")]
-    if let Some(dsn) = config.sentry.dsn.to_owned() {
-        let _sguard = sentry::init((
-            dsn,
+    let _sguard = config.sentry.dsn.as_ref().map(|dsn| {
+        sentry::init((
+            dsn.to_owned(),
             sentry::ClientOptions {
                 release: sentry::release_name!(),
                 ..Default::default()
             },
-        ));
+        ))
+    });
+
+    #[cfg(feature = "trace")]
+    if let Some(jaeger) = &config.jaeger {
+        info!("Start to trace using jaeger with opentelemetry compatibility"; "endpoint" => jaeger.endpoint.to_owned());
+        global::set_text_map_propagator(Propagator::new());
+
+        let mut builder = opentelemetry_jaeger::new_pipeline()
+            .with_collector_endpoint(jaeger.endpoint.to_owned())
+            .with_service_name(env!("CARGO_PKG_NAME"));
+
+        if let Some(user) = &jaeger.user {
+            builder = builder.with_collector_username(user);
+        }
+
+        if let Some(password) = &jaeger.password {
+            builder = builder.with_collector_password(password);
+        }
+
+        let layer = tracing_opentelemetry::layer().with_tracer(builder.install_simple()?);
+
+        tracing::subscriber::set_global_default(Registry::default().with(layer))?;
     }
 
     let result: Result<_, Box<dyn Error + Send + Sync>> = match &args.command {
@@ -70,6 +98,9 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
         crit!("could not execute {} properly", env!("CARGO_PKG_NAME"); "error" => err.to_string());
         return Err(err);
     }
+
+    #[cfg(feature = "trace")]
+    global::shutdown_tracer_provider();
 
     info!("{} halted!", env!("CARGO_PKG_NAME"));
     Ok(())

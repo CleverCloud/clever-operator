@@ -22,6 +22,7 @@ pub enum Error {
 // -----------------------------------------------------------------------------
 // Helper methods
 
+#[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns in the [`Response`] object the encoded metrics gathered from the
 /// application
 pub async fn handler(_req: &Request<Body>) -> Result<Response<Body>, Error> {

@@ -41,6 +41,7 @@ pub struct Api {
 
 #[allow(clippy::from_over_into)]
 impl Into<Credentials> for Api {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> Credentials {
         Credentials {
             token: self.token.to_owned(),
@@ -77,6 +78,17 @@ pub struct Sentry {
 }
 
 // -----------------------------------------------------------------------------
+// Jaeger structure
+
+#[cfg(feature = "trace")]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
+pub struct Jaeger {
+    pub endpoint: String,
+    pub user: Option<String>,
+    pub password: Option<String>,
+}
+
+// -----------------------------------------------------------------------------
 // Configuration structures
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
@@ -88,11 +100,15 @@ pub struct Configuration {
     #[cfg(feature = "tracker")]
     #[serde(rename = "sentry", default = "Default::default")]
     pub sentry: Sentry,
+    #[cfg(feature = "trace")]
+    #[serde(rename = "jaeger")]
+    pub jaeger: Option<Jaeger>,
 }
 
 impl TryFrom<PathBuf> for Configuration {
     type Error = ConfigurationError;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let mut config = Config::default();
 
@@ -119,6 +135,7 @@ impl TryFrom<PathBuf> for Configuration {
 }
 
 impl Configuration {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn try_default() -> Result<Self, ConfigurationError> {
         let mut config = Config::default();
 

@@ -10,13 +10,15 @@
 use std::{
     convert::TryFrom,
     error::Error,
-    fmt::{self, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     str::FromStr,
 };
 
 use k8s_openapi::api::core::v1::Event;
 use kube::{Client, CustomResourceExt, ResourceExt};
 use slog_scope::debug;
+#[cfg(feature = "trace")]
+use tracing::Instrument;
 
 use crate::svc::k8s::resource;
 
@@ -34,6 +36,7 @@ pub enum Level {
 impl FromStr for Level {
     type Err = Box<dyn Error + Send + Sync>;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
             "warning" => Self::Warning,
@@ -52,6 +55,7 @@ impl FromStr for Level {
 impl TryFrom<String> for Level {
     type Error = Box<dyn Error + Send + Sync>;
 
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(s: String) -> Result<Self, Self::Error> {
         Self::from_str(&s)
     }
@@ -68,6 +72,7 @@ impl Display for Level {
 
 #[allow(clippy::from_over_into)]
 impl Into<String> for Level {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> String {
         self.to_string()
     }
@@ -76,6 +81,7 @@ impl Into<String> for Level {
 // -----------------------------------------------------------------------------
 // Helper methods
 
+#[cfg(not(feature = "trace"))]
 /// record an event for the given object
 pub async fn record<T, U>(
     client: Client,
@@ -85,13 +91,47 @@ pub async fn record<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt,
-    U: ToString,
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    irecord(client, obj, kind, action, message).await
+}
+
+#[cfg(feature = "trace")]
+/// record an event for the given object
+pub async fn record<T, U>(
+    client: Client,
+    obj: &T,
+    kind: &Level,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    irecord(client, obj, kind, action, message)
+        .instrument(tracing::info_span!("recorder::record"))
+        .await
+}
+
+/// record an event for the given object
+async fn irecord<T, U>(
+    client: Client,
+    obj: &T,
+    kind: &Level,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
 {
     debug!("Create '{}' event for resource", action.to_string(); "uid" => &obj.meta().uid,"name" => &obj.name(), "namespace" => &obj.namespace(), "message" => message);
     resource::upsert(client, &event::new(obj, kind, action, message), false).await
 }
 
+#[cfg(not(feature = "trace"))]
 /// shortcut for the [`record`] method with the 'Normal' [`Level`]
 pub async fn normal<T, U>(
     client: Client,
@@ -100,12 +140,44 @@ pub async fn normal<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt,
-    U: ToString,
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    inormal(client, obj, action, message).await
+}
+
+#[cfg(feature = "trace")]
+/// shortcut for the [`record`] method with the 'Normal' [`Level`]
+pub async fn normal<T, U>(
+    client: Client,
+    obj: &T,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    inormal(client, obj, action, message)
+        .instrument(tracing::info_span!("record::normal"))
+        .await
+}
+
+/// shortcut for the [`record`] method with the 'Normal' [`Level`]
+async fn inormal<T, U>(
+    client: Client,
+    obj: &T,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
 {
     record(client, obj, &Level::Normal, action, message).await
 }
 
+#[cfg(not(feature = "trace"))]
 /// shortcut for the [`record`] method witj the 'Warning' [`Level`]
 pub async fn warning<T, U>(
     client: Client,
@@ -114,8 +186,39 @@ pub async fn warning<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt,
-    U: ToString,
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    iwarning(client, obj, action, message).await
+}
+
+#[cfg(feature = "trace")]
+/// shortcut for the [`record`] method witj the 'Warning' [`Level`]
+pub async fn warning<T, U>(
+    client: Client,
+    obj: &T,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
+{
+    iwarning(client, obj, action, message)
+        .instrument(tracing::info_span!("recorder::warning"))
+        .await
+}
+
+/// shortcut for the [`record`] method witj the 'Warning' [`Level`]
+async fn iwarning<T, U>(
+    client: Client,
+    obj: &T,
+    action: &U,
+    message: &str,
+) -> Result<Event, kube::Error>
+where
+    T: ResourceExt + CustomResourceExt + Debug,
+    U: ToString + Debug,
 {
     record(client, obj, &Level::Warning, action, message).await
 }
