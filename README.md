@@ -19,7 +19,7 @@ or use an already built operator hosted on dockerhub or operatorhub.
 
 ### From source
 
-You will need some tools on your computer to build and deploy the operator, at least you will `git`, `rust` compiler and
+You will need some tools on your computer to build and deploy the operator, at least you will `git`, `rust` toolchain and
 `docker`. To deploy the operator, you will also need the `kubectl` command and a `kubernetes` cluster.
 
 So, firstly, you will need to retrieve the source. You can clone them directly from
