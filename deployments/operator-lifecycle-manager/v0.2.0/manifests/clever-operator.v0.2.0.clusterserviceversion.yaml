@@ -2,13 +2,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: cleveroperator.v0.1.0
+  name: cleveroperator.v0.2.0
   namespace: clever-operator-system
   annotations:
     capabilities: Full Lifecycle
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     certified: "false"
-    containerImage: clevercloud/clever-operator:v0.1.0
+    containerImage: clevercloud/clever-operator:v0.2.0
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -104,7 +104,7 @@ spec:
   maturity: alpha
   provider:
     name: Clever Cloud
-  version: 0.1.0
+  version: 0.2.0
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
@@ -176,7 +176,7 @@ spec:
               serviceAccountName: clever-operator
               automountServiceAccountToken: false
               containers:
-                - image: clevercloud/clever-operator:v0.1.0
+                - image: clevercloud/clever-operator:v0.2.0
                   imagePullPolicy: Always
                   name: clever-operator
                   resources:
