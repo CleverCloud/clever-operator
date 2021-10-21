@@ -16,7 +16,7 @@ use crate::{
     cmd::crd::CustomResourceDefinitionError,
     svc::{
         cfg::Configuration,
-        crd::postgresql,
+        crd::{mongodb, mysql, postgresql, redis},
         k8s::{client, State, Watcher},
         telemetry::router,
     },
@@ -130,20 +130,55 @@ pub async fn daemon(
 
     // -------------------------------------------------------------------------
     // Create state to give to each reconciler
-    let state = State::new(kube_client, clever_client, config.to_owned());
+    let postgresql_state = State::new(kube_client, clever_client, config.to_owned());
+    let redis_state = postgresql_state.to_owned();
+    let mysql_state = postgresql_state.to_owned();
+    let mongodb_state = postgresql_state.to_owned();
 
     // -------------------------------------------------------------------------
     // Create reconcilers
-    let handles = vec![tokio::spawn(async {
-        let reconciler = postgresql::Reconciler::default();
+    let handles = vec![
+        tokio::spawn(async {
+            let reconciler = postgresql::Reconciler::default();
 
-        info!("Start to listen for events of postgresql addon custom resource");
-        if let Err(err) = reconciler.watch(state).await {
-            crit!("Could not reconcile postgresql addon custom resource"; "error" => err.to_string());
-        }
+            info!("Start to listen for events of postgresql addon custom resource");
+            if let Err(err) = reconciler.watch(postgresql_state).await {
+                crit!("Could not reconcile postgresql addon custom resource"; "error" => err.to_string());
+            }
 
-        abort();
-    })];
+            abort();
+        }),
+        tokio::spawn(async {
+            let reconciler = redis::Reconciler::default();
+
+            info!("Start to listen for events of redis addon custom resource");
+            if let Err(err) = reconciler.watch(redis_state).await {
+                crit!("Could not reconcile redis addon custom resource"; "error" => err.to_string());
+            }
+
+            abort();
+        }),
+        tokio::spawn(async {
+            let reconciler = mysql::Reconciler::default();
+
+            info!("Start to listen for events of mysql addon custom resource");
+            if let Err(err) = reconciler.watch(mysql_state).await {
+                crit!("Could not reconcile mysql addon custom resource"; "error" => err.to_string());
+            }
+
+            abort();
+        }),
+        tokio::spawn(async {
+            let reconciler = mongodb::Reconciler::default();
+
+            info!("Start to listen for events of mongodb addon custom resource");
+            if let Err(err) = reconciler.watch(mongodb_state).await {
+                crit!("Could not reconcile mongodb addon custom resource"; "error" => err.to_string());
+            }
+
+            abort();
+        }),
+    ];
 
     // -------------------------------------------------------------------------
     // Create http server

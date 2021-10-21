@@ -1,46 +1,46 @@
 ---
 apiVersion: api.clever-cloud.com/v1
-kind: PostgreSql
+kind: MongoDb
 metadata:
   namespace: default
-  name: postgresql
+  name: mongodb
 spec:
   organisation: orga_xxxx
   options:
-    version: 13
+    version: 403
     encryption: false
   instance:
     region: par
-    plan: s_sml
+    plan: xs_sml
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app: debian-postgresql
-  name: debian-postgresql
+    app: debian-mongodb
+  name: debian-mongodb
   namespace: default
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: debian-postgresql
+  name: debian-mongodb
   namespace: default
 spec:
   minAvailable: 0
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mongodb
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: debian-postgresql
+  name: debian-mongodb
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mongodb
   policyTypes:
     - Ingress
     - Egress
@@ -53,64 +53,64 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: default
-  name: debian-postgresql
+  name: debian-mongodb
   labels:
-    app: debian-postgresql
+    app: debian-mongodb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mongodb
   template:
     metadata:
       labels:
-        app: debian-postgresql
+        app: debian-mongodb
     spec:
-      serviceAccountName: debian-postgresql
+      serviceAccountName: debian-mongodb
       automountServiceAccountToken: true
       containers:
         - image: debian:bullseye-slim
           imagePullPolicy: Always
-          name: debian-postgresql
+          name: debian-mongodb
           command:
             - "sleep"
             - "3600"
           env:
-          - name: POSTGRESQL_ADDON_DB
+          - name: MONGODB_ADDON_DB
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets # build using the name of the addon following by -secrets
-                key: POSTGRESQL_ADDON_DB
-          - name: POSTGRESQL_ADDON_HOST
+                name: mongodb-secrets # build using the name of the addon following by -secrets
+                key: MONGODB_ADDON_DB
+          - name: MONGODB_ADDON_HOST
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_HOST
-          - name: POSTGRESQL_ADDON_PASSWORD
+                name: mongodb-secrets
+                key: MONGODB_ADDON_HOST
+          - name: MONGODB_ADDON_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PASSWORD
-          - name: POSTGRESQL_ADDON_PORT
+                name: mongodb-secrets
+                key: MONGODB_ADDON_PASSWORD
+          - name: MONGODB_ADDON_PORT
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PORT
-          - name: POSTGRESQL_ADDON_URI
+                name: mongodb-secrets
+                key: MONGODB_ADDON_PORT
+          - name: MONGODB_ADDON_URI
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_URI
-          - name: POSTGRESQL_ADDON_USER
+                name: mongodb-secrets
+                key: MONGODB_ADDON_URI
+          - name: MONGODB_ADDON_USER
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_USER
-          - name: POSTGRESQL_ADDON_VERSION
+                name: mongodb-secrets
+                key: MONGODB_ADDON_USER
+          - name: MONGODB_ADDON_VERSION
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_VERSION
+                name: mongodb-secrets
+                key: MONGODB_ADDON_VERSION
           resources:
             requests:
               memory: 64M

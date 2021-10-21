@@ -1,46 +1,46 @@
 ---
 apiVersion: api.clever-cloud.com/v1
-kind: PostgreSql
+kind: Redis
 metadata:
   namespace: default
-  name: postgresql
+  name: redis
 spec:
   organisation: orga_xxxx
   options:
-    version: 13
+    version: 6010
     encryption: false
   instance:
     region: par
-    plan: s_sml
+    plan: s_mono
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app: debian-postgresql
-  name: debian-postgresql
+    app: debian-redis
+  name: debian-redis
   namespace: default
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: debian-postgresql
+  name: debian-redis
   namespace: default
 spec:
   minAvailable: 0
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-redis
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: debian-postgresql
+  name: debian-redis
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-redis
   policyTypes:
     - Ingress
     - Egress
@@ -53,64 +53,59 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: default
-  name: debian-postgresql
+  name: debian-redis
   labels:
-    app: debian-postgresql
+    app: debian-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-redis
   template:
     metadata:
       labels:
-        app: debian-postgresql
+        app: debian-redis
     spec:
-      serviceAccountName: debian-postgresql
+      serviceAccountName: debian-redis
       automountServiceAccountToken: true
       containers:
         - image: debian:bullseye-slim
           imagePullPolicy: Always
-          name: debian-postgresql
+          name: debian-redis
           command:
             - "sleep"
             - "3600"
           env:
-          - name: POSTGRESQL_ADDON_DB
+          - name: REDIS_HOST
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets # build using the name of the addon following by -secrets
-                key: POSTGRESQL_ADDON_DB
-          - name: POSTGRESQL_ADDON_HOST
+                name: redis-secrets # build using the name of the addon following by -secrets
+                key: REDIS_HOST
+          - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_HOST
-          - name: POSTGRESQL_ADDON_PASSWORD
+                name: redis-secrets
+                key: REDIS_PASSWORD
+          - name: REDIS_PORT
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PASSWORD
-          - name: POSTGRESQL_ADDON_PORT
+                name: redis-secrets
+                key: REDIS_PORT
+          - name: REDIS_TOKEN
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PORT
-          - name: POSTGRESQL_ADDON_URI
+                name: redis-secrets
+                key: REDIS_TOKEN
+          - name: REDIS_URL
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_URI
-          - name: POSTGRESQL_ADDON_USER
+                name: redis-secrets
+                key: REDIS_URL
+          - name: REDIS_VERSION
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_USER
-          - name: POSTGRESQL_ADDON_VERSION
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_VERSION
+                name: redis-secrets
+                key: REDIS_VERSION
           resources:
             requests:
               memory: 64M

@@ -1,13 +1,13 @@
 ---
 apiVersion: api.clever-cloud.com/v1
-kind: PostgreSql
+kind: MySql
 metadata:
   namespace: default
-  name: postgresql
+  name: mysql
 spec:
   organisation: orga_xxxx
   options:
-    version: 13
+    version: 80
     encryption: false
   instance:
     region: par
@@ -17,30 +17,30 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app: debian-postgresql
-  name: debian-postgresql
+    app: debian-mysql
+  name: debian-mysql
   namespace: default
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: debian-postgresql
+  name: debian-mysql
   namespace: default
 spec:
   minAvailable: 0
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mysql
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: debian-postgresql
+  name: debian-mysql
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mysql
   policyTypes:
     - Ingress
     - Egress
@@ -53,64 +53,64 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: default
-  name: debian-postgresql
+  name: debian-mysql
   labels:
-    app: debian-postgresql
+    app: debian-mysql
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: debian-postgresql
+      app: debian-mysql
   template:
     metadata:
       labels:
-        app: debian-postgresql
+        app: debian-mysql
     spec:
-      serviceAccountName: debian-postgresql
+      serviceAccountName: debian-mysql
       automountServiceAccountToken: true
       containers:
         - image: debian:bullseye-slim
           imagePullPolicy: Always
-          name: debian-postgresql
+          name: debian-mysql
           command:
             - "sleep"
             - "3600"
           env:
-          - name: POSTGRESQL_ADDON_DB
+          - name: MYSQL_ADDON_DB
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets # build using the name of the addon following by -secrets
-                key: POSTGRESQL_ADDON_DB
-          - name: POSTGRESQL_ADDON_HOST
+                name: mysql-secrets # build using the name of the addon following by -secrets
+                key: MYSQL_ADDON_DB
+          - name: MYSQL_ADDON_HOST
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_HOST
-          - name: POSTGRESQL_ADDON_PASSWORD
+                name: mysql-secrets
+                key: MYSQL_ADDON_HOST
+          - name: MYSQL_ADDON_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PASSWORD
-          - name: POSTGRESQL_ADDON_PORT
+                name: mysql-secrets
+                key: MYSQL_ADDON_PASSWORD
+          - name: MYSQL_ADDON_PORT
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PORT
-          - name: POSTGRESQL_ADDON_URI
+                name: mysql-secrets
+                key: MYSQL_ADDON_PORT
+          - name: MYSQL_ADDON_URI
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_URI
-          - name: POSTGRESQL_ADDON_USER
+                name: mysql-secrets
+                key: MYSQL_ADDON_URI
+          - name: MYSQL_ADDON_USER
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_USER
-          - name: POSTGRESQL_ADDON_VERSION
+                name: mysql-secrets
+                key: MYSQL_ADDON_USER
+          - name: MYSQL_ADDON_VERSION
             valueFrom:
               secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_VERSION
+                name: mysql-secrets
+                key: MYSQL_ADDON_VERSION
           resources:
             requests:
               memory: 64M
