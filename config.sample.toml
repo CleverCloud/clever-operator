@@ -1,0 +1,19 @@
+# Clever-Cloud api credentials
+#
+# Could be created using this project :
+# - https://github.com/CleverCloud/oauth-consumer-server
+[api]
+token = ""
+secret = ""
+consumerKey = ""
+consumerSecret = ""
+
+# Jaeger configuratio
+# [jaeger]
+# endpoint = ""
+# user = ""
+# password = ""
+
+# Sentry configuration
+# [sentry]
+# dsn = ""
