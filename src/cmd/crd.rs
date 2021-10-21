@@ -11,7 +11,10 @@ use structopt::StructOpt;
 
 use crate::{
     cmd::Executor,
-    svc::{cfg::Configuration, crd::postgresql::PostgreSql},
+    svc::{
+        cfg::Configuration,
+        crd::{mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql, redis::Redis},
+    },
 };
 
 // -----------------------------------------------------------------------------
@@ -20,6 +23,9 @@ use crate::{
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub enum CustomResource {
     PostgreSql,
+    Redis,
+    MySql,
+    MongoDb,
 }
 
 impl FromStr for CustomResource {
@@ -29,7 +35,10 @@ impl FromStr for CustomResource {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "postgresql" => Ok(Self::PostgreSql),
-            _ => Err(format!("failed to parse '{}', available option is postgresql", s).into()),
+            "redis" => Ok(Self::Redis),
+            "mysql" => Ok(Self::MySql),
+            "mongodb" => Ok(Self::MongoDb),
+            _ => Err(format!("failed to parse '{}', available options are 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
         }
     }
 }
@@ -80,12 +89,26 @@ pub async fn view(
         vec![match cr {
             CustomResource::PostgreSql => serde_yaml::to_string(&PostgreSql::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::Redis => serde_yaml::to_string(&Redis::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::MySql => serde_yaml::to_string(&MySql::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::MongoDb => serde_yaml::to_string(&MongoDb::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
-        vec![serde_yaml::to_string(&PostgreSql::crd())
-            .map_err(CustomResourceDefinitionError::Serialize)?]
+        vec![
+            serde_yaml::to_string(&PostgreSql::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&Redis::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&MySql::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&MongoDb::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+        ]
     };
 
-    print!("{}", crds.join("\n"));
+    print!("{}", crds.join(""));
     Ok(())
 }

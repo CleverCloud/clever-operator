@@ -14,7 +14,7 @@ KUBE_SCORE			?= $(shell which kube-score)
 KUBE_VERSION		?= v1.21.0
 
 OLM_SDK		    	?= $(shell which operator-sdk)
-OLM_VERSION			?= v0.1.0
+OLM_VERSION			?= v0.2.0
 
 DEPLOY_KUBE			?= deployments/kubernetes/$(KUBE_VERSION)
 DEPLOY_OLM			?= deployments/operator-lifecycle-manager/$(OLM_VERSION)
@@ -27,7 +27,7 @@ CARGO_OPTS			?= --verbose
 # ------------------------------------------------------------------------------
 # Build operator
 .PHONY: build
-build: $(DIST)/$(NAME)
+build: $(DIST)/$(NAME) $(shell $(FIND) -type f -name '*.rs')
 
 $(DIST)/$(NAME): $(shell $(FIND) -type f -name '*.rs')
 	$(CARGO) build $(CARGO_OPTS) --release
@@ -45,13 +45,22 @@ docker-push: docker-build
 # ------------------------------------------------------------------------------
 # Kubernetes deployment
 .PHONY: crd
-crd: build $(shell $(FIND) -type f -name '*.rs') $(DEPLOY_KUBE)/10-custom-resource-definition.yaml $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+crd: build $(DEPLOY_KUBE)/10-custom-resource-definition.yaml $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml
 
 $(DEPLOY_KUBE)/10-custom-resource-definition.yaml:
 	$(DIST)/$(NAME) custom-resource-definition view > $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
 
-$(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml:
-	$(DIST)/$(NAME) custom-resource-definition view postgresql > $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+$(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view postgresql > $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml
+
+$(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view redis > $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml
+
+$(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view mysql > $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml
+
+$(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view mongodb > $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml
 
 .PHONY: validate
 validate: $(shell $(FIND) -type f -name '*.yaml')
@@ -67,7 +76,7 @@ deploy-kubernetes: crd validate deploy-kubernete-crd
 	$(KUBE) apply -f $(DEPLOY_KUBE)
 
 .PHONY: deploy-olm-crd
-deploy-olm-crd: crd validate $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+deploy-olm-crd: crd $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml validate
 	$(KUBE) apply -f $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
 
 .PHONY: deploy-olm

@@ -1,6 +1,6 @@
-//! # PostgreSQL addon
+//! # Redis addon
 //!
-//! This module provide the postgresql custom resource and its definition
+//! This module provide the redis custom resource and its definition
 
 use std::fmt::{self, Display, Formatter};
 
@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     oauth10a::ClientError,
     v2::addon::{AddonOpts, CreateAddonOpts},
-    v4::addon_provider::{plan, postgresql, AddonProviderId},
+    v4::addon_provider::{plan, redis, AddonProviderId},
 };
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
@@ -30,21 +30,21 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/postgresql";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/redis";
 
 // -----------------------------------------------------------------------------
-// PostgreSqlOptions structure
+// RedisOpts structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PostgreSqlOpts {
+pub struct RedisOpts {
     #[serde(rename = "version")]
-    pub version: postgresql::Version,
+    pub version: redis::Version,
     #[serde(rename = "encryption")]
     pub encryption: bool,
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<AddonOpts> for PostgreSqlOpts {
+impl Into<AddonOpts> for RedisOpts {
     fn into(self) -> AddonOpts {
         AddonOpts {
             version: self.version.to_string(),
@@ -54,55 +54,55 @@ impl Into<AddonOpts> for PostgreSqlOpts {
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlSpec structure
+// RedisSpec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
-#[kube(kind = "PostgreSql")]
-#[kube(singular = "postgresql")]
-#[kube(plural = "postgresqls")]
-#[kube(shortname = "pg")]
-#[kube(status = "PostgreSqlStatus")]
+#[kube(kind = "Redis")]
+#[kube(singular = "redis")]
+#[kube(plural = "redis")]
+#[kube(shortname = "r")]
+#[kube(status = "RedisStatus")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
-pub struct PostgreSqlSpec {
+pub struct RedisSpec {
     #[serde(rename = "organisation")]
     pub organisation: String,
     #[serde(rename = "options")]
-    pub options: PostgreSqlOpts,
+    pub options: RedisOpts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSQLStatus structure
+// RedisStatus structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
-pub struct PostgreSqlStatus {
+pub struct RedisStatus {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSql implementation
+// Redis implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateAddonOpts> for PostgreSql {
+impl Into<CreateAddonOpts> for Redis {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> CreateAddonOpts {
         CreateAddonOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::PostgreSql.to_string(),
+            provider_id: AddonProviderId::Redis.to_string(),
             plan: self.spec.instance.plan.to_owned(),
             options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for PostgreSql {
+impl AddonExt for Redis {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
@@ -128,10 +128,10 @@ impl AddonExt for PostgreSql {
     }
 }
 
-impl PostgreSql {
+impl Redis {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(PostgreSqlStatus::default);
+        let mut status = self.status.get_or_insert_with(RedisStatus::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
@@ -141,16 +141,16 @@ impl PostgreSql {
     pub fn get_addon_id(&self) -> Option<String> {
         self.status
             .to_owned()
-            .unwrap_or_else(PostgreSqlStatus::default)
+            .unwrap_or_else(RedisStatus::default)
             .addon
     }
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlAction structure
+// RedisAction structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum PostgreSqlAction {
+pub enum RedisAction {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
@@ -159,7 +159,7 @@ pub enum PostgreSqlAction {
     DeleteAddon,
 }
 
-impl Display for PostgreSqlAction {
+impl Display for RedisAction {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
@@ -214,17 +214,17 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<PostgreSql> for Reconciler {
-    fn build(&self, state: State) -> Controller<PostgreSql> {
+impl ControllerBuilder<Redis> for Reconciler {
+    fn build(&self, state: State) -> Controller<Redis> {
         Controller::new(Api::all(state.kube), ListParams::default())
     }
 }
 
 #[async_trait]
-impl k8s::Reconciler<PostgreSql> for Reconciler {
+impl k8s::Reconciler<Redis> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: &Context<State>, origin: &Redis) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
@@ -242,7 +242,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &PostgreSqlAction::UpsertFinalizer;
+        let action = &RedisAction::UpsertFinalizer;
         let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -250,10 +250,10 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // Step 2: translate plan
 
         if !modified.spec.instance.plan.starts_with("plan_") {
-            info!("Resolve plan for postgresql addon provider"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
+            info!("Resolve plan for redis addon provider"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
             let plan = plan::find(
                 apis,
-                &AddonProviderId::PostgreSql,
+                &AddonProviderId::Redis,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
             )
@@ -272,7 +272,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
                 let modified =
                     resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
-                let action = &PostgreSqlAction::OverridesInstancePlan;
+                let action = &RedisAction::OverridesInstancePlan;
                 let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
                 info!("Create '{}' event for resource", action; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
                 recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -297,9 +297,9 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::UpsertAddon;
+        let action = &RedisAction::UpsertAddon;
         let message = &format!(
-            "Create managed postgresql instance on clever-cloud '{}'",
+            "Create managed redis instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -316,7 +316,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
-            let action = &PostgreSqlAction::UpsertSecret;
+            let action = &RedisAction::UpsertSecret;
             let message = &format!("Create kubernetes secret '{}'", secret.name());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
@@ -324,7 +324,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: &Context<State>, origin: &Redis) -> Result<(), ReconcilerError> {
         let State {
             apis,
             kube,
@@ -346,8 +346,8 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::DeleteAddon;
-        let message = "Delete managed postgresql instance on clever-cloud";
+        let action = &RedisAction::DeleteAddon;
+        let message = "Delete managed redis instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
@@ -356,7 +356,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
-        let action = &PostgreSqlAction::DeleteFinalizer;
+        let action = &RedisAction::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
