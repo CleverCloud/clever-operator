@@ -253,9 +253,9 @@ dependencies = [
 
 [[package]]
 name = "clevercloud-sdk"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d473e4a3a1c45730123a45825be9dc0e31f25d405f6d61f31e60e2d4cbcfb44d"
+checksum = "b535c4cf1f70689b1bca602300542585a3d730bb1628d08df846ab732066535c"
 dependencies = [
  "async-trait",
  "hyper",
@@ -1014,10 +1014,11 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.62.0"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8db51365e1dbaaf9e5216849ca7d0c03e2c43bae5a9d7a4f6104999448eb16b4"
+checksum = "74c52a1e6b65e154ea6541bff7f0a9059cba7c4f1ca2aff29e51ac494a3d1ce7"
 dependencies = [
+ "k8s-openapi",
  "kube-client",
  "kube-core",
  "kube-derive",
@@ -1025,9 +1026,9 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.62.0"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cd12d68768b54bbd50547f4c7b57b73cff680ef8da3ba409463ee995cf0d707"
+checksum = "12181c33b78e03f0c8ba515a7793a64dc0b1e15bc7af5d76cb09e83689e5e421"
 dependencies = [
  "base64",
  "bytes 1.1.0",
@@ -1040,11 +1041,9 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "hyper-timeout",
- "hyper-tls",
  "jsonpath_lib",
  "k8s-openapi",
  "kube-core",
- "openssl",
  "pem",
  "pin-project 1.0.8",
  "rand",
@@ -1055,7 +1054,6 @@ dependencies = [
  "serde_yaml",
  "thiserror",
  "tokio 1.12.0",
- "tokio-native-tls",
  "tokio-tungstenite",
  "tokio-util",
  "tower",
@@ -1066,9 +1064,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.62.0"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cb6083983fc47d9144f1796d47edfeaba7e012de94c151bec8533af89d9b198"
+checksum = "6f8ed1232f14e3c9dfae622f9af4bce5500f8f91d0df706fe4cf23aadecca938"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -1083,9 +1081,9 @@ dependencies = [
 
 [[package]]
 name = "kube-derive"
-version = "0.62.0"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f61042dcda7b3026e2a741692ea8feba6c76c7781eeb5380364f3dacb0ce85"
+checksum = "15157f862856ce4e91e05997a9327ab37b6c4dc46a809572466068d14acaf2dd"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1096,9 +1094,9 @@ dependencies = [
 
 [[package]]
 name = "kube-runtime"
-version = "0.62.0"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dc77aa51353e95d9f16157adf9f8e5322ec8fa2bffaabe895ed815b968cfc5e"
+checksum = "e1a87375d128f8a5017a1fb76ae3d2ed919d861cf192bf1708575e9ab8f097e3"
 dependencies = [
  "dashmap",
  "derivative",
@@ -1179,15 +1177,6 @@ name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
-
-[[package]]
-name = "matchers"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
-dependencies = [
- "regex-automata",
-]
 
 [[package]]
 name = "matches"
@@ -1845,15 +1834,6 @@ checksum = "d07a8629359eb56f1e2fb1652bb04212c072a87ba68546a04065d525673ac461"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax",
-]
-
-[[package]]
-name = "regex-automata"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
-dependencies = [
  "regex-syntax",
 ]
 
@@ -3017,9 +2997,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-opentelemetry"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "599f388ecb26b28d9c1b2e4437ae019a7b336018b45ed911458cd9ebf91129f6"
+checksum = "3ffbf13a0f8b054a4e59df3a173b818e9c6177c02789871f2073977fd0062076"
 dependencies = [
  "opentelemetry",
  "tracing",
@@ -3029,35 +3009,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-serde"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb65ea441fbb84f9f6748fd496cf7f63ec9af5bca94dd86456978d055e8eb28b"
-dependencies = [
- "serde 1.0.130",
- "tracing-core",
-]
-
-[[package]]
 name = "tracing-subscriber"
-version = "0.2.25"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
+checksum = "80a4ddde70311d8da398062ecf6fc2c309337de6b0f77d6c27aff8d53f6fca52"
 dependencies = [
  "ansi_term 0.12.1",
- "chrono",
- "lazy_static",
- "matchers",
- "regex",
- "serde 1.0.130",
- "serde_json",
  "sharded-slab",
  "smallvec 1.7.0",
  "thread_local",
- "tracing",
  "tracing-core",
  "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]

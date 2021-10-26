@@ -1,0 +1,121 @@
+---
+apiVersion: api.clever-cloud.com/v1beta1
+kind: Pulsar
+metadata:
+  namespace: default
+  name: pulsar
+spec:
+  organisation: orga_xxxx
+  instance:
+    region: par
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: debian-pulsar
+  name: debian-pulsar
+  namespace: default
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: debian-pulsar
+  namespace: default
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: debian-pulsar
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: debian-pulsar
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: debian-pulsar
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  name: debian-pulsar
+  labels:
+    app: debian-pulsar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debian-pulsar
+  template:
+    metadata:
+      labels:
+        app: debian-pulsar
+    spec:
+      serviceAccountName: debian-pulsar
+      automountServiceAccountToken: true
+      containers:
+        - image: debian:bullseye-slim
+          imagePullPolicy: Always
+          name: debian-pulsar
+          command:
+            - "sleep"
+            - "3600"
+          env:
+          - name: ADDON_PULSAR_BINARY_PORT
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets # build using the name of the addon following by -secrets
+                key: ADDON_PULSAR_BINARY_PORT
+          - name: ADDON_PULSAR_BINARY_URL
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_BINARY_URL
+          - name: ADDON_PULSAR_HTTP_URL
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_HTTP_URL
+          - name: ADDON_PULSAR_HOSTNAME
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_HOSTNAME
+          - name: ADDON_PULSAR_HTTP_PORT
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_HTTP_PORT
+          - name: ADDON_PULSAR_NAMESPACE
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_NAMESPACE
+          - name: ADDON_PULSAR_TENANT
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_TENANT
+          - name: ADDON_PULSAR_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: pulsar-secrets
+                key: ADDON_PULSAR_TOKEN
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+            limits:
+              memory: 64M
+              cpu: 100m

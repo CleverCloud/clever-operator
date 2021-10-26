@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub mod mongodb;
 pub mod mysql;
 pub mod postgresql;
+pub mod pulsar;
 pub mod redis;
 
 // -----------------------------------------------------------------------------
@@ -16,6 +17,8 @@ pub mod redis;
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct Instance {
+    #[serde(rename = "region")]
     pub region: String,
+    #[serde(rename = "plan")]
     pub plan: String,
 }
