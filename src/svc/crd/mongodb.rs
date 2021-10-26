@@ -47,8 +47,8 @@ pub struct MongoDbOpts {
 impl Into<AddonOpts> for MongoDbOpts {
     fn into(self) -> AddonOpts {
         AddonOpts {
-            version: self.version.to_string(),
-            encryption: self.encryption.to_string(),
+            version: Some(self.version.to_string()),
+            encryption: Some(self.encryption.to_string()),
         }
     }
 }
@@ -139,10 +139,7 @@ impl MongoDb {
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn get_addon_id(&self) -> Option<String> {
-        self.status
-            .to_owned()
-            .unwrap_or_else(MongoDbStatus::default)
-            .addon
+        self.status.to_owned().unwrap_or_default().addon
     }
 }
 

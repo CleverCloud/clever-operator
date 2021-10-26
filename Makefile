@@ -45,7 +45,7 @@ docker-push: docker-build
 # ------------------------------------------------------------------------------
 # Kubernetes deployment
 .PHONY: crd
-crd: build $(DEPLOY_KUBE)/10-custom-resource-definition.yaml $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml
+crd: build $(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml $(DEPLOY_KUBE)/10-custom-resource-definition.yaml $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml
 
 $(DEPLOY_KUBE)/10-custom-resource-definition.yaml:
 	$(DIST)/$(NAME) custom-resource-definition view > $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
@@ -61,6 +61,9 @@ $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml:
 
 $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml:
 	$(DIST)/$(NAME) custom-resource-definition view mongodb > $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml
+
+$(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml:
+	$(DIST)/$(NAME) custom-resource-definition view pulsar > $(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml
 
 .PHONY: validate
 validate: $(shell $(FIND) -type f -name '*.yaml')

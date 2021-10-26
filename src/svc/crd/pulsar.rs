@@ -1,6 +1,6 @@
-//! # PostgreSQL addon
+//! # Pulsar addon
 //!
-//! This module provide the postgresql custom resource and its definition
+//! This module provide the puslar custom resource and its definition
 
 use std::fmt::{self, Display, Formatter};
 
@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     oauth10a::ClientError,
     v2::addon::{AddonOpts, CreateAddonOpts},
-    v4::addon_provider::{plan, postgresql, AddonProviderId},
+    v4::addon_provider::AddonProviderId,
 };
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
@@ -23,86 +23,73 @@ use slog_scope::{debug, error, info};
 
 use crate::svc::{
     clevercloud::ext::AddonExt,
-    crd::Instance,
     k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
 };
 
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/postgresql";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/pulsar";
+pub const ADDON_BETA_PLAN: &str = "plan_3ad3c5be-5c1e-4dae-bf9a-87120b88fc13";
 
 // -----------------------------------------------------------------------------
-// PostgreSqlOptions structure
+// PulsarInstance structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PostgreSqlOpts {
-    #[serde(rename = "version")]
-    pub version: postgresql::Version,
-    #[serde(rename = "encryption")]
-    pub encryption: bool,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<AddonOpts> for PostgreSqlOpts {
-    fn into(self) -> AddonOpts {
-        AddonOpts {
-            version: Some(self.version.to_string()),
-            encryption: Some(self.encryption.to_string()),
-        }
-    }
+pub struct PulsarInstance {
+    #[serde(rename = "region")]
+    pub region: String,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlSpec structure
+// PulsarSpec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
-#[kube(version = "v1")]
-#[kube(kind = "PostgreSql")]
-#[kube(singular = "postgresql")]
-#[kube(plural = "postgresqls")]
-#[kube(shortname = "pg")]
-#[kube(status = "PostgreSqlStatus")]
+#[kube(version = "v1beta1")]
+#[kube(kind = "Pulsar")]
+#[kube(singular = "pulsar")]
+#[kube(plural = "pulsars")]
+#[kube(shortname = "pulse")]
+#[kube(shortname = "pul")]
+#[kube(status = "PulsarStatus")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
-pub struct PostgreSqlSpec {
+pub struct PulsarSpec {
     #[serde(rename = "organisation")]
     pub organisation: String,
-    #[serde(rename = "options")]
-    pub options: PostgreSqlOpts,
     #[serde(rename = "instance")]
-    pub instance: Instance,
+    pub instance: PulsarInstance,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSQLStatus structure
+// PulsarStatus structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
-pub struct PostgreSqlStatus {
+pub struct PulsarStatus {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSql implementation
+// Pulsar implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateAddonOpts> for PostgreSql {
+impl Into<CreateAddonOpts> for Pulsar {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> CreateAddonOpts {
         CreateAddonOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::PostgreSql.to_string(),
-            plan: self.spec.instance.plan.to_owned(),
-            options: self.spec.options.into(),
+            provider_id: AddonProviderId::Pulsar.to_string(),
+            plan: ADDON_BETA_PLAN.to_string(),
+            options: AddonOpts::default(),
         }
     }
 }
 
-impl AddonExt for PostgreSql {
+impl AddonExt for Pulsar {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
@@ -128,10 +115,10 @@ impl AddonExt for PostgreSql {
     }
 }
 
-impl PostgreSql {
+impl Pulsar {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(PostgreSqlStatus::default);
+        let mut status = self.status.get_or_insert_with(PulsarStatus::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
@@ -144,25 +131,23 @@ impl PostgreSql {
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlAction structure
+// PulsarAction structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum PostgreSqlAction {
+pub enum PulsarAction {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
-    OverridesInstancePlan,
     DeleteFinalizer,
     DeleteAddon,
 }
 
-impl Display for PostgreSqlAction {
+impl Display for PulsarAction {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
             Self::UpsertAddon => write!(f, "UpsertAddon"),
             Self::UpsertSecret => write!(f, "UpsertSecret"),
-            Self::OverridesInstancePlan => write!(f, "OverridesInstancePlan"),
             Self::DeleteFinalizer => write!(f, "DeleteFinalizer"),
             Self::DeleteAddon => write!(f, "DeleteAddon"),
         }
@@ -211,17 +196,17 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<PostgreSql> for Reconciler {
-    fn build(&self, state: State) -> Controller<PostgreSql> {
+impl ControllerBuilder<Pulsar> for Reconciler {
+    fn build(&self, state: State) -> Controller<Pulsar> {
         Controller::new(Api::all(state.kube), ListParams::default())
     }
 }
 
 #[async_trait]
-impl k8s::Reconciler<PostgreSql> for Reconciler {
+impl k8s::Reconciler<Pulsar> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: &Context<State>, origin: &Pulsar) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
@@ -239,46 +224,14 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &PostgreSqlAction::UpsertFinalizer;
+        let action = &PulsarAction::UpsertFinalizer;
         let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 2: translate plan
+        // Step 2:
 
-        if !modified.spec.instance.plan.starts_with("plan_") {
-            info!("Resolve plan for postgresql addon provider"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
-            let plan = plan::find(
-                apis,
-                &AddonProviderId::PostgreSql,
-                &modified.spec.organisation,
-                &modified.spec.instance.plan,
-            )
-            .await?;
-
-            // Update the spec is not a good practise as it lead to
-            // no-deterministic and infinite reconciliation loop. It should be
-            // avoided or done with caution.
-            if let Some(plan) = plan {
-                info!("Override plan for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "plan" => &plan.id);
-                let oplan = modified.spec.instance.plan.to_owned();
-                modified.spec.instance.plan = plan.id.to_owned();
-
-                debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-                let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
-                let modified =
-                    resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
-
-                let action = &PostgreSqlAction::OverridesInstancePlan;
-                let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
-                info!("Create '{}' event for resource", action; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
-                recorder::normal(kube.to_owned(), &modified, action, message).await?;
-            }
-
-            // Stop reconciliation here and wait for next iteration, already
-            // triggered by the above patch request
-            return Ok(());
-        }
+        // This is not the step that you are looking for.
 
         // ---------------------------------------------------------------------
         // Step 3: upsert addon
@@ -294,9 +247,9 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::UpsertAddon;
+        let action = &PulsarAction::UpsertAddon;
         let message = &format!(
-            "Create managed postgresql instance on clever-cloud '{}'",
+            "Create managed pulsar instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -313,7 +266,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
-            let action = &PostgreSqlAction::UpsertSecret;
+            let action = &PulsarAction::UpsertSecret;
             let message = &format!("Create kubernetes secret '{}'", secret.name());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
@@ -321,7 +274,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: &Context<State>, origin: &PostgreSql) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: &Context<State>, origin: &Pulsar) -> Result<(), ReconcilerError> {
         let State {
             apis,
             kube,
@@ -343,8 +296,8 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::DeleteAddon;
-        let message = "Delete managed postgresql instance on clever-cloud";
+        let action = &PulsarAction::DeleteAddon;
+        let message = "Delete managed pulsar instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
@@ -353,7 +306,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
-        let action = &PostgreSqlAction::DeleteFinalizer;
+        let action = &PulsarAction::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
