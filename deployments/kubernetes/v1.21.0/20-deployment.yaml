@@ -83,7 +83,7 @@ spec:
           - key: "config.toml"
             path: "config.toml"
       containers:
-        - image: clevercloud/clever-operator:v0.2.0
+        - image: clevercloud/clever-operator:v0.3.0
           imagePullPolicy: Always
           name: clever-operator
           volumeMounts:

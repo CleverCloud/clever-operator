@@ -14,7 +14,7 @@ KUBE_SCORE			?= $(shell which kube-score)
 KUBE_VERSION		?= v1.21.0
 
 OLM_SDK		    	?= $(shell which operator-sdk)
-OLM_VERSION			?= v0.2.0
+OLM_VERSION			?= v0.3.0
 
 DEPLOY_KUBE			?= deployments/kubernetes/$(KUBE_VERSION)
 DEPLOY_OLM			?= deployments/operator-lifecycle-manager/$(OLM_VERSION)
