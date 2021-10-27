@@ -3,8 +3,8 @@
 [package]
 name = "clever-operator"
 description = "A kubernetes operator that expose clever cloud's resources through custom resource definition"
-version = "0.2.0"
-edition = "2018"
+version = "0.3.0"
+edition = "2021"
 authors = ["Florentin Dubois <florentin.dubois@clever-cloud.com>"]
 license-file = "LICENSE"
 readme = "README.md"
