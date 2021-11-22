@@ -105,7 +105,7 @@ pub enum DaemonError {
     #[error("failed to handle termintion signal, {0}")]
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
-    Client(kube::Error),
+    Client(client::Error),
 }
 
 // -----------------------------------------------------------------------------

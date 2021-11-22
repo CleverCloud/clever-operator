@@ -252,7 +252,7 @@ where
                         .with_label_values(&[&api_resource.kind])
                         .inc();
                 }
-                Err(controller::Error::ObjectNotFound { obj_ref, .. }) => {
+                Err(controller::Error::ObjectNotFound(obj_ref)) => {
                     debug!("Received an event about an already deleted resource"; "name" => &obj_ref.name, "namespace" => &obj_ref.namespace);
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS

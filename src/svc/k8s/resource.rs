@@ -440,7 +440,7 @@ where
 {
     let (ns, name) = namespaced_name(obj);
     if let Some(o) = get(client.to_owned(), &ns, &name).await? {
-        let p = diff(&o, obj)?;
+        let p = diff(&o, obj).map_err(kube::Error::SerdeError)?;
         let mut obj = patch(client.to_owned(), obj, p.to_owned()).await?;
 
         // todo: change this boolean to a polymorphic implementation instead
