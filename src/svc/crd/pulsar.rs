@@ -212,15 +212,16 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             apis,
             config: _,
         } = ctx.get_ref();
+        let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(origin);
 
         // ---------------------------------------------------------------------
         // Step 1: set finalizer
 
-        info!("Set finalizer on custom resource"; "kind" => &origin.kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!("Set finalizer on custom resource"; "kind" => &kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::add(origin.to_owned(), ADDON_FINALIZER);
 
-        debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
@@ -236,12 +237,12 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 3: upsert addon
 
-        info!("Upsert addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!("Upsert addon for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let addon = modified.upsert(apis).await?;
 
         modified.set_addon_id(Some(addon.id.to_owned()));
 
-        debug!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -262,7 +263,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
 
-            info!("Upsert kubernetes secret resource for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+            info!("Upsert kubernetes secret resource for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
@@ -281,16 +282,17 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             config: _,
         } = ctx.get_ref();
         let mut modified = origin.to_owned();
+        let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(origin);
 
         // ---------------------------------------------------------------------
         // Step 1: delete the addon
 
-        info!("Delete addon for custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!("Delete addon for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         modified.delete(apis).await?;
         modified.set_addon_id(None);
 
-        debug!("Update information and status of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -303,14 +305,14 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 2: remove the finalizer
 
-        info!("Remove finalizer on custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!("Remove finalizer on custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
         let action = &PulsarAction::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
-        debug!("Update information of custom resource"; "kind" => &modified.kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
         resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
