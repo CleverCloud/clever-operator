@@ -11,15 +11,15 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.51"
+async-trait = "^0.1.52"
 chrono = "^0.4.19"
-clevercloud-sdk = { version = "^0.5.1", features = ["jsonschemas"] }
+clevercloud-sdk = { version = "^0.5.2", features = ["jsonschemas"] }
 config = "^0.11.0"
-futures = "^0.3.17"
+futures = "^0.3.18"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.15", features = ["server", "tcp", "http1"] }
+hyper = { version = "^0.14.16", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.64.0", default-features = false, features = [
+kube = { version = "^0.65.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -27,8 +27,8 @@ kube = { version = "^0.64.0", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.64.0"
-kube-runtime = "^0.64.0"
+kube-derive = "^0.65.0"
+kube-runtime = "^0.65.0"
 k8s-openapi = { version = "^0.13.1", default-features = false, features = [
     "v1_21",
 ] }
@@ -42,7 +42,7 @@ opentelemetry-jaeger = { version = "^0.15.0", features = [
 ], optional = true }
 paw = "^1.0.0"
 prometheus = { version = "^0.13.0", optional = true }
-schemars = { version = "^0.8.7", features = [
+schemars = { version = "^0.8.8", features = [
     "chrono",
     "indexmap",
     "uuid",
@@ -50,12 +50,12 @@ schemars = { version = "^0.8.7", features = [
     "url",
 ] }
 sentry = { version = "^0.23.0", optional = true }
-serde = { version = "^1.0.130", features = ["derive"] }
-serde_json = { version = "^1.0.71", features = [
+serde = { version = "^1.0.131", features = ["derive"] }
+serde_json = { version = "^1.0.72", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.8.21"
+serde_yaml = "^0.8.23"
 slog = { version = "^2.7.0" }
 slog-async = "^2.7.0"
 slog-term = "^2.8.0"
@@ -66,7 +66,7 @@ thiserror = "^1.0.30"
 tokio = { version = "^1.14.0", features = ["full"] }
 tracing = { version = "0.1.29", optional = true }
 tracing-futures = { version = "^0.2.5", features = ["tokio"], optional = true }
-tracing-subscriber = { version = "^0.3.2", optional = true }
+tracing-subscriber = { version = "^0.3.3", optional = true }
 tracing-opentelemetry = { version = "^0.16.0", optional = true }
 
 [features]
