@@ -124,7 +124,7 @@ jobs:
           context: deployments/operator-lifecycle-manager/v0.3.1
           push: 'true'
           tags: clevercloud/clever-operator-manifest:${{ github.sha }}
-          file: bundle.Dockerfile
+          file: deployments/operator-lifecycle-manager/v0.3.1/bundle.Dockerfile
   kubernetes-deployment-scripts-validation:
     name: Kubernetes validate deployment scripts
     runs-on: ubuntu-latest
