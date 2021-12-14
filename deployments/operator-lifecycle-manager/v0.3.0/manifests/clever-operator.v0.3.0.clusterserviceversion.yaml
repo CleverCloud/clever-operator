@@ -8,7 +8,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     certified: "false"
-    containerImage: clevercloud/clever-operator:v0.2.0
+    containerImage: clevercloud/clever-operator:0566ceb0a0e8def0c2a047a896ddc3f824f6f9ec
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -197,7 +197,7 @@ spec:
               serviceAccountName: clever-operator
               automountServiceAccountToken: false
               containers:
-                - image: clevercloud/clever-operator:v0.3.0
+                - image: clevercloud/clever-operator:0566ceb0a0e8def0c2a047a896ddc3f824f6f9ec
                   imagePullPolicy: Always
                   name: clever-operator
                   resources:
