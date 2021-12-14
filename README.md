@@ -10,7 +10,8 @@ resources will match Clever-Cloud's add-ons.
 
 ## Status
 
-The operator is under development, you can use it, but it may have bugs or unimplemented features.
+The operator is under development, you can use it, but it may have bugs or unimplemented features. You could see missing
+features by checking issues with the label `enhancement`.
 
 ## Install
 
@@ -70,11 +71,15 @@ Then, push it to your registry.
 $ DOCKER_IMG=<your-registry>/<your-namespace>/clever-operator:latest make docker-push
 ```
 
-Then, update the kubernetes deployment script to deploy your docker image in your kubernetes cluster. Finally, apply
-the deployment script.
+Then, update the kubernetes deployment script located in `deployments/kubernetes/v1.21.0/20-deployment.yaml` to deploy
+your docker image in your kubernetes cluster. Finally, apply the deployment script.
 
 ```
 $ make deploy-kubernetes
+```
+or
+```
+$ kubectl apply -f deployments/kubernetes/v1.21.0
 ```
 
 ### From dockerhub
@@ -85,6 +90,40 @@ script.
 ```
 $ make deploy-kubernetes
 ```
+or
+```
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.21.0/10-custom-resource-definition.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.21.0/20-deployment.yaml
+```
+
+## Configuration
+
+To work properly the operator need to be configured with at least credentials to connect the Clever Cloud's API. Those
+configurations could be provided through a ConfigMap, a Secret or by the environment.
+
+Environment variables are:
+
+| Name                                  | Kind            | Default                        | Required | Description |
+| ------------------------------------- | --------------- | ------------------------------ | -------- | ----------- |
+| `CLEVER_OPERATOR_OPERATOR_LISTEN`     | `SocketAddress` | `0.0.0.0:7080`                 | yes      |             |
+| `CLEVER_OPERATOR_API_ENDPOINT`        | `Url`           | `https://api.clever-cloud.com` | yes      |             |
+| `CLEVER_OPERATOR_API_SECRET`          | `String`        | none                           | yes      |             |
+| `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      |             |
+| `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | yes      |             |
+| `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | yes      |             |
+| `CLEVER_OPERATOR_SENTRY_DSN`          | `Url`           | none                           | no       |             |
+| `CLEVER_OPERATOR_JAEGER_ENDPOINT`     | `Url`           | none                           | no       |             |
+| `CLEVER_OPERATOR_JAEGER_USER`         | `String`        | none                           | no       |             |
+| `CLEVER_OPERATOR_JAEGER_PASSWORD`     | `String`        | none                           | no       |             |
+
+By default, if the `--config` flag is not provided to the binary, the operator will look at the following paths to
+retrieve its configuration:
+
+- `/usr/share/clever-operator/config.{toml,yaml,json}`
+- `/etc/clever-operator/config.{toml,yaml,json}`
+- `$HOME/.config/clever-operator/config.{toml,yaml,json}`
+- `$HOME/.local/share/clever-operator/config.{toml,yaml,json}`
+- `config.{toml,yaml,json}`
 
 ## License
 
