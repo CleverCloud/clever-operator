@@ -21,15 +21,18 @@ pub enum Error {
 /// returns a new kubernetes client from the given path if defined
 /// or retrieve it from environment or defaults paths
 pub async fn try_new(path: Option<PathBuf>) -> Result<kube::Client, Error> {
-    let kubeconfig = match path {
-        None => Kubeconfig::read().map_err(Error::Kubeconfig)?,
-        Some(path) => Kubeconfig::read_from(path).map_err(Error::Kubeconfig)?,
-    };
+    match path {
+        None => kube::Client::try_default()
+            .await
+            .map_err(Error::CreateClient),
+        Some(path) => {
+            let kubeconfig = Kubeconfig::read_from(path).map_err(Error::Kubeconfig)?;
+            let opts = KubeConfigOptions::default();
+            let config = Config::from_custom_kubeconfig(kubeconfig, &opts)
+                .await
+                .map_err(Error::Kubeconfig)?;
 
-    let opts = KubeConfigOptions::default();
-    let config = Config::from_custom_kubeconfig(kubeconfig, &opts)
-        .await
-        .map_err(Error::Kubeconfig)?;
-
-    kube::Client::try_from(config).map_err(Error::CreateClient)
+            kube::Client::try_from(config).map_err(Error::CreateClient)
+        }
+    }
 }
