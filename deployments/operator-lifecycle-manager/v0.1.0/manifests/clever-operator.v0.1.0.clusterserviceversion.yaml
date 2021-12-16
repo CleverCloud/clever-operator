@@ -77,9 +77,9 @@ spec:
     - serviceAccountName: clever-operator
       rules:
       - apiGroups: [""]
-        resources: ["secrets"]
+        resources: ["secrets", "events"]
         verbs: ["*"]
-      - apiGroups: ["postgresqls"]
+      - apiGroups: ["api.clever-cloud.com"]
         resources: ["*"]
         verbs: ["*"]
     spec:
