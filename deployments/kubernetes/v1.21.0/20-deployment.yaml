@@ -12,6 +12,63 @@ metadata:
   name: clever-operator
   namespace: clever-operator-system
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: clever-operator
+  name: system:clever-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - api.clever-cloud.com
+  resources:
+  - pulsars
+  - pulsars/status
+  - mysqls
+  - mysqls/status
+  - postgresqls
+  - postgresqls/status
+  - redis
+  - redis/status
+  - mongodbs
+  - mongodbs/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: clever-operator
+  name: system:clever-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:clever-operator
+subjects:
+- kind: ServiceAccount
+  name: clever-operator
+  namespace: clever-operator-system
+---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
