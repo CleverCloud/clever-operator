@@ -8,7 +8,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     certified: "false"
-    containerImage: clevercloud/clever-operator:94a3a08371d5afd8637607ba15dc94e850866a4b
+    containerImage: clevercloud/clever-operator:20b1d871848c603e4e941e8abe6ea2c9263d06d8
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -85,7 +85,7 @@ metadata:
           }
         }
       }, {
-        "apiVersion": "api.clever-cloud.com/v1",
+        "apiVersion": "api.clever-cloud.com/v1beta1",
         "kind": "Pulsar",
         "metadata": {
           "namespace": "default",
@@ -94,7 +94,7 @@ metadata:
         "spec": {
           "organisation": "orga_xxxx",
           "instance": {
-            "region": "par",
+            "region": "par"
           }
         }
       }]
@@ -155,7 +155,7 @@ spec:
         version: v1
     - kind: Pulsar
       name: pulsars.api.clever-cloud.com
-      version: v1
+      version: v1beta1
       displayName: Pulsar
       description: Clever Cloud's managed pulsar messaging system
       resources:
@@ -197,7 +197,7 @@ spec:
               serviceAccountName: clever-operator
               automountServiceAccountToken: false
               containers:
-                - image: clevercloud/clever-operator:94a3a08371d5afd8637607ba15dc94e850866a4b
+                - image: clevercloud/clever-operator:20b1d871848c603e4e941e8abe6ea2c9263d06d8
                   imagePullPolicy: Always
                   name: clever-operator
                   resources:

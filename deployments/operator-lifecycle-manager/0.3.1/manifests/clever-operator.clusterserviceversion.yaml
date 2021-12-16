@@ -2,13 +2,13 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: cleveroperator.v0.3.0
+  name: cleveroperator.v0.3.1
   namespace: clever-operator-system
   annotations:
     capabilities: Full Lifecycle
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     certified: "false"
-    containerImage: clevercloud/clever-operator:0566ceb0a0e8def0c2a047a896ddc3f824f6f9ec
+    containerImage: clevercloud/clever-operator:d5b80aa746ce6ada80e60f9b384b1383cddc695b
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -85,7 +85,7 @@ metadata:
           }
         }
       }, {
-        "apiVersion": "api.clever-cloud.com/v1",
+        "apiVersion": "api.clever-cloud.com/v1beta1",
         "kind": "Pulsar",
         "metadata": {
           "namespace": "default",
@@ -94,7 +94,7 @@ metadata:
         "spec": {
           "organisation": "orga_xxxx",
           "instance": {
-            "region": "par",
+            "region": "par"
           }
         }
       }]
@@ -117,7 +117,7 @@ spec:
   maturity: alpha
   provider:
     name: Clever Cloud
-  version: 0.3.0
+  version: 0.3.1
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
@@ -155,7 +155,7 @@ spec:
         version: v1
     - kind: Pulsar
       name: pulsars.api.clever-cloud.com
-      version: v1
+      version: v1beta1
       displayName: Pulsar
       description: Clever Cloud's managed pulsar messaging system
       resources:
@@ -197,7 +197,7 @@ spec:
               serviceAccountName: clever-operator
               automountServiceAccountToken: false
               containers:
-                - image: clevercloud/clever-operator:0566ceb0a0e8def0c2a047a896ddc3f824f6f9ec
+                - image: clevercloud/clever-operator:d5b80aa746ce6ada80e60f9b384b1383cddc695b
                   imagePullPolicy: Always
                   name: clever-operator
                   resources:
