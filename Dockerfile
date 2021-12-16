@@ -9,7 +9,7 @@ RUN cargo build --release
 
 FROM debian:bullseye-slim
 
-RUN rm -rf /var/lib/apt/lists/*
+RUN apt update -y && apt install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN groupadd -g 25000 clever && useradd -u 20000 clever -g clever
 
 USER clever:clever
