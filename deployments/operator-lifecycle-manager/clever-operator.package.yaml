@@ -1,5 +1,0 @@
-packageName: clever-operator
-defaultChannel: alpha
-channel:
-- name: alpha
-  currentCSV: clever-operator.v0.3.2
