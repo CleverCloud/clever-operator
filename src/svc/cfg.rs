@@ -7,6 +7,7 @@ use std::{convert::TryFrom, path::PathBuf};
 use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
+use slog_scope::warn;
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -117,6 +118,22 @@ impl TryFrom<PathBuf> for Configuration {
             .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
 
         config
+            .set_default("api.token", "")
+            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?;
+
+        config
+            .set_default("api.secret", "")
+            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?;
+
+        config
+            .set_default("api.consumerKey", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?;
+
+        config
+            .set_default("api.consumerSecret", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?;
+
+        config
             .set_default("operator.listen", OPERATOR_LISTEN)
             .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
 
@@ -187,5 +204,25 @@ impl Configuration {
             .map_err(|err| ConfigurationError::File(path, err))?;
 
         config.try_into().map_err(ConfigurationError::Cast)
+    }
+
+    /// Prints a message about missing value for configuration key
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    pub fn help(&self) {
+        if self.api.consumer_key.is_empty() {
+            warn!("Configuration key 'api.consumerKey' has an empty value");
+        }
+
+        if self.api.consumer_secret.is_empty() {
+            warn!("Configuration key 'api.consumerSecret' has an empty value");
+        }
+
+        if self.api.token.is_empty() {
+            warn!("Configuration key 'api.token' has an empty value");
+        }
+
+        if self.api.secret.is_empty() {
+            warn!("Configuration key 'api.secret' has an empty value");
+        }
     }
 }

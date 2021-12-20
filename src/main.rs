@@ -50,6 +50,7 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
         None => Configuration::try_default()?,
     });
 
+    config.help();
     if args.check {
         debug!("{:#?}", config);
         info!("{} configuration is healthy!", env!("CARGO_PKG_NAME"));
