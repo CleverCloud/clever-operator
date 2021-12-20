@@ -117,6 +117,22 @@ impl TryFrom<PathBuf> for Configuration {
             .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
 
         config
+            .set_default("api.token", "")
+            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?;
+
+        config
+            .set_default("api.secret", "")
+            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?;
+
+        config
+            .set_default("api.consumerKey", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?;
+
+        config
+            .set_default("api.consumerSecret", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?;
+
+        config
             .set_default("operator.listen", OPERATOR_LISTEN)
             .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
 
