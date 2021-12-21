@@ -19,6 +19,7 @@ metadata:
           "namespace": "default",
           "name": "postgresql"
         },
+        "status": {},
         "spec": {
           "organisation": "orga_xxxx",
           "options": {
@@ -37,6 +38,7 @@ metadata:
           "namespace": "default",
           "name": "redis"
         },
+        "status": {},
         "spec": {
           "organisation": "orga_xxxx",
           "options": {
@@ -55,6 +57,7 @@ metadata:
           "namespace": "default",
           "name": "mysql"
         },
+        "status": {},
         "spec": {
           "organisation": "orga_xxxx",
           "options": {
@@ -73,6 +76,7 @@ metadata:
           "namespace": "default",
           "name": "mongodb"
         },
+        "status": {},
         "spec": {
           "organisation": "orga_xxxx",
           "options": {
@@ -116,6 +120,44 @@ spec:
       resources:
       - kind: Secret
         version: v1
+      specDescriptors:
+      - description: Instance options
+        displayName: Instance
+        path: instance
+      - description: Plan of the instance used to spawn the database
+        displayName: Plan
+        path: instance.plan
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Region of the instance used to spawn the database
+        displayName: Region
+        path: instance.region
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Options of the database
+        displayName: options
+        path: options
+      - description: Should the disk be encrypted?
+        displayName: Encryption
+        path: options.encryption
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Version of the database
+        displayName: Version
+        path: options.version
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Clever Cloud's organisation to spawn the database
+        displayName: Organisation
+        path: organisation
+        x-descriptors:
+        - urn:alm:descriptor:text
+      statusDescriptors:
+      - description: Clever Cloud's addon identifier
+        displayName: Addon
+        path: addon
+        x-descriptors:
+        - urn:alm:descriptor:text
     - kind: Redis
       name: redis.api.clever-cloud.com
       version: v1
@@ -124,6 +166,44 @@ spec:
       resources:
       - kind: Secret
         version: v1
+      specDescriptors:
+      - description: Instance options
+        displayName: Instance
+        path: instance
+      - description: Plan of the instance used to spawn the database
+        displayName: Plan
+        path: instance.plan
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Region of the instance used to spawn the database
+        displayName: Region
+        path: instance.region
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Options of the database
+        displayName: options
+        path: options
+      - description: Should the disk be encrypted?
+        displayName: Encryption
+        path: options.encryption
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Version of the database
+        displayName: Version
+        path: options.version
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Clever Cloud's organisation to spawn the database
+        displayName: Organisation
+        path: organisation
+        x-descriptors:
+        - urn:alm:descriptor:text
+      statusDescriptors:
+      - description: Clever Cloud's addon identifier
+        displayName: Addon
+        path: addon
+        x-descriptors:
+        - urn:alm:descriptor:text
     - kind: MySql
       name: mysqls.api.clever-cloud.com
       version: v1
@@ -132,6 +212,44 @@ spec:
       resources:
       - kind: Secret
         version: v1
+      specDescriptors:
+      - description: Instance options
+        displayName: Instance
+        path: instance
+      - description: Plan of the instance used to spawn the database
+        displayName: Plan
+        path: instance.plan
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Region of the instance used to spawn the database
+        displayName: Region
+        path: instance.region
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Options of the database
+        displayName: options
+        path: options
+      - description: Should the disk be encrypted?
+        displayName: Encryption
+        path: options.encryption
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Version of the database
+        displayName: Version
+        path: options.version
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Clever Cloud's organisation to spawn the database
+        displayName: Organisation
+        path: organisation
+        x-descriptors:
+        - urn:alm:descriptor:text
+      statusDescriptors:
+      - description: Clever Cloud's addon identifier
+        displayName: Addon
+        path: addon
+        x-descriptors:
+        - urn:alm:descriptor:text
     - kind: MongoDb
       name: mongodbs.api.clever-cloud.com
       version: v1
@@ -140,6 +258,44 @@ spec:
       resources:
       - kind: Secret
         version: v1
+      specDescriptors:
+      - description: Instance options
+        displayName: Instance
+        path: instance
+      - description: Plan of the instance used to spawn the database
+        displayName: Plan
+        path: instance.plan
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Region of the instance used to spawn the database
+        displayName: Region
+        path: instance.region
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Options of the database
+        displayName: options
+        path: options
+      - description: Should the disk be encrypted?
+        displayName: Encryption
+        path: options.encryption
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Version of the database
+        displayName: Version
+        path: options.version
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: Clever Cloud's organisation to spawn the database
+        displayName: Organisation
+        path: organisation
+        x-descriptors:
+        - urn:alm:descriptor:text
+      statusDescriptors:
+      - description: Clever Cloud's addon identifier
+        displayName: Addon
+        path: addon
+        x-descriptors:
+        - urn:alm:descriptor:text
   installModes:
   - supported: true
     type: OwnNamespace
