@@ -367,8 +367,6 @@ spec:
               labels:
                 app: clever-operator
             spec:
-              serviceAccountName: clever-operator
-              automountServiceAccountToken: false
               containers:
                 - image: clevercloud/clever-operator:20b1d871848c603e4e941e8abe6ea2c9263d06d8
                   imagePullPolicy: Always
