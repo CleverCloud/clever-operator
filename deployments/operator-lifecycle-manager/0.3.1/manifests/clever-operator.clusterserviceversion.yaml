@@ -9,6 +9,7 @@ metadata:
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     certified: "false"
     containerImage: clevercloud/clever-operator:d5b80aa746ce6ada80e60f9b384b1383cddc695b
+    description: A kubernetes operator that expose clever cloud's resources through custom resource definition
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
