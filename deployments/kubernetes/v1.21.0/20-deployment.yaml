@@ -155,7 +155,7 @@ spec:
               memory: 64M
               cpu: 100m
           ports:
-            - containerPort: 7080
+            - containerPort: 8000
               protocol: TCP
               name: observability
           readinessProbe:
