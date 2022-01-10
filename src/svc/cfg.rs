@@ -12,7 +12,7 @@ use slog_scope::warn;
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const OPERATOR_LISTEN: &str = "0.0.0.0:7080";
+pub const OPERATOR_LISTEN: &str = "0.0.0.0:8000";
 
 // -----------------------------------------------------------------------------
 // Operator structure
@@ -159,6 +159,22 @@ impl Configuration {
         config
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
             .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
+
+        config
+            .set_default("api.token", "")
+            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?;
+
+        config
+            .set_default("api.secret", "")
+            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?;
+
+        config
+            .set_default("api.consumerKey", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?;
+
+        config
+            .set_default("api.consumerSecret", "")
+            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?;
 
         config
             .set_default("operator.listen", OPERATOR_LISTEN)

@@ -7,8 +7,9 @@ metadata:
   annotations:
     capabilities: Full Lifecycle
     categories: Developer Tools, Integration & Delivery, Cloud Provider
+    description: A kubernetes operator that expose clever cloud's resources through custom resource definition
     certified: "false"
-    containerImage: clevercloud/clever-operator:ca75b3893d1e188f28fd9f08e30e9905bd626146
+    containerImage: clevercloud/clever-operator:1680db2488c8be856caea616512caffe6ff86707
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -366,10 +367,8 @@ spec:
               labels:
                 app: clever-operator
             spec:
-              serviceAccountName: clever-operator
-              automountServiceAccountToken: false
               containers:
-                - image: clevercloud/clever-operator:ca75b3893d1e188f28fd9f08e30e9905bd626146
+                - image: clevercloud/clever-operator:1680db2488c8be856caea616512caffe6ff86707
                   imagePullPolicy: Always
                   name: clever-operator
                   resources:
@@ -395,7 +394,7 @@ spec:
                   readinessProbe:
                     failureThreshold: 3
                     httpGet:
-                      path: /
+                      path: /healthz
                       port: observability
                       scheme: HTTP
                     periodSeconds: 5
