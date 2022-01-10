@@ -399,7 +399,7 @@ spec:
                   readinessProbe:
                     failureThreshold: 3
                     httpGet:
-                      path: /
+                      path: /healthz
                       port: observability
                       scheme: HTTP
                     periodSeconds: 5
