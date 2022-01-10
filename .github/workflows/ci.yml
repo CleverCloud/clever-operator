@@ -133,4 +133,27 @@ jobs:
       - uses: piraces/kube-score-ga@v0.1.2
         with:
           manifests-folders: 'deployments/kubernetes/v1.21.0/*.yml'
+  kubernetes-deployment:
+    name: Create a minikube and install the operator
+    runs-on: ubuntu-latest
+    needs:
+      - kubernetes-deployment-scripts-validation
+      - docker-build-and-push
+    steps:
+      - uses: actions/checkout@v2
+      - uses: medyagh/setup-minikube@master
+      - run: kubectl apply -f deployments/kubernetes/v1.21.0
+  openshift-deployment:
+    name: Create a minikube, install openshift and install the operator
+    runs-on: ubuntu-latest
+    needs:
+      - kubernetes-deployment-scripts-validation
+      - docker-build-and-push-openshift-manifest
+      - docker-build-and-push
+    steps:
+      - uses: actions/checkout@v2
+      - uses: medyagh/setup-minikube@master
+      - run: curl -L -vvv https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 > /tmp/operator-sdk && chmod +x /tmp/operator-sdk
+      - run: /tmp/operator-sdk olm install --verbose --timeout 30m
+      - run: /tmp/operator-sdk run bundle --verbose --timeout 30m 'docker.io/clevercloud/clever-operator-manifest:${{ github.sha }}'
 ...
