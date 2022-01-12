@@ -12,6 +12,7 @@ metadata:
     containerImage: clevercloud/clever-operator:20b1d871848c603e4e941e8abe6ea2c9263d06d8
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
+    "olm.properties": '[{"type": "olm.maxOpenShiftVersion", "value": "4.9"}]'
     alm-examples: |
       [{
         "apiVersion": "api.clever-cloud.com/v1",
