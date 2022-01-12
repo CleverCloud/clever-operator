@@ -14,6 +14,9 @@ LABEL operators.operatorframework.io.bundle.channel.default.v1=alpha
 LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
 LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
 
+# Label for OpenShift.
+LABEL com.redhat.openshift.versions=v4.6-v4.9
+
 # Copy files to locations specified by labels.
 ADD manifests /manifests/
 ADD metadata /metadata/
