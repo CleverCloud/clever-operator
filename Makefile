@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------------------
 # Define variables
 DIST				?= $(PWD)/target/release
+BIN_DIR				?= $(HOME)/.local/bin
 
 NAME				?= clever-operator
 VERSION				?= $(shell git describe --candidates 1 --tags HEAD 2>/dev/null || echo HEAD)
@@ -14,7 +15,14 @@ KUBE_SCORE			?= $(shell which kube-score)
 KUBE_VERSION		?= v1.21.0
 
 OLM_SDK		    	?= $(shell which operator-sdk)
-OLM_VERSION			?= v0.3.5
+OLM_SDK_VERSION		?= 1.15.0
+OLM_VERSION			?= 0.3.5
+
+OCP_VALIDATOR		?= $(shell which ocp-olm-catalog-validator)
+OCP_VERSION			?= 0.0.1
+
+K8S_VALIDATOR		?= $(shell which k8s-community-bundle-validator)
+K8S_VERSION			?= 0.0.1
 
 DEPLOY_KUBE			?= deployments/kubernetes/$(KUBE_VERSION)
 DEPLOY_OLM			?= deployments/operator-lifecycle-manager/$(OLM_VERSION)
@@ -24,6 +32,10 @@ FIND 				?= $(shell which find)
 CARGO				?= $(shell which cargo)
 CARGO_OPTS			?= --verbose
 
+CURL				?= $(shell which curl)
+MKDIR				?= $(shell which mkdir)
+CHMOD				?= $(shell which chmod)
+
 # ------------------------------------------------------------------------------
 # Build operator
 .PHONY: build
@@ -31,6 +43,16 @@ build: $(DIST)/$(NAME) $(shell $(FIND) -type f -name '*.rs')
 
 $(DIST)/$(NAME): $(shell $(FIND) -type f -name '*.rs')
 	$(CARGO) build $(CARGO_OPTS) --release
+
+# ------------------------------------------------------------------------------
+# Install command line tools
+
+.PHONY: install-cli-tools
+install-cli-tools:
+	$(MKDIR) -p $(BIN_DIR)
+	$(CURL) -L https://github.com/operator-framework/operator-sdk/releases/download/v$(OLM_SDK_VERSION)/operator-sdk_linux_amd64 > $(BIN_DIR)/operator-sdk && $(CHMOD) +x $(BIN_DIR)/operator-sdk
+	$(CURL) -L https://github.com/redhat-openshift-ecosystem/ocp-olm-catalog-validator/releases/download/v$(OCP_VERSION)/linux-amd64-ocp-olm-catalog-validator > $(BIN_DIR)/ocp-olm-catalog-validator && $(CHMOD) +x $(BIN_DIR)/ocp-olm-catalog-validator
+	$(CURL) -L https://github.com/k8s-operatorhub/bundle-validator/releases/download/v$(K8S_VERSION)/linux-amd64-k8s-community-bundle-validator > $(BIN_DIR)/k8s-community-bundle-validator && $(CHMOD) +x $(BIN_DIR)/k8s-community-bundle-validator
 
 # ------------------------------------------------------------------------------
 # Build docker
@@ -69,6 +91,8 @@ $(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml:
 validate: $(shell $(FIND) -type f -name '*.yaml')
 	$(KUBE_SCORE) score $(shell $(FIND) $(DEPLOY_KUBE) -type f -name '*.yaml')
 	$(OLM_SDK) bundle validate $(DEPLOY_OLM)
+	$(OCP_VALIDATOR) $(DEPLOY_OLM) --optional-values="file=$(DEPLOY_OLM)/metadata/annotations.yaml" --output json-alpha1
+	$(K8S_VALIDATOR) $(DEPLOY_OLM) --output json-alpha1
 
 .PHONY: deploy-kubernetes-crd
 deploy-kubernetes-crd: crd validate $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
@@ -76,11 +100,15 @@ deploy-kubernetes-crd: crd validate $(DEPLOY_KUBE)/10-custom-resource-definition
 
 .PHONY: deploy-kubernetes
 deploy-kubernetes: crd validate deploy-kubernete-crd
-	$(KUBE) apply -f $(DEPLOY_KUBE)
+	$(KUBE) apply -f $(DEPLOY_KUBE)/manifests/clever-operator.clusterserviceversion.yaml
 
 .PHONY: deploy-olm-crd
-deploy-olm-crd: crd $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml validate
-	$(KUBE) apply -f $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
+deploy-olm-crd: crd $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml $(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml validate
+	$(KUBE) apply -f $(DEPLOY_OLM)/manifests/clever-operator-postgresql.crd.yaml
+	$(KUBE) apply -f $(DEPLOY_OLM)/manifests/clever-operator-redis.crd.yaml
+	$(KUBE) apply -f $(DEPLOY_OLM)/manifests/clever-operator-mysql.crd.yaml
+	$(KUBE) apply -f $(DEPLOY_OLM)/manifests/clever-operator-mongodb.crd.yaml
+	$(KUBE) apply -f $(DEPLOY_OLM)/manifests/clever-operator-pulsar.crd.yaml
 
 .PHONY: deploy-olm
 deploy-olm: crd validate deploy-olm-crd
@@ -89,10 +117,9 @@ deploy-olm: crd validate deploy-olm-crd
 # ------------------------------------------------------------------------------
 # Clean up
 .PHONY: clean
-clean:
+clean: clean-kubernetes clean-olm
 	$(CARGO) clean $(CARGO_OPTS)
 	rm $(DEPLOY_KUBE)/10-custom-resource-definition.yaml
-	rm $(DEPLOY_OLM)/clever-operator-postgresql.crd.yaml
 
 .PHONY: clean-kubernetes
 clean-kubernetes:
@@ -100,4 +127,4 @@ clean-kubernetes:
 
 .PHONY: clean-olm
 clean-olm:
-	$(KUBE) delete -f $(DEPLOY_OLM)
+	$(KUBE) delete -f $(DEPLOY_OLM)/manifests
