@@ -372,6 +372,8 @@ spec:
                 - image: clevercloud/clever-operator:20b1d871848c603e4e941e8abe6ea2c9263d06d8
                   imagePullPolicy: Always
                   name: clever-operator
+                  command: ["/usr/local/bin/clever-operator"]
+                  args: ["-vvvvvvv"]
                   resources:
                     requests:
                       memory: 64M
