@@ -1,5 +1,7 @@
 # Clever operator
 
+[![Continuous integration](https://github.com/CleverCloud/clever-operator/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CleverCloud/clever-operator/actions/workflows/ci.yml)
+
 > A kubernetes operator that expose clever cloud's resources through custom resource definition
 
 ## How it works
