@@ -143,6 +143,8 @@ spec:
         - image: clevercloud/clever-operator:6d248d22533f6fca2f52ceb5f87c32049312b510
           imagePullPolicy: Always
           name: clever-operator
+          command: ["/usr/local/bin/clever-operator"]
+          args: ["-vvvvvvv"]
           volumeMounts:
           - name: config
             mountPath: "/etc/clever-operator"
