@@ -122,15 +122,15 @@ where
 #[async_trait]
 pub trait Reconciler<T>
 where
-    T: ResourceExt + CustomResourceExt + Debug + Send + Sync + 'static,
+    T: ResourceExt + CustomResourceExt + Debug + Clone + Send + Sync + 'static,
 {
     type Error: Error + Send + Sync;
 
     /// create or update the object, this is part of the the reconcile function
-    async fn upsert(ctx: &Context<State>, obj: &T) -> Result<(), Self::Error>;
+    async fn upsert(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// delete the object from kubernetes and third parts
-    async fn delete(ctx: &Context<State>, bj: &T) -> Result<(), Self::Error>;
+    async fn delete(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// returns a [`ReconcilerAction`] to perform following the given error
     fn retry(err: &Self::Error, _ctx: Context<State>) -> ReconcilerAction {
@@ -145,11 +145,11 @@ where
     /// process the object and perform actions on kubernetes and/or
     /// clever-cloud api returns a [`ReconcilerAction`] to maybe perform another
     /// reconciliation or an error, if something gets wrong.
-    async fn reconcile(obj: T, ctx: Context<State>) -> Result<ReconcilerAction, Self::Error> {
-        let (namespace, name) = resource::namespaced_name(&obj);
+    async fn reconcile(obj: Arc<T>, ctx: Context<State>) -> Result<ReconcilerAction, Self::Error> {
+        let (namespace, name) = resource::namespaced_name(&*obj);
         let api_resource = T::api_resource();
 
-        if resource::deleted(&obj) {
+        if resource::deleted(&*obj) {
             info!("Received deletion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace);
             #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
@@ -157,9 +157,9 @@ where
                 .inc();
 
             #[cfg(not(feature = "trace"))]
-            let result = Self::delete(&ctx, &obj).await;
+            let result = Self::delete(&ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::delete(&ctx, &obj)
+            let result = Self::delete(&ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))
                 .await;
 
@@ -175,9 +175,9 @@ where
                 .inc();
 
             #[cfg(not(feature = "trace"))]
-            let result = Self::upsert(&ctx, &obj).await;
+            let result = Self::upsert(&ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::upsert(&ctx, &obj)
+            let result = Self::upsert(&ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::upsert"))
                 .await;
 

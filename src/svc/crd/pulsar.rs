@@ -2,7 +2,10 @@
 //!
 //! This module provide the puslar custom resource and its definition
 
-use std::fmt::{self, Display, Formatter};
+use std::{
+    fmt::{self, Display, Formatter},
+    sync::Arc,
+};
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
@@ -206,23 +209,23 @@ impl ControllerBuilder<Pulsar> for Reconciler {
 impl k8s::Reconciler<Pulsar> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: &Context<State>, origin: &Pulsar) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: &Context<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
             config: _,
         } = ctx.get_ref();
         let kind = Pulsar::kind(&()).to_string();
-        let (namespace, name) = resource::namespaced_name(origin);
+        let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
         // Step 1: set finalizer
 
         info!("Set finalizer on custom resource"; "kind" => &kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
-        let modified = finalizer::add(origin.to_owned(), ADDON_FINALIZER);
+        let modified = finalizer::add((*origin).to_owned(), ADDON_FINALIZER);
 
         debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
         let action = &PulsarAction::UpsertFinalizer;
@@ -243,7 +246,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         modified.set_addon_id(Some(addon.id.to_owned()));
 
         debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
@@ -275,15 +278,15 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: &Context<State>, origin: &Pulsar) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: &Context<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
         let State {
             apis,
             kube,
             config: _,
         } = ctx.get_ref();
-        let mut modified = origin.to_owned();
+        let mut modified = (*origin).to_owned();
         let kind = Pulsar::kind(&()).to_string();
-        let (namespace, name) = resource::namespaced_name(origin);
+        let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
         // Step 1: delete the addon
@@ -293,7 +296,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         modified.set_addon_id(None);
 
         debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
@@ -313,7 +316,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        let patch = resource::diff(origin, &modified).map_err(ReconcilerError::Diff)?;
+        let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
         Ok(())
