@@ -15,7 +15,7 @@ keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 [dependencies]
 async-trait = "^0.1.52"
 chrono = "^0.4.19"
-clevercloud-sdk = { version = "^0.5.4", features = ["jsonschemas"] }
+clevercloud-sdk = { version = "^0.6.0", features = ["jsonschemas"] }
 config = "^0.11.0"
 futures = "^0.3.19"
 hostname = "^0.3.1"
