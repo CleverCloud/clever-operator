@@ -9,9 +9,14 @@ use std::{
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
-    oauth10a::ClientError,
-    v2::addon::{AddonOpts, CreateAddonOpts},
-    v4::addon_provider::{plan, postgresql, AddonProviderId},
+    v2::{
+        self,
+        addon::{AddonOpts, CreateAddonOpts},
+    },
+    v4::{
+        self,
+        addon_provider::{plan, postgresql, AddonProviderId},
+    },
 };
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
@@ -25,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use slog_scope::{debug, error, info};
 
 use crate::svc::{
-    clevercloud::ext::AddonExt,
+    clevercloud::{self, ext::AddonExt},
     crd::Instance,
     k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
 };
@@ -180,7 +185,7 @@ pub enum ReconcilerError {
     #[error("failed to reconcile resource, {0}")]
     Reconcile(String),
     #[error("failed to execute request on clever-cloud api, {0}")]
-    CleverClient(ClientError),
+    CleverClient(clevercloud::Error),
     #[error("failed to execute request on kubernetes api, {0}")]
     KubeClient(kube::Error),
     #[error("failed to compute diff between the original and modified object, {0}")]
@@ -194,10 +199,24 @@ impl From<kube::Error> for ReconcilerError {
     }
 }
 
-impl From<ClientError> for ReconcilerError {
+impl From<clevercloud::Error> for ReconcilerError {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn from(err: ClientError) -> Self {
+    fn from(err: clevercloud::Error) -> Self {
         Self::CleverClient(err)
+    }
+}
+
+impl From<v2::addon::Error> for ReconcilerError {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn from(err: v2::addon::Error) -> Self {
+        Self::from(clevercloud::Error::from(err))
+    }
+}
+
+impl From<v4::addon_provider::plan::Error> for ReconcilerError {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn from(err: v4::addon_provider::plan::Error) -> Self {
+        Self::from(clevercloud::Error::from(err))
     }
 }
 

@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, fmt::Debug};
 use async_trait::async_trait;
 use clevercloud_sdk::{
     oauth10a::ClientError,
-    v2::addon::{self, Addon, CreateAddonOpts},
+    v2::addon::{self, Addon, CreateAddonOpts, Error},
     Client,
 };
 use hyper::StatusCode;
@@ -19,7 +19,7 @@ use slog_scope::{debug, trace};
 
 #[async_trait]
 pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
-    type Error: From<ClientError> + Sync + Send;
+    type Error: From<Error> + Sync + Send;
 
     fn id(&self) -> Option<String>;
 
@@ -35,7 +35,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
                 Ok(addon) => {
                     return Ok(Some(addon));
                 }
-                Err(ClientError::StatusCode(code, _))
+                Err(Error::Get(_, _, ClientError::StatusCode(code, _)))
                     if StatusCode::NOT_FOUND.as_u16() == code.as_u16() =>
                 {
                     // try to retrieve the addon from the name

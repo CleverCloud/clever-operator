@@ -275,9 +275,9 @@ dependencies = [
 
 [[package]]
 name = "clevercloud-sdk"
-version = "0.5.4"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3346c5f28dc57f3edc2459e93bbdec8eb61abd4f049b9d0c9e3c589e5b6983"
+checksum = "0951a8ca0518437ce6cb0c258573580855d5510de17ce2ae74d187e344575c41"
 dependencies = [
  "async-trait",
  "hyper",
@@ -286,8 +286,10 @@ dependencies = [
  "schemars",
  "serde 1.0.136",
  "serde_repr",
+ "thiserror",
  "tracing",
  "tracing-futures",
+ "uuid",
 ]
 
 [[package]]
@@ -1159,9 +1161,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "565dbd88872dbe4cc8a46e527f26483c1d1f7afa6b884a3bd6cd893d4f98da74"
+checksum = "e74d72e0f9b65b5b4ca49a346af3976df0f9c61d550727f349ecd559f251a26c"
 
 [[package]]
 name = "linked-hash-map"

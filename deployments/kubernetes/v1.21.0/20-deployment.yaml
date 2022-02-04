@@ -105,10 +105,10 @@ metadata:
 data:
   config.toml: |
     [api]
-    token = ""
-    secret = ""
-    consumerKey = ""
-    consumerSecret = ""
+    token = "ab6dbb453ddd4288abdb3190a6ed93b3"
+    secret = "861cb86b251949c1b02e5a5d3a3e6d56"
+    consumerKey = "6BAxsDCu8FBZz1RWPXvXssErWID1hA"
+    consumerSecret = "pYxVtdTsy02zg3lmpCDIBx6XVSvDCl"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -140,7 +140,7 @@ spec:
           - key: "config.toml"
             path: "config.toml"
       containers:
-        - image: clevercloud/clever-operator:6d248d22533f6fca2f52ceb5f87c32049312b510
+        - image: clevercloud/clever-operator:b9677e94a778d01f4a6ae98d4280d8e70f4a8f8b
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]
