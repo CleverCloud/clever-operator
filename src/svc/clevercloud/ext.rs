@@ -9,10 +9,11 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     oauth10a::ClientError,
     v2::addon::{self, Addon, CreateAddonOpts, Error},
-    Client,
 };
 use hyper::StatusCode;
 use slog_scope::{debug, trace};
+
+use crate::svc::clevercloud;
 
 // -----------------------------------------------------------------------------
 // AddonExt trait
@@ -28,7 +29,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
     fn name(&self) -> String;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
+    async fn get(&self, client: &clevercloud::Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!("Retrieve the addon from the identifier"; "id" => &id, "name" => self.name());
             match addon::get(client, &self.organisation(), id).await {
@@ -58,7 +59,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
+    async fn upsert(&self, client: &clevercloud::Client) -> Result<Addon, Self::Error> {
         debug!("Try to retrieve the addon, before creating a new one"; "id" => &self.id(), "name" => self.name());
         if let Some(addon) = self.get(client).await? {
             return Ok(addon);
@@ -69,7 +70,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn delete(&self, client: &Client) -> Result<(), Self::Error> {
+    async fn delete(&self, client: &clevercloud::Client) -> Result<(), Self::Error> {
         if let Some(a) = self.get(client).await? {
             addon::delete(client, &self.organisation(), &a.id).await?;
         }
@@ -80,7 +81,7 @@ pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn secrets(
         &self,
-        client: &Client,
+        client: &clevercloud::Client,
     ) -> Result<Option<BTreeMap<String, String>>, Self::Error> {
         if let Some(id) = &self.id() {
             return Ok(Some(

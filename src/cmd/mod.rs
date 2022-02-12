@@ -4,7 +4,10 @@
 use std::{error::Error, io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
 
 use async_trait::async_trait;
-use clevercloud_sdk::{oauth10a::Credentials, Client};
+use clevercloud_sdk::{
+    oauth10a::{proxy::ProxyConnectorBuilder, Credentials},
+    Client,
+};
 use hyper::{
     service::{make_service_fn, service_fn},
     Server,
@@ -106,6 +109,8 @@ pub enum DaemonError {
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
     Client(client::Error),
+    #[error("failed to create clever cloud client, {0}")]
+    CleverClient(clevercloud_sdk::oauth10a::proxy::Error),
 }
 
 // -----------------------------------------------------------------------------
@@ -126,7 +131,10 @@ pub async fn daemon(
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
     let credentials: Credentials = config.api.to_owned().into();
-    let clever_client = Client::from(credentials);
+    let connector = ProxyConnectorBuilder::try_from_env().map_err(DaemonError::CleverClient)?;
+    let clever_client = Client::builder()
+        .with_credentials(credentials)
+        .build(connector);
 
     // -------------------------------------------------------------------------
     // Create state to give to each reconciler
