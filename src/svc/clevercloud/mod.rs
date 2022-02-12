@@ -3,9 +3,18 @@
 //! This module provide structures, traits and helpers related to Clever-Cloud
 //! and the `clevercloud-sdk` crate.
 
-use clevercloud_sdk::{v2, v4};
+use clevercloud_sdk::{
+    oauth10a::connector::{GaiResolver, HttpConnector, HttpsConnector, ProxyConnector},
+    v2, v4,
+};
 
 pub mod ext;
+
+// -----------------------------------------------------------------------------
+// type aliases
+
+pub type Client =
+    clevercloud_sdk::Client<ProxyConnector<HttpsConnector<HttpConnector<GaiResolver>>>>;
 
 // -----------------------------------------------------------------------------
 // Error enumeration

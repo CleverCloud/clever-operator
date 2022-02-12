@@ -6,6 +6,7 @@
 use std::{error::Error, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
+
 use futures::{StreamExt, TryStreamExt};
 use kube::{CustomResourceExt, Resource, ResourceExt};
 use kube_runtime::{
@@ -22,7 +23,7 @@ use tokio::time::{sleep_until, Instant};
 #[cfg(feature = "trace")]
 use tracing::Instrument;
 
-use crate::svc::cfg::Configuration;
+use crate::svc::{cfg::Configuration, clevercloud};
 
 pub mod client;
 pub mod finalizer;
@@ -82,20 +83,18 @@ lazy_static! {
 #[derive(Clone)]
 pub struct State {
     pub kube: kube::Client,
-    pub apis: clevercloud_sdk::Client,
+    pub apis: clevercloud::Client,
     pub config: Arc<Configuration>,
 }
 
-impl From<(kube::Client, clevercloud_sdk::Client, Arc<Configuration>)> for State {
-    fn from(
-        (kube, apis, config): (kube::Client, clevercloud_sdk::Client, Arc<Configuration>),
-    ) -> Self {
+impl From<(kube::Client, clevercloud::Client, Arc<Configuration>)> for State {
+    fn from((kube, apis, config): (kube::Client, clevercloud::Client, Arc<Configuration>)) -> Self {
         Self { kube, apis, config }
     }
 }
 
 impl State {
-    pub fn new(k: kube::Client, a: clevercloud_sdk::Client, c: Arc<Configuration>) -> Self {
+    pub fn new(k: kube::Client, a: clevercloud::Client, c: Arc<Configuration>) -> Self {
         Self::from((k, a, c))
     }
 }
