@@ -17,9 +17,9 @@ async-trait = "^0.1.52"
 chrono = "^0.4.19"
 clevercloud-sdk = { version = "^0.7.0", features = ["jsonschemas"] }
 config = "^0.11.0"
-futures = "^0.3.19"
+futures = "^0.3.21"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.16", features = ["server", "tcp", "http1"] }
+hyper = { version = "^0.14.17", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
 kube = { version = "^0.68.0", default-features = false, features = [
     "client",
@@ -35,10 +35,10 @@ k8s-openapi = { version = "^0.14.0", default-features = false, features = [
     "v1_21",
 ] }
 lazy_static = { version = "^1.4.0", optional = true }
-opentelemetry = { version = "^0.16.0", features = [
+opentelemetry = { version = "^0.17.0", features = [
     "rt-tokio",
 ], optional = true }
-opentelemetry-jaeger = { version = "^0.15.0", features = [
+opentelemetry-jaeger = { version = "^0.16.0", features = [
     "rt-tokio",
     "collector_client",
 ], optional = true }
@@ -51,25 +51,25 @@ schemars = { version = "^0.8.8", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.24.2", optional = true }
+sentry = { version = "^0.24.3", optional = true }
 serde = { version = "^1.0.136", features = ["derive"] }
-serde_json = { version = "^1.0.78", features = [
+serde_json = { version = "^1.0.79", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
 serde_yaml = "^0.8.23"
 slog = { version = "^2.7.0" }
 slog-async = "^2.7.0"
-slog-term = "^2.8.0"
+slog-term = "^2.8.1"
 slog-scope = "^4.4.0"
 slog-stdlog = { version = "^4.1.0", optional = true }
 structopt = { version = "^0.3.26", features = ["paw"] }
 thiserror = "^1.0.30"
 tokio = { version = "^1.16.1", features = ["full"] }
-tracing = { version = "0.1.29", optional = true }
+tracing = { version = "0.1.30", optional = true }
 tracing-futures = { version = "^0.2.5", features = ["tokio"], optional = true }
-tracing-subscriber = { version = "^0.3.7", optional = true }
-tracing-opentelemetry = { version = "^0.16.0", optional = true }
+tracing-subscriber = { version = "^0.3.8", optional = true }
+tracing-opentelemetry = { version = "^0.17.1", optional = true }
 
 [features]
 default = [
