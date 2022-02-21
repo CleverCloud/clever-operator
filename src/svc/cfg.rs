@@ -71,14 +71,12 @@ impl Into<Credentials> for Api {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigurationError {
-    #[error("failed to load file '{0:?}', {1}")]
-    File(PathBuf, ConfigError),
     #[error("failed to load configuration, {0}")]
-    Cast(ConfigError),
+    Build(ConfigError),
+    #[error("failed to deserialize configuration, {0}")]
+    Deserialize(ConfigError),
     #[error("failed to set default for key '{0}', {1}")]
     Default(String, ConfigError),
-    #[error("failed to set environment source, {0}")]
-    Environment(ConfigError),
 }
 
 // -----------------------------------------------------------------------------
@@ -126,115 +124,84 @@ impl TryFrom<PathBuf> for Configuration {
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        let mut config = Config::default();
-
-        config
+        Config::builder()
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
-            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?
             .set_default("api.token", "")
-            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?
             .set_default("api.secret", "")
-            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?
             .set_default("api.consumerKey", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?
             .set_default("api.consumerSecret", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?
             .set_default("operator.listen", OPERATOR_LISTEN)
-            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
-
-        config
-            .merge(Environment::with_prefix(
+            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
+            .add_source(Environment::with_prefix(
                 &env!("CARGO_PKG_NAME").replace("-", "_"),
             ))
-            .map_err(ConfigurationError::Environment)?;
-
-        config
-            .merge(File::from(path.to_owned()).required(true))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        config.try_into().map_err(ConfigurationError::Cast)
+            .add_source(File::from(path).required(true))
+            .build()
+            .map_err(ConfigurationError::Build)?
+            .try_deserialize()
+            .map_err(ConfigurationError::Deserialize)
     }
 }
 
 impl Configuration {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn try_default() -> Result<Self, ConfigurationError> {
-        let mut config = Config::default();
-
-        config
+        Config::builder()
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
-            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?
             .set_default("api.token", "")
-            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?
             .set_default("api.secret", "")
-            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?
             .set_default("api.consumerKey", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?
             .set_default("api.consumerSecret", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?;
-
-        config
+            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?
             .set_default("operator.listen", OPERATOR_LISTEN)
-            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?;
-
-        config
-            .merge(Environment::with_prefix(
+            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
+            .add_source(Environment::with_prefix(
                 &env!("CARGO_PKG_NAME").replace("-", "_"),
             ))
-            .map_err(ConfigurationError::Environment)?;
-
-        let path = PathBuf::from(format!("/usr/share/{}/config", env!("CARGO_PKG_NAME")));
-        config
-            .merge(File::from(path.to_owned()).required(false))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        let path = PathBuf::from(format!("/etc/{}/config", env!("CARGO_PKG_NAME")));
-        config
-            .merge(File::from(path.to_owned()).required(false))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        let path = PathBuf::from(format!(
-            "{}/.config/{}/config",
-            env!("HOME"),
-            env!("CARGO_PKG_NAME")
-        ));
-        config
-            .merge(File::from(path.to_owned()).required(false))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        let path = PathBuf::from(format!(
-            "{}/.local/share/{}/config",
-            env!("HOME"),
-            env!("CARGO_PKG_NAME")
-        ));
-        config
-            .merge(File::from(path.to_owned()).required(false))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        let path = PathBuf::from("config");
-        config
-            .merge(File::from(path.to_owned()).required(false))
-            .map_err(|err| ConfigurationError::File(path, err))?;
-
-        config.try_into().map_err(ConfigurationError::Cast)
+            .add_source(
+                File::from(PathBuf::from(format!(
+                    "/usr/share/{}/config",
+                    env!("CARGO_PKG_NAME")
+                )))
+                .required(false),
+            )
+            .add_source(
+                File::from(PathBuf::from(format!(
+                    "/etc/{}/config",
+                    env!("CARGO_PKG_NAME")
+                )))
+                .required(false),
+            )
+            .add_source(
+                File::from(PathBuf::from(format!(
+                    "{}/.config/{}/config",
+                    env!("HOME"),
+                    env!("CARGO_PKG_NAME")
+                )))
+                .required(false),
+            )
+            .add_source(
+                File::from(PathBuf::from(format!(
+                    "{}/.local/share/{}/config",
+                    env!("HOME"),
+                    env!("CARGO_PKG_NAME")
+                )))
+                .required(false),
+            )
+            .add_source(File::from(PathBuf::from("config")).required(false))
+            .build()
+            .map_err(ConfigurationError::Build)?
+            .try_deserialize()
+            .map_err(ConfigurationError::Deserialize)
     }
 
     /// Prints a message about missing value for configuration key
