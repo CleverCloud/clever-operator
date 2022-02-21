@@ -5,7 +5,11 @@ use std::{error::Error, io, net::AddrParseError, path::PathBuf, process::abort, 
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
-    oauth10a::{proxy::ProxyConnectorBuilder, Credentials},
+    oauth10a::{
+        connector::HttpsConnector,
+        proxy::{ProxyBuilder, ProxyConnectorBuilder},
+        Credentials,
+    },
     Client,
 };
 use hyper::{
@@ -131,7 +135,27 @@ pub async fn daemon(
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
     let credentials: Credentials = config.api.to_owned().into();
-    let connector = ProxyConnectorBuilder::try_from_env().map_err(DaemonError::CleverClient)?;
+    let connector = match &config.proxy {
+        Some(proxy) if proxy.https.is_some() || proxy.http.is_some() => {
+            let proxy = ProxyBuilder::try_from(
+                proxy.https.to_owned().unwrap_or_else(|| {
+                    proxy
+                        .http
+                        .to_owned()
+                        .expect("to have one of http or https value in proxy configuration file")
+                }),
+                proxy.no.to_owned(),
+            )
+            .map_err(DaemonError::CleverClient)?;
+
+            ProxyConnectorBuilder::default()
+                .with_proxy(proxy)
+                .build(HttpsConnector::new())
+                .map_err(DaemonError::CleverClient)?
+        }
+        _ => ProxyConnectorBuilder::try_from_env().map_err(DaemonError::CleverClient)?,
+    };
+
     let clever_client = Client::builder()
         .with_credentials(credentials)
         .build(connector);

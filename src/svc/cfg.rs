@@ -7,12 +7,25 @@ use std::{convert::TryFrom, path::PathBuf};
 use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
-use slog_scope::warn;
+use slog_scope::{info, warn};
 
 // -----------------------------------------------------------------------------
 // Constants
 
 pub const OPERATOR_LISTEN: &str = "0.0.0.0:8000";
+
+// -----------------------------------------------------------------------------
+// Proxy structure
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+pub struct Proxy {
+    #[serde(rename = "http")]
+    pub http: Option<String>,
+    #[serde(rename = "https")]
+    pub https: Option<String>,
+    #[serde(rename = "no", default = "Default::default")]
+    pub no: Vec<String>,
+}
 
 // -----------------------------------------------------------------------------
 // Operator structure
@@ -94,6 +107,8 @@ pub struct Jaeger {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Configuration {
+    #[serde(rename = "proxy")]
+    pub proxy: Option<Proxy>,
     #[serde(rename = "api")]
     pub api: Api,
     #[serde(rename = "operator")]
@@ -225,6 +240,18 @@ impl Configuration {
     /// Prints a message about missing value for configuration key
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn help(&self) {
+        #[cfg(feature = "logging")]
+        info!("Build with 'logging' feature flag");
+
+        #[cfg(feature = "metrics")]
+        info!("Build with 'metrics' feature flag");
+
+        #[cfg(feature = "trace")]
+        info!("Build with 'trace' feature flag");
+
+        #[cfg(feature = "tracker")]
+        info!("Build with 'tracker' feature flag");
+
         if self.api.consumer_key.is_empty() {
             warn!("Configuration key 'api.consumerKey' has an empty value");
         }
