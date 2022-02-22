@@ -16,7 +16,7 @@ KUBE_VERSION		?= v1.21.0
 
 OLM_SDK		    	?= $(shell which operator-sdk)
 OLM_SDK_VERSION		?= 1.15.0
-OLM_VERSION			?= 0.3.5
+OLM_VERSION			?= 0.4.0
 
 OCP_VALIDATOR		?= $(shell which ocp-olm-catalog-validator)
 OCP_VERSION			?= 0.0.1
