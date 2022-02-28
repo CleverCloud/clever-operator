@@ -138,7 +138,7 @@ impl TryFrom<PathBuf> for Configuration {
             .set_default("operator.listen", OPERATOR_LISTEN)
             .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
             .add_source(Environment::with_prefix(
-                &env!("CARGO_PKG_NAME").replace("-", "_"),
+                &env!("CARGO_PKG_NAME").replace('-', "_"),
             ))
             .add_source(File::from(path).required(true))
             .build()
@@ -165,7 +165,7 @@ impl Configuration {
             .set_default("operator.listen", OPERATOR_LISTEN)
             .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
             .add_source(Environment::with_prefix(
-                &env!("CARGO_PKG_NAME").replace("-", "_"),
+                &env!("CARGO_PKG_NAME").replace('-', "_"),
             ))
             .add_source(
                 File::from(PathBuf::from(format!(
