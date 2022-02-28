@@ -2,7 +2,11 @@
 //!
 //! This module provide utilities and helpers to interact with the configuration
 
-use std::{convert::TryFrom, path::PathBuf};
+use std::{
+    convert::TryFrom,
+    env::{self, VarError},
+    path::PathBuf,
+};
 
 use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
 use config::{Config, ConfigError, Environment, File};
@@ -77,6 +81,8 @@ pub enum ConfigurationError {
     Deserialize(ConfigError),
     #[error("failed to set default for key '{0}', {1}")]
     Default(String, ConfigError),
+    #[error("failed to retrieve environment variable '{0}', {1}")]
+    EnvironmentVariable(&'static str, VarError),
 }
 
 // -----------------------------------------------------------------------------
@@ -184,7 +190,8 @@ impl Configuration {
             .add_source(
                 File::from(PathBuf::from(format!(
                     "{}/.config/{}/config",
-                    env!("HOME"),
+                    env::var("HOME")
+                        .map_err(|err| ConfigurationError::EnvironmentVariable("HOME", err))?,
                     env!("CARGO_PKG_NAME")
                 )))
                 .required(false),
@@ -192,7 +199,8 @@ impl Configuration {
             .add_source(
                 File::from(PathBuf::from(format!(
                     "{}/.local/share/{}/config",
-                    env!("HOME"),
+                    env::var("HOME")
+                        .map_err(|err| ConfigurationError::EnvironmentVariable("HOME", err))?,
                     env!("CARGO_PKG_NAME")
                 )))
                 .required(false),
