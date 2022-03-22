@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use kube::{CustomResourceExt, Resource, ResourceExt};
 use kube_runtime::{
-    controller::{self, Context, ReconcilerAction},
+    controller::{self, Action, Context},
     watcher, Controller,
 };
 #[cfg(feature = "metrics")]
@@ -131,20 +131,18 @@ where
     /// delete the object from kubernetes and third parts
     async fn delete(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
-    /// returns a [`ReconcilerAction`] to perform following the given error
-    fn retry(err: &Self::Error, _ctx: Context<State>) -> ReconcilerAction {
+    /// returns a [`Action`] to perform following the given error
+    fn retry(err: &Self::Error, _ctx: Context<State>) -> Action {
         // Implements a basic reconciliation which always re-schedule the event
         // 500 ms later
         trace!("Requeue failed reconciliation"; "duration" => 500, "error" => err.to_string());
-        ReconcilerAction {
-            requeue_after: Some(Duration::from_millis(500)),
-        }
+        Action::requeue(Duration::from_millis(500))
     }
 
     /// process the object and perform actions on kubernetes and/or
-    /// clever-cloud api returns a [`ReconcilerAction`] to maybe perform another
+    /// clever-cloud api returns a [`Action`] to maybe perform another
     /// reconciliation or an error, if something gets wrong.
-    async fn reconcile(obj: Arc<T>, ctx: Context<State>) -> Result<ReconcilerAction, Self::Error> {
+    async fn reconcile(obj: Arc<T>, ctx: Context<State>) -> Result<Action, Self::Error> {
         let (namespace, name) = resource::namespaced_name(&*obj);
         let api_resource = T::api_resource();
 
@@ -186,9 +184,7 @@ where
             }
         }
 
-        Ok(ReconcilerAction {
-            requeue_after: None,
-        })
+        Ok(Action::await_change())
     }
 }
 
@@ -244,8 +240,8 @@ where
                     debug!("We have reached the end of the infinite watch stream");
                     return Ok(());
                 }
-                Ok(Some((obj, ReconcilerAction { requeue_after }))) => {
-                    info!("Successfully reconcile resource"; "requeue" => requeue_after.map(|d| d.as_millis()), "kind" => &api_resource.kind, "name" => &obj.name, "namespace" => &obj.namespace);
+                Ok(Some((obj, _action))) => {
+                    info!("Successfully reconcile resource"; "kind" => &api_resource.kind, "name" => &obj.name, "namespace" => &obj.namespace);
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
