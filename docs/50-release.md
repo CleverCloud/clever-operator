@@ -36,6 +36,10 @@ and as well update docker image to the latest commit of the `main` branch.
 You will have to edit the `.github/ci.yaml` file and replace as well the `<latest-release>` by the `<new-release>` in task 
 `docker-build-and-push-openshift-manifest`.
 
+### Update Dockerfile
+
+You will have to update the `Dockerfile` to bump the value of `version` label. 
+
 ### Update the Makefile
 
 You will have to update the `Makefile` to bump the variable `OLM_VERSION` to the `<new-release>`.
