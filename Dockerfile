@@ -1,4 +1,4 @@
-FROM rust:1.58.1 AS builder
+FROM rust:1.59.0 AS builder
 
 WORKDIR /usr/src/clever-operator
 ADD src src
