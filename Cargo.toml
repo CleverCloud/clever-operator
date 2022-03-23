@@ -21,7 +21,7 @@ futures = "^0.3.21"
 hostname = "^0.3.1"
 hyper = { version = "^0.14.17", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.69.1", default-features = false, features = [
+kube = { version = "^0.70.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -29,8 +29,8 @@ kube = { version = "^0.69.1", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.69.1"
-kube-runtime = "^0.69.1"
+kube-derive = "^0.70.0"
+kube-runtime = "^0.70.0"
 k8s-openapi = { version = "^0.14.0", default-features = false, features = [
     "v1_21",
 ] }
@@ -51,7 +51,7 @@ schemars = { version = "^0.8.8", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.24.3", optional = true }
+sentry = { version = "^0.25.0", optional = true }
 serde = { version = "^1.0.136", features = ["derive"] }
 serde_json = { version = "^1.0.79", features = [
     "preserve_order",
@@ -66,7 +66,7 @@ slog-stdlog = { version = "^4.1.0", optional = true }
 structopt = { version = "^0.3.26", features = ["paw"] }
 thiserror = "^1.0.30"
 tokio = { version = "^1.17.0", features = ["full"] }
-tracing = { version = "0.1.31", optional = true }
+tracing = { version = "^0.1.32", optional = true }
 tracing-futures = { version = "^0.2.5", features = ["tokio"], optional = true }
 tracing-subscriber = { version = "^0.3.9", optional = true }
 tracing-opentelemetry = { version = "^0.17.2", optional = true }
