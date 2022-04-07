@@ -41,10 +41,10 @@ use crate::svc::{
 pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/postgresql";
 
 // -----------------------------------------------------------------------------
-// PostgreSqlOptions structure
+// Opts structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PostgreSqlOpts {
+pub struct Opts {
     #[serde(rename = "version")]
     pub version: postgresql::Version,
     #[serde(rename = "encryption")]
@@ -52,7 +52,7 @@ pub struct PostgreSqlOpts {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<AddonOpts> for PostgreSqlOpts {
+impl Into<AddonOpts> for Opts {
     fn into(self) -> AddonOpts {
         AddonOpts {
             version: Some(self.version.to_string()),
@@ -62,7 +62,7 @@ impl Into<AddonOpts> for PostgreSqlOpts {
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlSpec structure
+// Spec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
@@ -71,15 +71,15 @@ impl Into<AddonOpts> for PostgreSqlOpts {
 #[kube(singular = "postgresql")]
 #[kube(plural = "postgresqls")]
 #[kube(shortname = "pg")]
-#[kube(status = "PostgreSqlStatus")]
+#[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
-pub struct PostgreSqlSpec {
+pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
     #[serde(rename = "options")]
-    pub options: PostgreSqlOpts,
+    pub options: Opts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
@@ -88,7 +88,7 @@ pub struct PostgreSqlSpec {
 // PostgreSQLStatus structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
-pub struct PostgreSqlStatus {
+pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
 }
@@ -139,7 +139,7 @@ impl AddonExt for PostgreSql {
 impl PostgreSql {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(PostgreSqlStatus::default);
+        let mut status = self.status.get_or_insert_with(Status::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
@@ -152,10 +152,10 @@ impl PostgreSql {
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSqlAction structure
+// Action structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum PostgreSqlAction {
+pub enum Action {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
@@ -164,7 +164,7 @@ pub enum PostgreSqlAction {
     DeleteAddon,
 }
 
-impl Display for PostgreSqlAction {
+impl Display for Action {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
@@ -262,7 +262,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &PostgreSqlAction::UpsertFinalizer;
+        let action = &Action::UpsertFinalizer;
         let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -292,7 +292,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
                 let modified =
                     resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
-                let action = &PostgreSqlAction::OverridesInstancePlan;
+                let action = &Action::OverridesInstancePlan;
                 let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
                 info!("Create '{}' event for resource", action; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
                 recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -317,7 +317,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::UpsertAddon;
+        let action = &Action::UpsertAddon;
         let message = &format!(
             "Create managed postgresql instance on clever-cloud '{}'",
             addon.id
@@ -336,7 +336,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
-            let action = &PostgreSqlAction::UpsertSecret;
+            let action = &Action::UpsertSecret;
             let message = &format!("Create kubernetes secret '{}'", secret.name());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
@@ -367,7 +367,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PostgreSqlAction::DeleteAddon;
+        let action = &Action::DeleteAddon;
         let message = "Delete managed postgresql instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -377,7 +377,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
-        let action = &PostgreSqlAction::DeleteFinalizer;
+        let action = &Action::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 

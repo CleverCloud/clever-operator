@@ -41,10 +41,10 @@ use crate::svc::{
 pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/mongodb";
 
 // -----------------------------------------------------------------------------
-// MongoDbOpts structure
+// Opts structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct MongoDbOpts {
+pub struct Opts {
     #[serde(rename = "version")]
     pub version: mongodb::Version,
     #[serde(rename = "encryption")]
@@ -52,7 +52,7 @@ pub struct MongoDbOpts {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<AddonOpts> for MongoDbOpts {
+impl Into<AddonOpts> for Opts {
     fn into(self) -> AddonOpts {
         AddonOpts {
             version: Some(self.version.to_string()),
@@ -71,24 +71,24 @@ impl Into<AddonOpts> for MongoDbOpts {
 #[kube(singular = "mongodb")]
 #[kube(plural = "mongodbs")]
 #[kube(shortname = "mo")]
-#[kube(status = "MongoDbStatus")]
+#[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
-pub struct MongoDbSpec {
+pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
     #[serde(rename = "options")]
-    pub options: MongoDbOpts,
+    pub options: Opts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// MongoDbStatus structure
+// Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
-pub struct MongoDbStatus {
+pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
 }
@@ -139,7 +139,7 @@ impl AddonExt for MongoDb {
 impl MongoDb {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(MongoDbStatus::default);
+        let mut status = self.status.get_or_insert_with(Status::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
@@ -155,7 +155,7 @@ impl MongoDb {
 // MongoDbAction structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum MongoDbAction {
+pub enum Action {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
@@ -164,7 +164,7 @@ pub enum MongoDbAction {
     DeleteAddon,
 }
 
-impl Display for MongoDbAction {
+impl Display for Action {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
@@ -262,7 +262,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &MongoDbAction::UpsertFinalizer;
+        let action = &Action::UpsertFinalizer;
         let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -292,7 +292,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
                 let modified =
                     resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
-                let action = &MongoDbAction::OverridesInstancePlan;
+                let action = &Action::OverridesInstancePlan;
                 let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
                 info!("Create '{}' event for resource", action; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
                 recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -317,7 +317,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &MongoDbAction::UpsertAddon;
+        let action = &Action::UpsertAddon;
         let message = &format!(
             "Create managed mongodb instance on clever-cloud '{}'",
             addon.id
@@ -336,7 +336,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
-            let action = &MongoDbAction::UpsertSecret;
+            let action = &Action::UpsertSecret;
             let message = &format!("Create kubernetes secret '{}'", secret.name());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
@@ -367,7 +367,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &MongoDbAction::DeleteAddon;
+        let action = &Action::DeleteAddon;
         let message = "Delete managed mongodb instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -377,7 +377,7 @@ impl k8s::Reconciler<MongoDb> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
-        let action = &MongoDbAction::DeleteFinalizer;
+        let action = &Action::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 

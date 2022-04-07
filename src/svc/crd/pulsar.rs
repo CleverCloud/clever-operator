@@ -38,16 +38,16 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/pulsar";
 pub const ADDON_BETA_PLAN: &str = "plan_3ad3c5be-5c1e-4dae-bf9a-87120b88fc13";
 
 // -----------------------------------------------------------------------------
-// PulsarInstance structure
+// Instance structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct PulsarInstance {
+pub struct Instance {
     #[serde(rename = "region")]
     pub region: String,
 }
 
 // -----------------------------------------------------------------------------
-// PulsarSpec structure
+// Spec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
@@ -57,22 +57,22 @@ pub struct PulsarInstance {
 #[kube(plural = "pulsars")]
 #[kube(shortname = "pulse")]
 #[kube(shortname = "pul")]
-#[kube(status = "PulsarStatus")]
+#[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
-pub struct PulsarSpec {
+pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
     #[serde(rename = "instance")]
-    pub instance: PulsarInstance,
+    pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// PulsarStatus structure
+// Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
-pub struct PulsarStatus {
+pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
 }
@@ -123,7 +123,7 @@ impl AddonExt for Pulsar {
 impl Pulsar {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(PulsarStatus::default);
+        let mut status = self.status.get_or_insert_with(Status::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
@@ -136,10 +136,10 @@ impl Pulsar {
 }
 
 // -----------------------------------------------------------------------------
-// PulsarAction structure
+// Action structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
-pub enum PulsarAction {
+pub enum Action {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
@@ -147,7 +147,7 @@ pub enum PulsarAction {
     DeleteAddon,
 }
 
-impl Display for PulsarAction {
+impl Display for Action {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
@@ -244,7 +244,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &PulsarAction::UpsertFinalizer;
+        let action = &Action::UpsertFinalizer;
         let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -267,7 +267,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PulsarAction::UpsertAddon;
+        let action = &Action::UpsertAddon;
         let message = &format!(
             "Create managed pulsar instance on clever-cloud '{}'",
             addon.id
@@ -286,7 +286,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
-            let action = &PulsarAction::UpsertSecret;
+            let action = &Action::UpsertSecret;
             let message = &format!("Create kubernetes secret '{}'", secret.name());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
@@ -317,7 +317,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
-        let action = &PulsarAction::DeleteAddon;
+        let action = &Action::DeleteAddon;
         let message = "Delete managed pulsar instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
@@ -327,7 +327,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         info!("Remove finalizer on custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
-        let action = &PulsarAction::DeleteFinalizer;
+        let action = &Action::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
