@@ -13,13 +13,13 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.52"
+async-trait = "^0.1.53"
 chrono = "^0.4.19"
 clevercloud-sdk = { version = "^0.9.0", features = ["jsonschemas"] }
-config = "^0.12.0"
+config = "^0.13.0"
 futures = "^0.3.21"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.17", features = ["server", "tcp", "http1"] }
+hyper = { version = "^0.14.18", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
 kube = { version = "^0.70.0", default-features = false, features = [
     "client",
@@ -62,13 +62,12 @@ slog = { version = "^2.7.0" }
 slog-async = "^2.7.0"
 slog-term = "^2.9.0"
 slog-scope = "^4.4.0"
-slog-stdlog = { version = "^4.1.0", optional = true }
+slog-stdlog = { version = "^4.1.1", optional = true }
 structopt = { version = "^0.3.26", features = ["paw"] }
 thiserror = "^1.0.30"
 tokio = { version = "^1.17.0", features = ["full"] }
 tracing = { version = "^0.1.32", optional = true }
-tracing-futures = { version = "^0.2.5", features = ["tokio"], optional = true }
-tracing-subscriber = { version = "^0.3.9", optional = true }
+tracing-subscriber = { version = "^0.3.10", optional = true }
 tracing-opentelemetry = { version = "^0.17.2", optional = true }
 
 [features]
@@ -90,7 +89,6 @@ trace = [
     "clevercloud-sdk/trace",
     "clevercloud-sdk/tokio",
     "tracing",
-    "tracing-futures",
     "tracing-subscriber",
     "tracing-opentelemetry",
     "opentelemetry",
