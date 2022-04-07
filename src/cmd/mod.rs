@@ -23,7 +23,7 @@ use crate::{
     cmd::crd::CustomResourceDefinitionError,
     svc::{
         cfg::Configuration,
-        crd::{mongodb, mysql, postgresql, pulsar, redis},
+        crd::{config_provider, mongodb, mysql, postgresql, pulsar, redis},
         k8s::{client, State, Watcher},
         telemetry::router,
     },
@@ -167,6 +167,7 @@ pub async fn daemon(
     let mysql_state = postgresql_state.to_owned();
     let mongodb_state = postgresql_state.to_owned();
     let pulsar_state = postgresql_state.to_owned();
+    let config_provider_state = postgresql_state.to_owned();
 
     // -------------------------------------------------------------------------
     // Create reconcilers
@@ -217,6 +218,16 @@ pub async fn daemon(
             info!("Start to listen for events of pulsar addon custom resource");
             if let Err(err) = reconciler.watch(pulsar_state).await {
                 crit!("Could not reconcile plusar addon custom resource"; "error" => err.to_string());
+            }
+
+            abort();
+        }),
+        tokio::spawn(async {
+            let reconciler = config_provider::Reconciler::default();
+
+            info!("Start to listen for events of config-provider addon custom resource");
+            if let Err(err) = reconciler.watch(config_provider_state).await {
+                crit!("Could not reconcile config-provider addon custom resource"; "error" => err.to_string());
             }
 
             abort();

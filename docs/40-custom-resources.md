@@ -40,11 +40,11 @@ spec:
 
 | Version | Code |
 | ------- | ---- |
-| `9.6`   | 96   |
 | `10`    | 10   |
 | `11`    | 11   |
 | `12`    | 12   |
 | `13`    | 13   |
+| `14`    | 14   |
 
 ### Supported region
 
@@ -200,9 +200,9 @@ spec:
 
 ### Supported version
 
-| Version  | Code |
-| -------- | ---- |
-| `6.0.10` | 6010 |
+| Version | Code |
+| ------- | ---- |
+| `6.2.6` | 626  |
 
 ### Supported region
 
@@ -327,3 +327,22 @@ spec:
 
 Currently, the pulsar manages services is only available in the one region which
 name is `par`. More will come, before the product will be generally available.
+
+## ConfigProvider
+
+Below, you will find the custom resource in yaml format that you can use to
+provide extra configuration to your applications and managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: ConfigProvider
+metadata:
+  namespace: default
+  name: config-provider
+spec:
+  organisation: orga_xxxx
+  variables:
+    REGION: par
+...
+```

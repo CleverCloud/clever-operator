@@ -14,7 +14,8 @@ use crate::{
     svc::{
         cfg::Configuration,
         crd::{
-            mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
+            config_provider::ConfigProvider, mongodb::MongoDb, mysql::MySql,
+            postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
         },
     },
 };
@@ -29,6 +30,7 @@ pub enum CustomResource {
     MySql,
     MongoDb,
     Pulsar,
+    ConfigProvider,
 }
 
 impl FromStr for CustomResource {
@@ -42,7 +44,8 @@ impl FromStr for CustomResource {
             "mysql" => Ok(Self::MySql),
             "mongodb" => Ok(Self::MongoDb),
             "pulsar" => Ok(Self::Pulsar),
-            _ => Err(format!("failed to parse '{}', available options are 'pulsar', 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
+            "config-provider" => Ok(Self::ConfigProvider),
+            _ => Err(format!("failed to parse '{}', available options are 'config-provider', 'pulsar', 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
         }
     }
 }
@@ -101,6 +104,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::Pulsar => serde_yaml::to_string(&Pulsar::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::ConfigProvider => serde_yaml::to_string(&ConfigProvider::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -113,6 +118,8 @@ pub async fn view(
             serde_yaml::to_string(&MongoDb::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&Pulsar::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&ConfigProvider::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };

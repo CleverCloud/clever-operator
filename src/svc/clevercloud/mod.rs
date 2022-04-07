@@ -5,7 +5,8 @@
 
 use clevercloud_sdk::{
     oauth10a::connector::{GaiResolver, HttpConnector, HttpsConnector, ProxyConnector},
-    v2, v4,
+    v2,
+    v4::addon_provider::{config_provider::addon::environment, plan},
 };
 
 pub mod ext;
@@ -24,7 +25,9 @@ pub enum Error {
     #[error("{0}")]
     Addon(v2::addon::Error),
     #[error("{0}")]
-    Plan(v4::addon_provider::plan::Error),
+    Plan(plan::Error),
+    #[error("{0}")]
+    Environment(environment::Error),
 }
 
 impl From<v2::addon::Error> for Error {
@@ -34,9 +37,16 @@ impl From<v2::addon::Error> for Error {
     }
 }
 
-impl From<v4::addon_provider::plan::Error> for Error {
+impl From<plan::Error> for Error {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn from(err: v4::addon_provider::plan::Error) -> Self {
+    fn from(err: plan::Error) -> Self {
         Self::Plan(err)
+    }
+}
+
+impl From<environment::Error> for Error {
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn from(err: environment::Error) -> Self {
+        Self::Environment(err)
     }
 }
