@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     v2::{
         self,
-        addon::{AddonOpts, CreateAddonOpts},
+        addon::{self, CreateOpts},
     },
     v4::{
         self,
@@ -52,17 +52,18 @@ pub struct Opts {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<AddonOpts> for Opts {
-    fn into(self) -> AddonOpts {
-        AddonOpts {
+impl Into<addon::Opts> for Opts {
+    fn into(self) -> addon::Opts {
+        addon::Opts {
             version: Some(self.version.to_string()),
             encryption: Some(self.encryption.to_string()),
+            ..Default::default()
         }
     }
 }
 
 // -----------------------------------------------------------------------------
-// MongoDbSpec structure
+// Spec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
@@ -97,10 +98,10 @@ pub struct Status {
 // MongoDb implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateAddonOpts> for MongoDb {
+impl Into<CreateOpts> for MongoDb {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn into(self) -> CreateAddonOpts {
-        CreateAddonOpts {
+    fn into(self) -> CreateOpts {
+        CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
             provider_id: AddonProviderId::MongoDb.to_string(),

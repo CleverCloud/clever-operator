@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     v2::{
         self,
-        addon::{AddonOpts, CreateAddonOpts},
+        addon::{self, CreateOpts},
     },
     v4::addon_provider::{
         config_provider::addon::environment::{self, Variable},
@@ -74,15 +74,15 @@ pub struct Status {
 // MySql implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateAddonOpts> for ConfigProvider {
+impl Into<CreateOpts> for ConfigProvider {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn into(self) -> CreateAddonOpts {
-        CreateAddonOpts {
+    fn into(self) -> CreateOpts {
+        CreateOpts {
             name: AddonExt::name(&self),
             region: "par".to_owned(), // config provider is only available in the "par" datacenter
             provider_id: AddonProviderId::ConfigProvider.to_string(),
             plan: plan::CONFIG_PROVIDER.to_owned(),
-            options: AddonOpts::default(),
+            options: addon::Opts::default(),
         }
     }
 }

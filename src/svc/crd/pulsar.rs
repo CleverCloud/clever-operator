@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use clevercloud_sdk::{
     v2::{
         self,
-        addon::{AddonOpts, CreateAddonOpts},
+        addon::{self, CreateOpts},
     },
     v4::{self, addon_provider::AddonProviderId},
 };
@@ -81,15 +81,15 @@ pub struct Status {
 // Pulsar implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateAddonOpts> for Pulsar {
+impl Into<CreateOpts> for Pulsar {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn into(self) -> CreateAddonOpts {
-        CreateAddonOpts {
+    fn into(self) -> CreateOpts {
+        CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
             provider_id: AddonProviderId::Pulsar.to_string(),
             plan: ADDON_BETA_PLAN.to_string(),
-            options: AddonOpts::default(),
+            options: addon::Opts::default(),
         }
     }
 }

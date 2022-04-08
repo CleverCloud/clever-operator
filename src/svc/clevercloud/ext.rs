@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, fmt::Debug};
 use async_trait::async_trait;
 use clevercloud_sdk::{
     oauth10a::ClientError,
-    v2::addon::{self, Addon, CreateAddonOpts, Error},
+    v2::addon::{self, Addon, CreateOpts, Error},
 };
 use hyper::StatusCode;
 use slog_scope::{debug, trace};
@@ -19,7 +19,7 @@ use crate::svc::clevercloud;
 // AddonExt trait
 
 #[async_trait]
-pub trait AddonExt: Into<CreateAddonOpts> + Clone + Debug + Sync + Send {
+pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     type Error: From<Error> + Sync + Send;
 
     fn id(&self) -> Option<String>;
