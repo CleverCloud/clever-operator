@@ -346,3 +346,73 @@ spec:
     REGION: par
 ...
 ```
+
+## ElasticSearch
+
+Below, you will find the custom resource in yaml format that you can use to
+deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: ElasticSearch
+metadata:
+  namespace: default
+  name: elasticsearch
+spec:
+  organisation: orga_xxxx
+  options:
+    version: 13
+    encryption: true
+    kibana: true
+    apm: true
+  instance:
+    region: par
+    plan: s
+...
+```
+
+### Supported version
+
+| Version | Code |
+| ------- | ---- |
+| `6`     | 6    |
+| `7`     | 7    |
+
+### Supported region
+
+For region, the code could be used to select the desired region.
+
+| Name                             | Code     |
+| -------------------------------- | -------- |
+| Jeddah                           | `jed`    |
+| Paris                            | `par`    |
+| Singapore                        | `sgp`    |
+| Montreal                         | `mtl`    |
+| Roubaix                          | `rbx`    |
+| Warsaw                           | `wsw`    |
+| Roubaix (with hds certification) | `rbxhds` |
+| Sydney                           | `syd`    |
+| New Yord                         | `nyc`    |
+
+### Supported plan
+
+For plan, both name and code could be used to select the desired plan.
+
+| Name   | Code     |
+| ------ | -------- |
+| `XS`   | `xs`     |
+| `S`    | `s`      |
+| `M`    | `m`      |
+| `L`    | `l`      |
+| `XL`   | `xl`     |
+| `XXL`  | `xxl`    |
+| `XXXL` | `xxxl`   |
+| `4XL`  | `xxxxl`  |
+| `5XL`  | `xxxxxl` |
+
+### Note
+
+When you create an elasticsearch addon, we create for you a cellar addon to save your backups. This
+operator will not manage backups of the addon. It is up to you to delete backup, if you do not want
+to keep them.
