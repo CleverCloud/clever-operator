@@ -29,6 +29,11 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     fn name(&self) -> String;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn prefix() -> String {
+        "kubernetes::".to_string()
+    }
+
+    #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn get(&self, client: &clevercloud::Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!("Retrieve the addon from the identifier"; "id" => &id, "name" => self.name());

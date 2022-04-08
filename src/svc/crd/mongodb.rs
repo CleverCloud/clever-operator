@@ -130,7 +130,7 @@ impl AddonExt for MongoDb {
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn name(&self) -> String {
-        "kubernetes_".to_string()
+        Self::prefix()
             + &self
                 .uid()
                 .expect("expect all resources in kubernetes to have an identifier")
