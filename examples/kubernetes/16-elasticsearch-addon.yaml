@@ -1,0 +1,142 @@
+---
+apiVersion: api.clever-cloud.com/v1
+kind: ElasticSearch
+metadata:
+  namespace: default
+  name: elasticsearch
+spec:
+  organisation: orga_xxxx
+  options:
+    version: 7
+    encryption: true
+    kibana: true
+    apm: true
+  instance:
+    region: par
+    plan: xs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: debian-elasticsearch
+  name: debian-elasticsearch
+  namespace: default
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: debian-elasticsearch
+  namespace: default
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: debian-elasticsearch
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: debian-elasticsearch
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: debian-elasticsearch
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  name: debian-elasticsearch
+  labels:
+    app: debian-elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debian-elasticsearch
+  template:
+    metadata:
+      labels:
+        app: debian-elasticsearch
+    spec:
+      serviceAccountName: debian-elasticsearch
+      automountServiceAccountToken: true
+      containers:
+        - image: debian:bullseye-slim
+          imagePullPolicy: Always
+          name: debian-elasticsearch
+          command:
+            - "sleep"
+            - "3600"
+          env:
+          - name: ES_ADDON_APM_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets # build using the name of the addon following by -secrets
+                key: ES_ADDON_APM_AUTH_TOKEN
+          - name: ES_ADDON_APM_HOST
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_APM_HOST
+          - name: ES_ADDON_APM_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_APM_PASSWORD
+          - name: ES_ADDON_APM_USER
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_APM_USER
+          - name: ES_ADDON_HOST
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_HOST
+          - name: ES_ADDON_KIBANA_HOST
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_KIBANA_HOST
+          - name: ES_ADDON_KIBANA_USER
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_KIBANA_USER
+          - name: ES_ADDON_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_PASSWORD
+          - name: ES_ADDON_URI
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_URI
+          - name: ES_ADDON_USER
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_USER
+          - name: ES_ADDON_VERSION
+            valueFrom:
+              secretKeyRef:
+                name: elasticsearch-secrets
+                key: ES_ADDON_VERSION
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+            limits:
+              memory: 64M
+              cpu: 100m

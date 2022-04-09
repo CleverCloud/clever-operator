@@ -1,9 +1,8 @@
-//! # ConfigProvider addon
+//! # ElasticSearch addon
 //!
-//! This module provide the configuration custom resource and its definition
+//! This module provide the elasticsearch custom resource and its definition
 
 use std::{
-    collections::BTreeMap,
     fmt::{self, Display, Formatter},
     sync::Arc,
 };
@@ -14,9 +13,9 @@ use clevercloud_sdk::{
         self,
         addon::{self, CreateOpts},
     },
-    v4::addon_provider::{
-        config_provider::addon::environment::{self, Variable},
-        plan, AddonProviderId,
+    v4::{
+        self,
+        addon_provider::{elasticsearch, plan, AddonProviderId, Feature},
     },
 };
 use futures::TryFutureExt;
@@ -32,24 +31,63 @@ use slog_scope::{debug, error, info};
 
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
+    crd::Instance,
     k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
 };
 
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/config-provider";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/elasticsearch";
 
 // -----------------------------------------------------------------------------
-// MySqlSpec structure
+// Opts structure
+
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub struct Opts {
+    #[serde(rename = "version")]
+    pub version: elasticsearch::Version,
+    #[serde(rename = "encryption")]
+    pub encryption: bool,
+    #[serde(rename = "kibana")]
+    pub kibana: bool,
+    #[serde(rename = "apm")]
+    pub apm: bool,
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<addon::Opts> for Opts {
+    fn into(self) -> addon::Opts {
+        addon::Opts {
+            version: Some(self.version.to_string()),
+            encryption: Some(self.encryption.to_string()),
+            services: Some(
+                serde_json::to_string(&vec![
+                    Feature {
+                        name: "kibana".to_string(),
+                        enabled: self.kibana,
+                    },
+                    Feature {
+                        name: "apm".to_string(),
+                        enabled: self.apm,
+                    },
+                ])
+                .expect("serialization of elasticsearch features to not fail"),
+            ),
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Spec structure
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
-#[kube(kind = "ConfigProvider")]
-#[kube(singular = "configprovider")]
-#[kube(plural = "configproviders")]
-#[kube(shortname = "cp")]
+#[kube(kind = "ElasticSearch")]
+#[kube(singular = "elasticsearch")]
+#[kube(plural = "elasticsearches")]
+#[kube(shortname = "es")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(apiextensions = "v1")]
@@ -57,12 +95,14 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/config-provider";
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
-    #[serde(rename = "variables")]
-    pub variables: BTreeMap<String, String>,
+    #[serde(rename = "options")]
+    pub options: Opts,
+    #[serde(rename = "instance")]
+    pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// MySqlStatus structure
+// Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
 pub struct Status {
@@ -71,23 +111,23 @@ pub struct Status {
 }
 
 // -----------------------------------------------------------------------------
-// MySql implementation
+// ElasticSearch implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for ConfigProvider {
+impl Into<CreateOpts> for ElasticSearch {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
-            region: "par".to_owned(), // config provider is only available in the "par" datacenter
-            provider_id: AddonProviderId::ConfigProvider.to_string(),
-            plan: plan::CONFIG_PROVIDER.to_owned(),
-            options: addon::Opts::default(),
+            region: self.spec.instance.region.to_owned(),
+            provider_id: AddonProviderId::ElasticSearch.to_string(),
+            plan: self.spec.instance.plan.to_owned(),
+            options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for ConfigProvider {
+impl AddonExt for ElasticSearch {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
@@ -113,7 +153,7 @@ impl AddonExt for ConfigProvider {
     }
 }
 
-impl ConfigProvider {
+impl ElasticSearch {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let mut status = self.status.get_or_insert_with(Status::default);
@@ -129,7 +169,7 @@ impl ConfigProvider {
 }
 
 // -----------------------------------------------------------------------------
-// MySqlAction structure
+// MongoDbAction structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub enum Action {
@@ -190,16 +230,9 @@ impl From<v2::addon::Error> for ReconcilerError {
     }
 }
 
-impl From<plan::Error> for ReconcilerError {
+impl From<v4::addon_provider::plan::Error> for ReconcilerError {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn from(err: plan::Error) -> Self {
-        Self::from(clevercloud::Error::from(err))
-    }
-}
-
-impl From<environment::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn from(err: environment::Error) -> Self {
+    fn from(err: v4::addon_provider::plan::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
@@ -217,26 +250,26 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<ConfigProvider> for Reconciler {
-    fn build(&self, state: State) -> Controller<ConfigProvider> {
+impl ControllerBuilder<ElasticSearch> for Reconciler {
+    fn build(&self, state: State) -> Controller<ElasticSearch> {
         Controller::new(Api::all(state.kube), ListParams::default())
     }
 }
 
 #[async_trait]
-impl k8s::Reconciler<ConfigProvider> for Reconciler {
+impl k8s::Reconciler<ElasticSearch> for Reconciler {
     type Error = ReconcilerError;
 
     async fn upsert(
         ctx: &Context<State>,
-        origin: Arc<ConfigProvider>,
+        origin: Arc<ElasticSearch>,
     ) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
             config: _,
         } = ctx.get_ref();
-        let kind = ConfigProvider::kind(&()).to_string();
+        let kind = ElasticSearch::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -254,7 +287,45 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 2: upsert addon
+        // Step 2: translate plan
+
+        if !modified.spec.instance.plan.starts_with("plan_") {
+            info!("Resolve plan for elasticsearch addon provider"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
+            let plan = plan::find(
+                apis,
+                &AddonProviderId::ElasticSearch,
+                &modified.spec.organisation,
+                &modified.spec.instance.plan,
+            )
+            .await?;
+
+            // Update the spec is not a good practise as it lead to
+            // no-deterministic and infinite reconciliation loop. It should be
+            // avoided or done with caution.
+            if let Some(plan) = plan {
+                info!("Override plan for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "plan" => &plan.id);
+                let oplan = modified.spec.instance.plan.to_owned();
+                modified.spec.instance.plan = plan.id.to_owned();
+
+                debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+                let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
+                let modified =
+                    resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
+
+                let action = &Action::OverridesInstancePlan;
+                let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
+                info!("Create '{}' event for resource", action; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
+                recorder::normal(kube.to_owned(), &modified, action, message).await?;
+            }
+
+            // Stop reconciliation here and wait for next iteration, already
+            // triggered by the above patch request
+            return Ok(());
+        }
+
+        // ---------------------------------------------------------------------
+        // Step 3: upsert addon
+
         info!("Upsert addon for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
         let addon = modified.upsert(apis).await?;
 
@@ -268,56 +339,34 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
 
         let action = &Action::UpsertAddon;
         let message = &format!(
-            "Create configuration provider on clever-cloud '{}'",
+            "Create managed elasticsearch instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 3: upsert environment variables
-        info!("Upsert environment variables for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "config-provider-id" => &addon.real_id);
-        // We could not used the "addon_xxxx" identifier, we have to used the "config_xxxx" identifier
-        let variables = environment::get(apis, &addon.real_id).await?.iter().fold(
-            BTreeMap::new(),
-            |mut acc, var| {
-                acc.insert(var.name.to_owned(), var.value.to_owned());
-                acc
-            },
-        );
-
-        if modified.spec.variables != variables {
-            debug!("Update config-provider's environment variables with custom resource ones"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "config-provider-id" => &addon.real_id);
-            let variables = modified
-                .spec
-                .variables
-                .iter()
-                .fold(vec![], |mut acc, (k, v)| {
-                    acc.push(Variable::from((k.to_owned(), v.to_owned())));
-                    acc
-                });
-
-            environment::put(apis, &addon.real_id, &variables).await?;
-        }
-
-        // ---------------------------------------------------------------------
         // Step 4: create the secret
-        let s = secret::new(&modified, modified.spec.variables.to_owned());
-        let (s_ns, s_name) = resource::namespaced_name(&s);
 
-        info!("Upsert kubernetes secret resource for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-        info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
-        let secret = resource::upsert(kube.to_owned(), &s, false).await?;
+        let secrets = modified.secrets(apis).await?;
+        if let Some(secrets) = secrets {
+            let s = secret::new(&modified, secrets);
+            let (s_ns, s_name) = resource::namespaced_name(&s);
 
-        let action = &Action::UpsertSecret;
-        let message = &format!("Create kubernetes secret '{}'", secret.name());
-        recorder::normal(kube.to_owned(), &modified, action, message).await?;
+            info!("Upsert kubernetes secret resource for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+            info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
+            let secret = resource::upsert(kube.to_owned(), &s, false).await?;
+
+            let action = &Action::UpsertSecret;
+            let message = &format!("Create kubernetes secret '{}'", secret.name());
+            recorder::normal(kube.to_owned(), &modified, action, message).await?;
+        }
 
         Ok(())
     }
 
     async fn delete(
         ctx: &Context<State>,
-        origin: Arc<ConfigProvider>,
+        origin: Arc<ElasticSearch>,
     ) -> Result<(), ReconcilerError> {
         let State {
             apis,
@@ -325,7 +374,7 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
             config: _,
         } = ctx.get_ref();
         let mut modified = (*origin).to_owned();
-        let kind = ConfigProvider::kind(&()).to_string();
+        let kind = ElasticSearch::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -342,7 +391,7 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete configuration provider on clever-cloud";
+        let message = "Delete managed elasticsearch instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------

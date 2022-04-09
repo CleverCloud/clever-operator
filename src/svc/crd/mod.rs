@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod config_provider;
+pub mod elasticsearch;
 pub mod mongodb;
 pub mod mysql;
 pub mod postgresql;
