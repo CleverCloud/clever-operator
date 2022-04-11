@@ -113,7 +113,12 @@ impl AddonExt for Pulsar {
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn name(&self) -> String {
+        let delimiter = Self::delimiter();
+
         Self::prefix()
+            + &delimiter
+            + &Self::kind(&()).to_string()
+            + &delimiter
             + &self
                 .uid()
                 .expect("expect all resources in kubernetes to have an identifier")

@@ -30,7 +30,12 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn prefix() -> String {
-        "kubernetes::".to_string()
+        "kubernetes".to_string()
+    }
+
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn delimiter() -> String {
+        "::".to_string()
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
