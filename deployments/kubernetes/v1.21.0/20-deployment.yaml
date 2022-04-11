@@ -140,7 +140,7 @@ spec:
           - key: "config.toml"
             path: "config.toml"
       containers:
-        - image: clevercloud/clever-operator:5821576632c9d524a3f1c419b86346823033c282
+        - image: clevercloud/clever-operator:5479ce18039bea686c167939eb77a2bc370a0e85
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]
@@ -153,9 +153,11 @@ spec:
             requests:
               memory: 64M
               cpu: 100m
+              ephemeral-storage: 128Mi
             limits:
               memory: 64M
               cpu: 100m
+              ephemeral-storage: 128Mi
           ports:
             - containerPort: 8000
               protocol: TCP

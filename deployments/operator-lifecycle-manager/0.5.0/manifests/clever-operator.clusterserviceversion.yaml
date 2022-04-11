@@ -2,7 +2,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: cleveroperator.v0.4.0
+  name: cleveroperator.v0.5.0
   namespace: clever-operator-system
   annotations:
     capabilities: Full Lifecycle
@@ -490,9 +490,11 @@ spec:
                     requests:
                       memory: 64M
                       cpu: 100m
+                      ephemeral-storage: 128Mi
                     limits:
                       memory: 64M
                       cpu: 100m
+                      ephemeral-storage: 128Mi
                   ports:
                     - containerPort: 8000
                       protocol: TCP
