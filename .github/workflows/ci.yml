@@ -28,7 +28,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --features logging --features tracker
+          args: --verbose --all-features
   test:
     name: Test operator
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: tarpaulin
-          args: --verbose --features logging --features tracker
+          args: --verbose --all-features
   format:
     name: Format source code
     runs-on: ubuntu-latest
@@ -83,7 +83,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --verbose --features logging --features tracker -- -D warnings
+          args: --verbose --all-features -- -D warnings
   doc:
     name: Build documentation
     runs-on: ubuntu-latest
