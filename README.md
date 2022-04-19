@@ -134,3 +134,4 @@ See the [license](LICENSE).
 ## Getting in touch
 
 - [@FlorentinDUBOIS](https://twitter.com/FlorentinDUBOIS)
+- [@Wonsthrum](https://twitter.com/Wonsthrum)
