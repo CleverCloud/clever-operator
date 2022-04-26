@@ -7,7 +7,7 @@ ADD Cargo.lock .
 
 RUN cargo build --release
 
-FROM redhat/ubi8:latest
+FROM registry.access.redhat.com/ubi9-beta/ubi:9.0.0beta
 
 MAINTAINER Florentin Dubois <florentin.dubois@clever-cloud.com>
 LABEL name="clever-operator" \
