@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+{{ include "cleveroperator.namespace" . | indent 2 }}
+  name: clever-operator
+  labels:
+    app: clever-operator
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: clever-operator
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '7080'
+      labels:
+        app: clever-operator
+    spec:
+      serviceAccountName: clever-operator
+      automountServiceAccountToken: true
+      volumes:
+      - name: config
+        configMap:
+          name: clever-operator-configuration
+          items:
+          - key: "config.toml"
+            path: "config.toml"
+      containers:
+        - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: clever-operator
+          command: ["/usr/local/bin/clever-operator"]
+          args: ["-vvvvvvv"]
+          volumeMounts:
+          - name: config
+            mountPath: "/etc/clever-operator"
+            readOnly: true
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+              ephemeral-storage: 128Mi
+            limits:
+              memory: 64M
+              cpu: 100m
+              ephemeral-storage: 128Mi
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+              name: observability
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: observability
+              scheme: HTTP
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsGroup: 25000
+            runAsUser: 20000
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

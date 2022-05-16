@@ -1,0 +1,17 @@
+You can now deploy add-ons on Clever Cloud by creating CRDs in Kubernetes.
+
+apiVersion: api.clever-cloud.com/v1
+kind: MySql
+metadata:
+  namespace: default
+  name: mysql
+spec:
+  organisation: orga_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  options:
+    version: 80
+    encryption: false
+  instance:
+    region: par
+    plan: dev
+
+See https://github.com/CleverCloud/clever-operator/blob/main/docs/40-custom-resources.md for more information and configuration options

@@ -1,0 +1,66 @@
+# Default values for clever-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+networkPolicy:
+  enabled: false
+  ingress:
+  - {}
+  egress:
+  - {}
+
+replicaCount: 1
+
+image:
+  repository: clevercloud/clever-operator
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "5479ce18039bea686c167939eb77a2bc370a0e85"
+
+# Declare your secrets for the operator to create add-ons on Clever Cloud
+config:
+  token: ""
+  secret: ""
+  consumerKey: ""
+  consumerSecret: ""
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 0
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+

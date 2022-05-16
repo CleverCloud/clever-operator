@@ -1,0 +1,13 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: clever-operator
+{{ include "cleveroperator.namespace" . | indent 2 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: clever-operator
+{{- end }}
