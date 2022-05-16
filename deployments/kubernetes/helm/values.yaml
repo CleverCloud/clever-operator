@@ -13,7 +13,7 @@ replicaCount: 1
 
 image:
   repository: clevercloud/clever-operator
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "5479ce18039bea686c167939eb77a2bc370a0e85"
 
