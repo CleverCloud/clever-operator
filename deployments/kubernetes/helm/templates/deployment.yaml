@@ -16,6 +16,9 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '7080'
+    {{- if .Values.server.podAnnotations }}
+        {{ toYaml .Values.server.podAnnotations | nindent 8 }}
+    {{- end }}
       labels:
         app: clever-operator
     spec:
@@ -55,5 +58,21 @@ spec:
             timeoutSeconds: 1
           securityContext:
 {{ toYaml .Values.securityContext | indent 12 }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+    {{- end }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+    {{- if .Values.tolerations }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+    {{- end }}
+    {{- if .Values.affinity }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
+    {{- end }}
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
