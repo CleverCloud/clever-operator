@@ -16,8 +16,8 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '7080'
-    {{- if .Values.server.podAnnotations }}
-        {{ toYaml .Values.server.podAnnotations | nindent 8 }}
+    {{- if .Values.podAnnotations }}
+        {{ toYaml .Values.podAnnotations | nindent 8 }}
     {{- end }}
       labels:
         app: clever-operator
