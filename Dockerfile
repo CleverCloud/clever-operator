@@ -1,13 +1,14 @@
-FROM rust:1.60.0 AS builder
+FROM fedora:latest AS builder
 
 WORKDIR /usr/src/clever-operator
 ADD src src
 ADD Cargo.toml .
 ADD Cargo.lock .
 
+RUN dnf update -y && dnf install cargo openssl-devel -y
 RUN cargo build --release
 
-FROM redhat/ubi8:latest
+FROM fedora:latest
 
 MAINTAINER Florentin Dubois <florentin.dubois@clever-cloud.com>
 LABEL name="clever-operator" \
