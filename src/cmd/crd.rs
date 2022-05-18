@@ -6,8 +6,8 @@
 use std::{error::Error, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
+use clap::Subcommand;
 use kube::CustomResourceExt;
-use structopt::StructOpt;
 
 use crate::{
     cmd::Executor,
@@ -64,12 +64,12 @@ pub enum CustomResourceDefinitionError {
 // -----------------------------------------------------------------------------
 // CustomResourceDefinition enum
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum CustomResourceDefinition {
     /// View custom resource definition
-    #[structopt(name = "view", aliases = &["v"])]
+    #[clap(name = "view", aliases = &["v"])]
     View {
-        #[structopt(name = "custom-resource")]
+        #[clap(name = "custom-resource")]
         custom_resource: Option<CustomResource>,
     },
 }
