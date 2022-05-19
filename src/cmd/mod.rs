@@ -1,9 +1,10 @@
 //! # Command module
 //!
 //! This module provide command line interface structures and helpers
-use std::{error::Error, io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
+use std::{io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
 
 use async_trait::async_trait;
+use clap::{Parser, Subcommand};
 use clevercloud_sdk::{
     oauth10a::{
         connector::HttpsConnector,
@@ -16,8 +17,8 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Server,
 };
+use paw::ParseArgs;
 use slog_scope::{crit, error, info};
-use structopt::StructOpt;
 
 use crate::{
     cmd::crd::CustomResourceDefinitionError,
@@ -45,9 +46,9 @@ pub trait Executor {
 // CommandError enum
 
 #[derive(thiserror::Error, Debug)]
-pub enum CommandError {
+pub enum Error {
     #[error("failed to execute command '{0}', {1}")]
-    Execution(String, Arc<CommandError>),
+    Execution(String, Arc<Error>),
     #[error("failed to execute command, {0}")]
     CustomResourceDefinition(CustomResourceDefinitionError),
 }
@@ -55,16 +56,16 @@ pub enum CommandError {
 // -----------------------------------------------------------------------------
 // Command enum
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     /// Interact with custom resource definition
-    #[structopt(name = "custom-resource-definition", aliases= &["crd"])]
+    #[clap(name = "custom-resource-definition", aliases= &["crd"], subcommand)]
     CustomResourceDefinition(crd::CustomResourceDefinition),
 }
 
 #[async_trait]
 impl Executor for Command {
-    type Error = CommandError;
+    type Error = Error;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
@@ -72,9 +73,9 @@ impl Executor for Command {
             Self::CustomResourceDefinition(crd) => crd
                 .execute(config)
                 .await
-                .map_err(CommandError::CustomResourceDefinition)
+                .map_err(Error::CustomResourceDefinition)
                 .map_err(|err| {
-                    CommandError::Execution("custom-resource-definition".into(), Arc::new(err))
+                    Error::Execution("custom-resource-definition".into(), Arc::new(err))
                 }),
         }
     }
@@ -83,23 +84,31 @@ impl Executor for Command {
 // -----------------------------------------------------------------------------
 // Args struct
 
-#[derive(StructOpt, Clone, Debug)]
-#[structopt(about = env!("CARGO_PKG_DESCRIPTION"))]
+#[derive(Parser, Clone, Debug)]
+#[clap(author, version, about)]
 pub struct Args {
     /// Increase log verbosity
-    #[structopt(short = "v", global = true, parse(from_occurrences))]
+    #[clap(short = 'v', global = true, parse(from_occurrences))]
     pub verbosity: usize,
     /// Specify location of kubeconfig
-    #[structopt(short = "k", long = "kubeconfig", global = true)]
+    #[clap(short = 'k', long = "kubeconfig", global = true)]
     pub kubeconfig: Option<PathBuf>,
     /// Specify location of configuration
-    #[structopt(short = "c", long = "config", global = true)]
+    #[clap(short = 'c', long = "config", global = true)]
     pub config: Option<PathBuf>,
     /// Check if configuration is healthy
-    #[structopt(short = "t", long = "check", global = true)]
+    #[clap(short = 't', long = "check", global = true)]
     pub check: bool,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub command: Option<Command>,
+}
+
+impl ParseArgs for Args {
+    type Error = Error;
+
+    fn parse_args() -> Result<Self, Self::Error> {
+        Ok(Self::parse())
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -263,7 +272,7 @@ pub async fn daemon(
         };
 
         let server = builder.serve(make_service_fn(|_| async {
-            Ok::<_, Box<dyn Error + Send + Sync>>(service_fn(router))
+            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(service_fn(router))
         }));
 
         info!("Start to listen for http request on {}", addr);
