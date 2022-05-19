@@ -122,13 +122,13 @@ metadata:
           "organisation": "orga_xxxx",
           "instance": {
             "region": "par",
-            "plan": "s",
+            "plan": "s"
           },
           "options": {
             "version": 7,
             "encryption": true,
             "kibana": true,
-            "apm": true,
+            "apm": true
           }
         }
       }]
