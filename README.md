@@ -84,6 +84,14 @@ or
 $ kubectl apply -f deployments/kubernetes/v1.21.0
 ```
 
+#### From the helm chart
+
+You can also use the available Helm chart. Configure the values.yaml file in `deployments/kubernetes/helm` with your own values, then run:
+
+```console
+$ helm install clever-operator -n clever-operator --create-namespace -f values.yaml .
+```
+
 ### From dockerhub
 
 The docker image will be provided by the dockerhub account of Clever-Cloud and you only need to apply the deployment

@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+{{ include "cleveroperator.namespace" . | indent 2 }}
+  name: clever-operator
+  labels:
+    app: clever-operator
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: clever-operator
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '7080'
+    {{- if .Values.podAnnotations }}
+        {{ toYaml .Values.podAnnotations | nindent 8 }}
+    {{- end }}
+      labels:
+        app: clever-operator
+    spec:
+      serviceAccountName: clever-operator
+      automountServiceAccountToken: true
+      volumes:
+      - name: config
+        configMap:
+          name: clever-operator-configuration
+          items:
+          - key: "config.toml"
+            path: "config.toml"
+      containers:
+        - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: clever-operator
+          command: ["/usr/local/bin/clever-operator"]
+          args: ["-vvvvvvv"]
+          volumeMounts:
+          - name: config
+            mountPath: "/etc/clever-operator"
+            readOnly: true
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+              name: observability
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: observability
+              scheme: HTTP
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          securityContext:
+{{ toYaml .Values.securityContext | indent 12 }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+    {{- end }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+    {{- if .Values.tolerations }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+    {{- end }}
+    {{- if .Values.affinity }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
+    {{- end }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

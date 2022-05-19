@@ -1,0 +1,60 @@
+# Default values for clever-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+networkPolicy:
+  enabled: false
+  ingress:
+  - {}
+  egress:
+  - {}
+
+replicaCount: 1
+
+image:
+  repository: clevercloud/clever-operator
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "5479ce18039bea686c167939eb77a2bc370a0e85"
+
+# Declare your secrets for the operator to create add-ons on Clever Cloud
+config:
+  token: ""
+  secret: ""
+  consumerKey: ""
+  consumerSecret: ""
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 0
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+
+podAnnotations: {}
+
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsGroup: 25000
+  runAsUser: 20000
+
+resources:
+  requests:
+    memory: 64M
+    cpu: 100m
+    ephemeral-storage: 128Mi
+  limits:
+    memory: 64M
+    cpu: 100m
+    ephemeral-storage: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+
