@@ -140,7 +140,7 @@ spec:
           - key: "config.toml"
             path: "config.toml"
       containers:
-        - image: clevercloud/clever-operator:5479ce18039bea686c167939eb77a2bc370a0e85
+        - image: clevercloud/clever-operator:c00666a3f9911221a313a3f387d9561f77da0384
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]

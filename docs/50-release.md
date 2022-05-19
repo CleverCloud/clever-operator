@@ -48,7 +48,7 @@ You will have to update the `Makefile` to bump the variable `OLM_VERSION` to the
 
 > This part explain how to update manifests for the deployment of the operator in Kubernetes
 
-You have to update the Kubernetes' Deployment with the latest docker image of the branch `main`. That's all!
+You have to update the Kubernetes' Deployment and helm charts with the latest docker image of the branch `main`. That's all!
 
 ## Update version of clever-operator
 
