@@ -21,13 +21,10 @@ use clevercloud_sdk::{
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
 use kube_derive::CustomResource;
-use kube_runtime::{
-    controller::{self, Context},
-    watcher, Controller,
-};
+use kube_runtime::{controller, watcher, Controller};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use slog_scope::{debug, error, info};
+use tracing::{debug, error, info};
 
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
@@ -265,25 +262,28 @@ impl ControllerBuilder<ElasticSearch> for Reconciler {
 impl k8s::Reconciler<ElasticSearch> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(
-        ctx: &Context<State>,
-        origin: Arc<ElasticSearch>,
-    ) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<State>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
             config: _,
-        } = ctx.get_ref();
+        } = ctx.as_ref();
         let kind = ElasticSearch::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
         // Step 1: set finalizer
 
-        info!("Set finalizer on custom resource"; "kind" => &kind, "uid" => &origin.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!(
+            "Set finalizer on custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let modified = finalizer::add((*origin).to_owned(), ADDON_FINALIZER);
 
-        debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!(
+            "Update information of custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
@@ -295,7 +295,10 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         // Step 2: translate plan
 
         if !modified.spec.instance.plan.starts_with("plan_") {
-            info!("Resolve plan for elasticsearch addon provider"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "pattern" => &modified.spec.instance.plan);
+            info!(
+                "Resolve plan for '{}' addon provider for resource '{}/{}' using '{}'",
+                &kind, &namespace, &name, &modified.spec.instance.plan
+            );
             let plan = plan::find(
                 apis,
                 &AddonProviderId::ElasticSearch,
@@ -308,18 +311,27 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
             // no-deterministic and infinite reconciliation loop. It should be
             // avoided or done with caution.
             if let Some(plan) = plan {
-                info!("Override plan for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "plan" => &plan.id);
+                info!(
+                    "Override plan for custom resource '{}' ('{}/{}') with plan '{}'",
+                    &kind, &name, &namespace, &plan.id
+                );
                 let oplan = modified.spec.instance.plan.to_owned();
                 modified.spec.instance.plan = plan.id.to_owned();
 
-                debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+                debug!(
+                    "Update information of custom resource '{}' ('{}/{}')",
+                    &kind, &namespace, &name
+                );
                 let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
                 let modified =
                     resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 
                 let action = &Action::OverridesInstancePlan;
                 let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
-                info!("Create '{}' event for resource", action; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace, "message" => message);
+                info!(
+                    "Create '{}' event for resource '{}' ('{}/{}') with following message, {}",
+                    action, &kind, &namespace, &name, message
+                );
                 recorder::normal(kube.to_owned(), &modified, action, message).await?;
             }
 
@@ -331,12 +343,18 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 3: upsert addon
 
-        info!("Upsert addon for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!(
+            "Upsert addon for custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let addon = modified.upsert(apis).await?;
 
         modified.set_addon_id(Some(addon.id.to_owned()));
 
-        debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!(
+            "Update information and status of custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -357,8 +375,11 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
 
-            info!("Upsert kubernetes secret resource for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
-            info!("Upsert kubernetes secret"; "kind" => "Secret", "name" => &s_name, "namespace" => &s_ns);
+            info!(
+                "Upsert kubernetes secret resource for custom resource '{}' ('{}/{}')",
+                &kind, &namespace, &name
+            );
+            info!("Upsert kubernetes secret '{}/{}'", &s_ns, &s_name);
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
             let action = &Action::UpsertSecret;
@@ -369,15 +390,12 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         Ok(())
     }
 
-    async fn delete(
-        ctx: &Context<State>,
-        origin: Arc<ElasticSearch>,
-    ) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<State>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
         let State {
             apis,
             kube,
             config: _,
-        } = ctx.get_ref();
+        } = ctx.as_ref();
         let mut modified = (*origin).to_owned();
         let kind = ElasticSearch::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
@@ -385,11 +403,17 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 1: delete the addon
 
-        info!("Delete addon for custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!(
+            "Delete addon for custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         modified.delete(apis).await?;
         modified.set_addon_id(None);
 
-        debug!("Update information and status of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!(
+            "Update information and status of custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -402,14 +426,20 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 2: remove the finalizer
 
-        info!("Remove finalizer on custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        info!(
+            "Remove finalizer on custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
         let action = &Action::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
-        debug!("Update information of custom resource"; "kind" => &kind, "uid" => &modified.meta().uid,"name" => &name, "namespace" => &namespace);
+        debug!(
+            "Update information of custom resource '{}' ('{}/{}')",
+            &kind, &namespace, &name
+        );
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 

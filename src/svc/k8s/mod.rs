@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use kube::{CustomResourceExt, Resource, ResourceExt};
 use kube_runtime::{
-    controller::{self, Action, Context},
+    controller::{self, Action},
     watcher, Controller,
 };
 #[cfg(feature = "metrics")]
@@ -18,10 +18,10 @@ use lazy_static::lazy_static;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
-use slog_scope::{debug, error, info, trace};
 use tokio::time::{sleep_until, Instant};
 #[cfg(feature = "trace")]
 use tracing::Instrument;
+use tracing::{debug, error, info, trace};
 
 use crate::svc::{cfg::Configuration, clevercloud};
 
@@ -126,28 +126,31 @@ where
     type Error: Error + Send + Sync;
 
     /// create or update the object, this is part of the the reconcile function
-    async fn upsert(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn upsert(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// delete the object from kubernetes and third parts
-    async fn delete(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn delete(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// returns a [`Action`] to perform following the given error
-    fn retry(err: &Self::Error, _ctx: Context<State>) -> Action {
+    fn retry(err: &Self::Error, _ctx: Arc<State>) -> Action {
         // Implements a basic reconciliation which always re-schedule the event
         // 500 ms later
-        trace!("Requeue failed reconciliation"; "duration" => 500, "error" => err.to_string());
+        trace!("Requeue failed reconciliation for 500ms, {}", err);
         Action::requeue(Duration::from_millis(500))
     }
 
     /// process the object and perform actions on kubernetes and/or
     /// clever-cloud api returns a [`Action`] to maybe perform another
     /// reconciliation or an error, if something gets wrong.
-    async fn reconcile(obj: Arc<T>, ctx: Context<State>) -> Result<Action, Self::Error> {
+    async fn reconcile(obj: Arc<T>, ctx: Arc<State>) -> Result<Action, Self::Error> {
         let (namespace, name) = resource::namespaced_name(&*obj);
         let api_resource = T::api_resource();
 
-        if resource::deleted(&*obj) {
-            info!("Received deletion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace);
+        if resource::deleted(obj.as_ref()) {
+            info!(
+                "Received deletion event for custom resource '{}' named '{}/{}'",
+                &api_resource.kind, &namespace, &name
+            );
             #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
@@ -156,30 +159,39 @@ where
             #[cfg(not(feature = "trace"))]
             let result = Self::delete(&ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::delete(&ctx, obj.to_owned())
+            let result = Self::delete(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))
                 .await;
 
             if let Err(err) = result {
-                error!("Failed to delete custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
+                error!(
+                    "Failed to delete custom resource '{}' named '{}/{}', {}",
+                    &api_resource.kind, &namespace, &name, err
+                );
                 return Err(err);
             }
         } else {
-            info!("Received upsertion event for custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &obj.meta().name, "namespace" => &obj.meta().namespace);
+            info!(
+                "Received upsertion event for custom resource '{}' named '{}/{}'",
+                &api_resource.kind, &namespace, &name
+            );
             #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
                 .inc();
 
             #[cfg(not(feature = "trace"))]
-            let result = Self::upsert(&ctx, obj.to_owned()).await;
+            let result = Self::upsert(ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::upsert(&ctx, obj.to_owned())
+            let result = Self::upsert(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::upsert"))
                 .await;
 
             if let Err(err) = result {
-                error!("Failed to upsert custom resource"; "kind" => &api_resource.kind, "uid" => &obj.meta().uid, "name" => &name, "namespace" => &namespace, "error" => err.to_string());
+                error!(
+                    "Failed to upsert custom resource '{}' named '{}/{}', {}",
+                    &api_resource.kind, &namespace, &name, err
+                );
                 return Err(err);
             }
         }
@@ -225,7 +237,7 @@ where
 
     /// listen for events of the custom resource as generic parameter
     async fn watch(&self, state: State) -> Result<(), <Self as Watcher<T>>::Error> {
-        let context = Context::new(state.to_owned());
+        let context = Arc::new(state.to_owned());
         let api_resource = T::api_resource();
         let mut stream = self
             .build(state.to_owned())
@@ -241,21 +253,34 @@ where
                     return Ok(());
                 }
                 Ok(Some((obj, _action))) => {
-                    info!("Successfully reconcile resource"; "kind" => &api_resource.kind, "name" => &obj.name, "namespace" => &obj.namespace);
+                    info!(
+                        "Successfully reconcile resource '{}' named '{}/{}'",
+                        &api_resource.kind,
+                        &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        &obj.name
+                    );
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
                         .inc();
                 }
-                Err(controller::Error::ObjectNotFound(obj_ref)) => {
-                    debug!("Received an event about an already deleted resource"; "name" => &obj_ref.name, "namespace" => &obj_ref.namespace);
+                Err(controller::Error::ObjectNotFound(obj)) => {
+                    debug!(
+                        "Received an event about an already deleted resource '{}' named '{}/{}'",
+                        &api_resource.kind,
+                        &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        &obj.name
+                    );
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
                         .inc();
                 }
                 Err(err) => {
-                    error!("Failed to reconcile resource"; "kind" => &api_resource.kind, "error" => err.to_string());
+                    error!(
+                        "Failed to reconcile resource '{}', {}",
+                        &api_resource.kind, err
+                    );
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_FAILED
                         .with_label_values(&[&api_resource.kind])
@@ -263,7 +288,14 @@ where
                 }
             }
 
-            trace!("Put watch event loop to bed"; "kind" => &api_resource.kind, "duration" => Instant::now().checked_duration_since(instant+Duration::from_millis(100)).map(|d| d.as_millis()).unwrap_or_else(|| 0));
+            trace!(
+                "Put watch event loop for resource '{}' to sleep for {}ms",
+                &api_resource.kind,
+                Instant::now()
+                    .checked_duration_since(instant + Duration::from_millis(100))
+                    .map(|d| d.as_millis())
+                    .unwrap_or_else(|| 0)
+            );
             #[cfg(feature = "metrics")]
             RECONCILIATION_DURATION
                 .with_label_values(&[&api_resource.kind, "us"])

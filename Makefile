@@ -1,5 +1,6 @@
 # ------------------------------------------------------------------------------
 # Define variables
+PWD					?= $(shell pwd)
 DIST				?= $(PWD)/target/release
 BIN_DIR				?= $(HOME)/.local/bin
 

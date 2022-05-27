@@ -11,7 +11,7 @@ use std::{
 use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
-use slog_scope::{info, warn};
+use tracing::{info, warn};
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -74,7 +74,7 @@ impl Into<Credentials> for Api {
 // ConfigurationError enum
 
 #[derive(thiserror::Error, Debug)]
-pub enum ConfigurationError {
+pub enum Error {
     #[error("failed to load configuration, {0}")]
     Build(ConfigError),
     #[error("failed to deserialize configuration, {0}")]
@@ -126,50 +126,50 @@ pub struct Configuration {
 }
 
 impl TryFrom<PathBuf> for Configuration {
-    type Error = ConfigurationError;
+    type Error = Error;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         Config::builder()
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
-            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?
+            .map_err(|err| Error::Default("api.endpoint".into(), err))?
             .set_default("api.token", "")
-            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?
+            .map_err(|err| Error::Default("api.token".into(), err))?
             .set_default("api.secret", "")
-            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?
+            .map_err(|err| Error::Default("api.secret".into(), err))?
             .set_default("api.consumerKey", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?
+            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
             .set_default("api.consumerSecret", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?
+            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
             .set_default("operator.listen", OPERATOR_LISTEN)
-            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
+            .map_err(|err| Error::Default("operator.listen".into(), err))?
             .add_source(Environment::with_prefix(
                 &env!("CARGO_PKG_NAME").replace('-', "_"),
             ))
             .add_source(File::from(path).required(true))
             .build()
-            .map_err(ConfigurationError::Build)?
+            .map_err(Error::Build)?
             .try_deserialize()
-            .map_err(ConfigurationError::Deserialize)
+            .map_err(Error::Deserialize)
     }
 }
 
 impl Configuration {
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    pub fn try_default() -> Result<Self, ConfigurationError> {
+    pub fn try_default() -> Result<Self, Error> {
         Config::builder()
             .set_default("api.endpoint", PUBLIC_ENDPOINT)
-            .map_err(|err| ConfigurationError::Default("api.endpoint".into(), err))?
+            .map_err(|err| Error::Default("api.endpoint".into(), err))?
             .set_default("api.token", "")
-            .map_err(|err| ConfigurationError::Default("api.token".into(), err))?
+            .map_err(|err| Error::Default("api.token".into(), err))?
             .set_default("api.secret", "")
-            .map_err(|err| ConfigurationError::Default("api.secret".into(), err))?
+            .map_err(|err| Error::Default("api.secret".into(), err))?
             .set_default("api.consumerKey", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerKey".into(), err))?
+            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
             .set_default("api.consumerSecret", "")
-            .map_err(|err| ConfigurationError::Default("api.consumerSecret".into(), err))?
+            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
             .set_default("operator.listen", OPERATOR_LISTEN)
-            .map_err(|err| ConfigurationError::Default("operator.listen".into(), err))?
+            .map_err(|err| Error::Default("operator.listen".into(), err))?
             .add_source(Environment::with_prefix(
                 &env!("CARGO_PKG_NAME").replace('-', "_"),
             ))
@@ -190,8 +190,7 @@ impl Configuration {
             .add_source(
                 File::from(PathBuf::from(format!(
                     "{}/.config/{}/config",
-                    env::var("HOME")
-                        .map_err(|err| ConfigurationError::EnvironmentVariable("HOME", err))?,
+                    env::var("HOME").map_err(|err| Error::EnvironmentVariable("HOME", err))?,
                     env!("CARGO_PKG_NAME")
                 )))
                 .required(false),
@@ -199,17 +198,16 @@ impl Configuration {
             .add_source(
                 File::from(PathBuf::from(format!(
                     "{}/.local/share/{}/config",
-                    env::var("HOME")
-                        .map_err(|err| ConfigurationError::EnvironmentVariable("HOME", err))?,
+                    env::var("HOME").map_err(|err| Error::EnvironmentVariable("HOME", err))?,
                     env!("CARGO_PKG_NAME")
                 )))
                 .required(false),
             )
             .add_source(File::from(PathBuf::from("config")).required(false))
             .build()
-            .map_err(ConfigurationError::Build)?
+            .map_err(Error::Build)?
             .try_deserialize()
-            .map_err(ConfigurationError::Deserialize)
+            .map_err(Error::Deserialize)
     }
 
     /// Prints a message about missing value for configuration key

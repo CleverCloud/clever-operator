@@ -13,7 +13,7 @@ use hyper::{
 use lazy_static::lazy_static;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
-use slog_scope::info;
+use tracing::info;
 
 #[cfg(feature = "metrics")]
 pub mod metrics;
@@ -83,7 +83,14 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
     // recover error
     match result {
         Ok(res) => {
-            info!("receive request"; "method" => req.method().as_str(), "path" => req.uri().path(), "host" => req.uri().host(), "status" => res.status().as_u16(), "duration" => format!("{}us", duration));
+            info!(
+                "Receive request, {} {} {} - {} {}us",
+                req.method().as_str(),
+                req.uri().host().unwrap_or("<none>"),
+                req.uri().path(),
+                res.status().as_u16(),
+                duration
+            );
             #[cfg(feature = "metrics")]
             SERVER_REQUEST_SUCCESS
                 .with_label_values(&[
@@ -128,7 +135,14 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
             *res.body_mut() =
                 Body::from(serde_json::to_string_pretty(&map).map_err(Error::Serialize)?);
 
-            info!("receive request"; "method" => req.method().as_str(), "path" => req.uri().path(), "host" => req.uri().host(), "status" => res.status().as_u16(), "duration" => format!("{}us", duration));
+            info!(
+                "Receive request, {} {} {} - {} {}us",
+                req.method().as_str(),
+                req.uri().host().unwrap_or("<none>"),
+                req.uri().path(),
+                res.status().as_u16(),
+                duration
+            );
 
             #[cfg(feature = "metrics")]
             SERVER_REQUEST_FAILURE

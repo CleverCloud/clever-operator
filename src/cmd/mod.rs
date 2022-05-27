@@ -18,7 +18,7 @@ use hyper::{
     Server,
 };
 use paw::ParseArgs;
-use slog_scope::{crit, error, info};
+use tracing::{error, info};
 
 use crate::{
     cmd::crd::CustomResourceDefinitionError,
@@ -51,6 +51,14 @@ pub enum Error {
     Execution(String, Arc<Error>),
     #[error("failed to execute command, {0}")]
     CustomResourceDefinition(CustomResourceDefinitionError),
+    #[error("failed to parse listen address '{0}', {1}")]
+    Listen(String, AddrParseError),
+    #[error("failed to handle termintion signal, {0}")]
+    SigTerm(io::Error),
+    #[error("failed to create kubernetes client, {0}")]
+    Client(client::Error),
+    #[error("failed to create clever cloud client, {0}")]
+    CleverClient(clevercloud_sdk::oauth10a::proxy::Error),
 }
 
 // -----------------------------------------------------------------------------
@@ -112,34 +120,14 @@ impl ParseArgs for Args {
 }
 
 // -----------------------------------------------------------------------------
-// DaemonError enum
-
-#[derive(thiserror::Error, Debug)]
-pub enum DaemonError {
-    #[error("failed to parse listen address '{0}', {1}")]
-    Listen(String, AddrParseError),
-    #[error("failed to handle termintion signal, {0}")]
-    SigTerm(io::Error),
-    #[error("failed to create kubernetes client, {0}")]
-    Client(client::Error),
-    #[error("failed to create clever cloud client, {0}")]
-    CleverClient(clevercloud_sdk::oauth10a::proxy::Error),
-}
-
-// -----------------------------------------------------------------------------
 // daemon function
 
 #[cfg_attr(feature = "trace", tracing::instrument)]
-pub async fn daemon(
-    kubeconfig: Option<PathBuf>,
-    config: Arc<Configuration>,
-) -> Result<(), DaemonError> {
+pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> Result<(), Error> {
     // -------------------------------------------------------------------------
     // Create a new kubernetes client from path if defined, or via the
     // environment or defaults locations
-    let kube_client = client::try_new(kubeconfig)
-        .await
-        .map_err(DaemonError::Client)?;
+    let kube_client = client::try_new(kubeconfig).await.map_err(Error::Client)?;
 
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
@@ -155,14 +143,14 @@ pub async fn daemon(
                 }),
                 proxy.no.to_owned(),
             )
-            .map_err(DaemonError::CleverClient)?;
+            .map_err(Error::CleverClient)?;
 
             ProxyConnectorBuilder::default()
                 .with_proxy(proxy)
                 .build(HttpsConnector::new())
-                .map_err(DaemonError::CleverClient)?
+                .map_err(Error::CleverClient)?
         }
-        _ => ProxyConnectorBuilder::try_from_env().map_err(DaemonError::CleverClient)?,
+        _ => ProxyConnectorBuilder::try_from_env().map_err(Error::CleverClient)?,
     };
 
     let clever_client = Client::builder()
@@ -187,7 +175,10 @@ pub async fn daemon(
 
             info!("Start to listen for events of postgresql addon custom resource");
             if let Err(err) = reconciler.watch(postgresql_state).await {
-                crit!("Could not reconcile postgresql addon custom resource"; "error" => err.to_string());
+                error!(
+                    "Could not reconcile postgresql addon custom resource, {}",
+                    err
+                );
             }
 
             abort();
@@ -197,7 +188,7 @@ pub async fn daemon(
 
             info!("Start to listen for events of redis addon custom resource");
             if let Err(err) = reconciler.watch(redis_state).await {
-                crit!("Could not reconcile redis addon custom resource"; "error" => err.to_string());
+                error!("Could not reconcile redis addon custom resource, {}", err);
             }
 
             abort();
@@ -207,7 +198,7 @@ pub async fn daemon(
 
             info!("Start to listen for events of mysql addon custom resource");
             if let Err(err) = reconciler.watch(mysql_state).await {
-                crit!("Could not reconcile mysql addon custom resource"; "error" => err.to_string());
+                error!("Could not reconcile mysql addon custom resource, {}", err);
             }
 
             abort();
@@ -217,7 +208,7 @@ pub async fn daemon(
 
             info!("Start to listen for events of mongodb addon custom resource");
             if let Err(err) = reconciler.watch(mongodb_state).await {
-                crit!("Could not reconcile mongodb addon custom resource"; "error" => err.to_string());
+                error!("Could not reconcile mongodb addon custom resource, {}", err);
             }
 
             abort();
@@ -227,7 +218,7 @@ pub async fn daemon(
 
             info!("Start to listen for events of pulsar addon custom resource");
             if let Err(err) = reconciler.watch(pulsar_state).await {
-                crit!("Could not reconcile plusar addon custom resource"; "error" => err.to_string());
+                error!("Could not reconcile plusar addon custom resource, {}", err);
             }
 
             abort();
@@ -237,7 +228,10 @@ pub async fn daemon(
 
             info!("Start to listen for events of config-provider addon custom resource");
             if let Err(err) = reconciler.watch(config_provider_state).await {
-                crit!("Could not reconcile config-provider addon custom resource"; "error" => err.to_string());
+                error!(
+                    "Could not reconcile config-provider addon custom resource, {}",
+                    err
+                );
             }
 
             abort();
@@ -247,7 +241,10 @@ pub async fn daemon(
 
             info!("Start to listen for events of elasticsearch addon custom resource");
             if let Err(err) = reconciler.watch(elasticsearch_state).await {
-                crit!("Could not reconcile elasticsearch addon custom resource"; "error" => err.to_string());
+                error!(
+                    "Could not reconcile elasticsearch addon custom resource, {}",
+                    err
+                );
             }
 
             abort();
@@ -260,13 +257,13 @@ pub async fn daemon(
         .operator
         .listen
         .parse()
-        .map_err(|err| DaemonError::Listen(config.operator.listen.to_owned(), err))?;
+        .map_err(|err| Error::Listen(config.operator.listen.to_owned(), err))?;
 
     let server = tokio::spawn(async move {
         let builder = match Server::try_bind(&addr) {
             Ok(builder) => builder,
             Err(err) => {
-                crit!("Could not bind http server"; "error" => err.to_string());
+                error!("Could not bind http server, {}", err);
                 abort();
             }
         };
@@ -277,7 +274,7 @@ pub async fn daemon(
 
         info!("Start to listen for http request on {}", addr);
         if let Err(err) = server.await {
-            crit!("Could not serve http server"; "error" => err.to_string());
+            error!("Could not serve http server, {}", err);
         }
 
         abort()
@@ -285,9 +282,7 @@ pub async fn daemon(
 
     // -------------------------------------------------------------------------
     // Wait for termination signal
-    tokio::signal::ctrl_c()
-        .await
-        .map_err(DaemonError::SigTerm)?;
+    tokio::signal::ctrl_c().await.map_err(Error::SigTerm)?;
 
     // -------------------------------------------------------------------------
     // Cancel reconcilers
@@ -296,7 +291,7 @@ pub async fn daemon(
     for handle in handles {
         if let Err(err) = handle.await {
             if !err.is_cancelled() {
-                error!("Could not wait for the task to complete"; "error" => err.to_string());
+                error!("Could not wait for the task to complete, {}", err);
             }
         }
     }
@@ -306,7 +301,10 @@ pub async fn daemon(
     server.abort();
     if let Err(err) = server.await {
         if !err.is_cancelled() {
-            error!("Could not wait for the http server to gracefully close"; "error" => err.to_string());
+            error!(
+                "Could not wait for the http server to gracefully close, {}",
+                err
+            );
         }
     }
 
