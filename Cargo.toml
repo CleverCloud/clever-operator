@@ -16,13 +16,13 @@ keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 async-trait = "^0.1.53"
 chrono = "^0.4.19"
 clap = { version = "^3.1.18", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.1", features = ["jsonschemas"] }
+clevercloud-sdk = { version = "^0.10.2", features = ["jsonschemas"] }
 config = "^0.13.1"
 futures = "^0.3.21"
 hostname = "^0.3.1"
 hyper = { version = "^0.14.18", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.72.0", default-features = false, features = [
+kube = { version = "^0.73.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -30,9 +30,9 @@ kube = { version = "^0.72.0", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.72.0"
-kube-runtime = "^0.72.0"
-k8s-openapi = { version = "^0.14.0", default-features = false, features = [
+kube-derive = "^0.73.0"
+kube-runtime = "^0.73.0"
+k8s-openapi = { version = "^0.15.0", default-features = false, features = [
     "v1_21",
 ] }
 lazy_static = { version = "^1.4.0", optional = true }
@@ -44,7 +44,7 @@ opentelemetry-jaeger = { version = "^0.16.0", features = [
     "collector_client",
 ], optional = true }
 paw = "^1.0.0"
-prometheus = { version = "^0.13.0", optional = true }
+prometheus = { version = "^0.13.1", optional = true }
 schemars = { version = "^0.8.10", features = [
     "chrono",
     "indexmap1",
@@ -52,7 +52,7 @@ schemars = { version = "^0.8.10", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.25.0", optional = true }
+sentry = { version = "^0.26.0", optional = true }
 serde = { version = "^1.0.137", features = ["derive"] }
 serde_json = { version = "^1.0.81", features = [
     "preserve_order",

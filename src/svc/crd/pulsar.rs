@@ -18,10 +18,7 @@ use clevercloud_sdk::{
 use futures::TryFutureExt;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
 use kube_derive::CustomResource;
-use kube_runtime::{
-    controller::{self, Context},
-    watcher, Controller,
-};
+use kube_runtime::{controller, watcher, Controller};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slog_scope::{debug, error, info};
@@ -230,12 +227,12 @@ impl ControllerBuilder<Pulsar> for Reconciler {
 impl k8s::Reconciler<Pulsar> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: &Context<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
         let State {
             kube,
             apis,
             config: _,
-        } = ctx.get_ref();
+        } = ctx.as_ref();
         let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
@@ -299,12 +296,12 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: &Context<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
         let State {
             apis,
             kube,
             config: _,
-        } = ctx.get_ref();
+        } = ctx.as_ref();
         let mut modified = (*origin).to_owned();
         let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);

@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use kube::{CustomResourceExt, Resource, ResourceExt};
 use kube_runtime::{
-    controller::{self, Action, Context},
+    controller::{self, Action},
     watcher, Controller,
 };
 #[cfg(feature = "metrics")]
@@ -126,13 +126,13 @@ where
     type Error: Error + Send + Sync;
 
     /// create or update the object, this is part of the the reconcile function
-    async fn upsert(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn upsert(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// delete the object from kubernetes and third parts
-    async fn delete(ctx: &Context<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn delete(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// returns a [`Action`] to perform following the given error
-    fn retry(err: &Self::Error, _ctx: Context<State>) -> Action {
+    fn retry(err: &Self::Error, _ctx: Arc<State>) -> Action {
         // Implements a basic reconciliation which always re-schedule the event
         // 500 ms later
         trace!("Requeue failed reconciliation"; "duration" => 500, "error" => err.to_string());
@@ -142,7 +142,7 @@ where
     /// process the object and perform actions on kubernetes and/or
     /// clever-cloud api returns a [`Action`] to maybe perform another
     /// reconciliation or an error, if something gets wrong.
-    async fn reconcile(obj: Arc<T>, ctx: Context<State>) -> Result<Action, Self::Error> {
+    async fn reconcile(obj: Arc<T>, ctx: Arc<State>) -> Result<Action, Self::Error> {
         let (namespace, name) = resource::namespaced_name(&*obj);
         let api_resource = T::api_resource();
 
@@ -156,7 +156,7 @@ where
             #[cfg(not(feature = "trace"))]
             let result = Self::delete(&ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::delete(&ctx, obj.to_owned())
+            let result = Self::delete(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))
                 .await;
 
@@ -172,9 +172,9 @@ where
                 .inc();
 
             #[cfg(not(feature = "trace"))]
-            let result = Self::upsert(&ctx, obj.to_owned()).await;
+            let result = Self::upsert(ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
-            let result = Self::upsert(&ctx, obj.to_owned())
+            let result = Self::upsert(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::upsert"))
                 .await;
 
@@ -225,7 +225,7 @@ where
 
     /// listen for events of the custom resource as generic parameter
     async fn watch(&self, state: State) -> Result<(), <Self as Watcher<T>>::Error> {
-        let context = Context::new(state.to_owned());
+        let context = Arc::new(state.to_owned());
         let api_resource = T::api_resource();
         let mut stream = self
             .build(state.to_owned())
