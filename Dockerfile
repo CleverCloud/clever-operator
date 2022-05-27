@@ -1,14 +1,16 @@
-FROM fedora:latest AS builder
+FROM redhat/ubi9:latest AS builder
 
 WORKDIR /usr/src/clever-operator
 ADD src src
 ADD Cargo.toml .
 ADD Cargo.lock .
 
-RUN dnf update -y && dnf install cargo openssl-devel -y
-RUN cargo build --release
+RUN dnf update -y && dnf install gcc openssl-devel -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --verbose -y \
+    && export PATH="$HOME/.cargo/bin:$PATH" \
+    && cargo build --release
 
-FROM fedora:latest
+FROM redhat/ubi9:latest
 
 MAINTAINER Florentin Dubois <florentin.dubois@clever-cloud.com>
 LABEL name="clever-operator" \
