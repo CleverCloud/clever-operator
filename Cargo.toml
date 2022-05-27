@@ -59,15 +59,10 @@ serde_json = { version = "^1.0.81", features = [
     "float_roundtrip",
 ] }
 serde_yaml = "^0.8.24"
-slog = { version = "^2.7.0" }
-slog-async = "^2.7.0"
-slog-term = "^2.9.0"
-slog-scope = "^4.4.0"
-slog-stdlog = { version = "^4.1.1", optional = true }
 thiserror = "^1.0.31"
 tokio = { version = "^1.18.2", features = ["full"] }
-tracing = { version = "^0.1.34", optional = true }
-tracing-subscriber = { version = "^0.3.11", optional = true }
+tracing = "^0.1.34"
+tracing-subscriber = { version = "^0.3.11", default-features = false, features = ["std", "ansi", "tracing-log"] }
 tracing-opentelemetry = { version = "^0.17.2", optional = true }
 
 [features]
@@ -75,21 +70,15 @@ default = [
     "metrics",
     "trace",
     "tracker",
-    "slog/release_max_level_debug",
-    "slog/max_level_trace",
 ]
 logging = [
     "clevercloud-sdk/logging",
-    "tracing-subscriber/tracing-log",
-    "slog-stdlog",
 ]
 metrics = ["clevercloud-sdk/metrics", "lazy_static", "prometheus"]
 tracker = ["sentry"]
 trace = [
     "clevercloud-sdk/trace",
     "clevercloud-sdk/tokio",
-    "tracing",
-    "tracing-subscriber",
     "tracing-opentelemetry",
     "opentelemetry",
     "opentelemetry-jaeger",

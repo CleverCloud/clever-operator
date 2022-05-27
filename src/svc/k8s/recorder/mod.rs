@@ -9,14 +9,13 @@
 
 use std::{
     convert::TryFrom,
-    error::Error,
     fmt::{self, Debug, Display, Formatter},
     str::FromStr,
 };
 
 use k8s_openapi::api::core::v1::Event;
 use kube::{Client, CustomResourceExt, ResourceExt};
-use slog_scope::debug;
+use tracing::debug;
 #[cfg(feature = "trace")]
 use tracing::Instrument;
 
@@ -25,7 +24,16 @@ use crate::svc::k8s::resource;
 pub mod event;
 
 // -----------------------------------------------------------------------------
-// Level enum
+// Error enumeration
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("failed to parse '{0}', available options are 'normal' or 'warning'")]
+    Parse(String),
+}
+
+// -----------------------------------------------------------------------------
+// Level enumeration
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub enum Level {
@@ -34,7 +42,7 @@ pub enum Level {
 }
 
 impl FromStr for Level {
-    type Err = Box<dyn Error + Send + Sync>;
+    type Err = Error;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -42,18 +50,14 @@ impl FromStr for Level {
             "warning" => Self::Warning,
             "normal" => Self::Normal,
             _ => {
-                return Err(format!(
-                    "failed to parse '{}', available options are 'normal' or 'warning",
-                    s
-                )
-                .into());
+                return Err(Error::Parse(s.to_string()));
             }
         })
     }
 }
 
 impl TryFrom<String> for Level {
-    type Error = Box<dyn Error + Send + Sync>;
+    type Error = Error;
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(s: String) -> Result<Self, Self::Error> {
@@ -127,7 +131,13 @@ where
     T: ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
-    debug!("Create '{}' event for resource", action.to_string(); "uid" => &obj.meta().uid,"name" => &obj.name(), "namespace" => &obj.namespace(), "message" => message);
+    debug!(
+        "Create '{}' event for resource '{}/{}', {}",
+        action.to_string(),
+        &obj.namespace().unwrap_or_else(|| "<none>".to_string()),
+        &obj.name(),
+        message
+    );
     resource::upsert(client, &event::new(obj, kind, action, message), false).await
 }
 

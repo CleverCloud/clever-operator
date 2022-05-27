@@ -18,9 +18,9 @@ use lazy_static::lazy_static;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
-use slog_scope::{debug, trace};
 #[cfg(feature = "trace")]
 use tracing::Instrument;
+use tracing::{debug, level_enabled, trace, Level};
 
 // -----------------------------------------------------------------------------
 // Telemetry
@@ -125,11 +125,23 @@ where
     let (namespace, name) = namespaced_name(obj);
 
     if patch.0.is_empty() {
-        debug!("skip patch request on resource, no operation to apply"; "name" => &name, "namespace" => &namespace);
+        debug!(
+            "skip patch request on resource '{}/{}', no operation to apply",
+            &namespace, &name
+        );
         return Ok(obj.to_owned());
     }
 
-    trace!("execute patch request on resource"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
+    if level_enabled!(Level::TRACE) {
+        trace!(
+            "execute patch request on resource '{}/{}', {}",
+            &namespace,
+            &name,
+            serde_json::to_string_pretty(&patch)
+                .expect("Serialize patch as JSON string without error")
+        );
+    }
+
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)
@@ -198,11 +210,23 @@ where
     let (namespace, name) = namespaced_name(&obj);
 
     if patch.0.is_empty() {
-        debug!("skip patch request on resource's status, no operation to apply"; "name" => &name, "namespace" => &namespace);
+        debug!(
+            "skip patch request on resource's status ('{}/{}'), no operation to apply",
+            &namespace, &name
+        );
         return Ok(obj.to_owned());
     }
 
-    trace!("execute patch request on resource's status"; "name" => &name, "namespace" => &namespace, "patch" => serde_json::to_string(&patch).unwrap());
+    if level_enabled!(Level::TRACE) {
+        trace!(
+            "execute patch request on resource's status ('{}/{}'), {}",
+            &namespace,
+            &name,
+            serde_json::to_string_pretty(&patch)
+                .expect("Serialize patch to JSON string without error")
+        );
+    }
+
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)
@@ -256,7 +280,11 @@ where
     T: Resource + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
-    trace!("execute a request to find by labels resources"; "namespace" => ns, "query" => query);
+    trace!(
+        "execute a request to find by labels resources on namespace '{}' with query {}",
+        &ns,
+        query
+    );
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, ns)
@@ -311,7 +339,7 @@ where
 {
     let api: Api<T> = Api::namespaced(client, ns);
 
-    trace!("execute a request to retrieve resource"; "namespace" => ns, "name" => name);
+    trace!("execute a request to retrieve resource '{}/{}'", &ns, &name);
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     match api.get(name).await {
@@ -381,7 +409,11 @@ where
 {
     let (namespace, name) = namespaced_name(obj);
 
-    trace!("execute a request to create a resource"; "namespace" => &namespace, "name" => &name);
+    trace!(
+        "execute a request to create a resource '{}, {}'",
+        &namespace,
+        &name
+    );
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)

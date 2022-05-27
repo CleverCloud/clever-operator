@@ -2,16 +2,13 @@
 //!
 //! A kubernetes operator that expose clever cloud's resources through custom
 //! resource definition
-use std::{convert::TryFrom, error::Error, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
 
 #[cfg(feature = "trace")]
 use opentelemetry::global;
 #[cfg(feature = "trace")]
 use opentelemetry_jaeger::Propagator;
-use slog::{o, Drain, Level, LevelFilter, Logger};
-use slog_async::Async;
-use slog_scope::{crit, debug, info, set_global_logger, GlobalLoggerGuard as Guard};
-use slog_term::{FullFormat, TermDecorator};
+use tracing::{debug, error, info};
 #[cfg(feature = "trace")]
 use tracing_subscriber::{layer::SubscriberExt, Registry};
 
@@ -21,29 +18,63 @@ use crate::{
 };
 
 pub mod cmd;
+pub mod logging;
 pub mod svc;
 
-pub(crate) fn initialize(verbosity: &usize) -> Guard {
-    let level = Level::from_usize(Level::Critical.as_usize() + verbosity).unwrap_or(Level::Trace);
+// -----------------------------------------------------------------------------
+// Error enumeration
 
-    let decorator = TermDecorator::new().build();
-    let drain = FullFormat::new(decorator).build().fuse();
-    let drain = LevelFilter::new(drain, level).fuse();
-    let drain = Async::new(drain).build().fuse();
-
-    set_global_logger(Logger::root(drain, o!()))
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("failed to interact with command line interface, {0}")]
+    Command(cmd::Error),
+    #[error("failed to initialize logging system, {0}")]
+    Logging(logging::Error),
+    #[error("failed to load configuration, {0}")]
+    Configuration(svc::cfg::Error),
+    #[error("failed to set subscriber, {0}")]
+    Subscriber(tracing::subscriber::SetGlobalDefaultError),
+    #[error("failed to build tracing subscription")]
+    Subscription(opentelemetry::trace::TraceError),
 }
+
+impl From<cmd::Error> for Error {
+    fn from(err: cmd::Error) -> Self {
+        Self::Command(err)
+    }
+}
+
+impl From<logging::Error> for Error {
+    fn from(err: logging::Error) -> Self {
+        Self::Logging(err)
+    }
+}
+
+impl From<svc::cfg::Error> for Error {
+    fn from(err: svc::cfg::Error) -> Self {
+        Self::Configuration(err)
+    }
+}
+
+impl From<tracing::subscriber::SetGlobalDefaultError> for Error {
+    fn from(err: tracing::subscriber::SetGlobalDefaultError) -> Self {
+        Self::Subscriber(err)
+    }
+}
+
+impl From<opentelemetry::trace::TraceError> for Error {
+    fn from(err: opentelemetry::trace::TraceError) -> Self {
+        Self::Subscription(err)
+    }
+}
+
+// -----------------------------------------------------------------------------
+// main entrypoint
 
 #[paw::main]
 #[tokio::main]
-pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let _guard = initialize(&args.verbosity);
-
-    #[cfg(feature = "logging")]
-    if let Err(err) = slog_stdlog::init() {
-        crit!("Could not initialize standard logger"; "error" => err.to_string());
-        return Err(err.into());
-    }
+pub(crate) async fn main(args: Args) -> Result<(), Error> {
+    logging::initialize(args.verbosity)?;
 
     let config = Arc::new(match &args.config {
         Some(path) => Configuration::try_from(path.to_owned())?,
@@ -70,7 +101,10 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
 
     #[cfg(feature = "trace")]
     if let Some(jaeger) = &config.jaeger {
-        info!("Start to trace using jaeger with opentelemetry compatibility"; "endpoint" => jaeger.endpoint.to_owned());
+        info!(
+            "Start to trace using jaeger with opentelemetry compatibility on endpoint {}",
+            jaeger.endpoint
+        );
         global::set_text_map_propagator(Propagator::new());
 
         let mut builder = opentelemetry_jaeger::new_pipeline()
@@ -90,13 +124,18 @@ pub(crate) async fn main(args: Args) -> Result<(), Box<dyn Error + Send + Sync>>
         tracing::subscriber::set_global_default(Registry::default().with(layer))?;
     }
 
-    let result: Result<_, Box<dyn Error + Send + Sync>> = match &args.command {
-        Some(cmd) => cmd.execute(config).await.map_err(Into::into),
-        None => daemon(args.kubeconfig, config).await.map_err(Into::into),
-    };
+    let result = match &args.command {
+        Some(cmd) => cmd.execute(config).await,
+        None => daemon(args.kubeconfig, config).await,
+    }
+    .map_err(Error::Command);
 
     if let Err(err) = result {
-        crit!("could not execute {} properly", env!("CARGO_PKG_NAME"); "error" => err.to_string());
+        error!(
+            "could not execute {} properly, {}",
+            env!("CARGO_PKG_NAME"),
+            err
+        );
         return Err(err);
     }
 
