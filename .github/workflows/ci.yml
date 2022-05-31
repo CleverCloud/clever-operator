@@ -127,10 +127,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v2
         with:
-          context: deployments/operator-lifecycle-manager/0.5.1
+          context: deployments/operator-lifecycle-manager/0.5.2
           push: 'true'
           tags: clevercloud/clever-operator-manifest:${{ github.sha }}
-          file: deployments/operator-lifecycle-manager/0.5.1/bundle.Dockerfile
+          file: deployments/operator-lifecycle-manager/0.5.2/bundle.Dockerfile
   kubernetes-deployment-scripts-validation:
     name: Kubernetes validate deployment scripts
     runs-on: ubuntu-latest
@@ -159,7 +159,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: medyagh/setup-minikube@master
-      - run: curl -L -vvv https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 > /tmp/operator-sdk && chmod +x /tmp/operator-sdk
+      - run: curl -L -vvv https://github.com/operator-framework/operator-sdk/releases/download/v1.20.1/operator-sdk_linux_amd64 > /tmp/operator-sdk && chmod +x /tmp/operator-sdk
       - run: /tmp/operator-sdk olm install --verbose --timeout 30m
       - run: /tmp/operator-sdk run bundle --verbose --timeout 30m 'docker.io/clevercloud/clever-operator-manifest:${{ github.sha }}'
 ...
