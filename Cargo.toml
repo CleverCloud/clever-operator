@@ -83,3 +83,8 @@ trace = [
     "opentelemetry",
     "opentelemetry-jaeger",
 ]
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
