@@ -13,16 +13,16 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.53"
+async-trait = "^0.1.56"
 chrono = "^0.4.19"
-clap = { version = "^3.1.18", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.3", features = ["jsonschemas"] }
+clap = { version = "^3.2.8", features = ["derive"] }
+clevercloud-sdk = { version = "^0.10.5", features = ["jsonschemas"] }
 config = "^0.13.1"
 futures = "^0.3.21"
 hostname = "^0.3.1"
 hyper = { version = "^0.14.19", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.73.0", default-features = false, features = [
+kube = { version = "^0.73.1", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -30,8 +30,8 @@ kube = { version = "^0.73.0", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.73.0"
-kube-runtime = "^0.73.0"
+kube-derive = "^0.73.1"
+kube-runtime = "^0.73.1"
 k8s-openapi = { version = "^0.15.0", default-features = false, features = [
     "v1_21",
 ] }
@@ -52,18 +52,18 @@ schemars = { version = "^0.8.10", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.26.0", optional = true }
-serde = { version = "^1.0.137", features = ["derive"] }
-serde_json = { version = "^1.0.81", features = [
+sentry = { version = "^0.27.0", optional = true }
+serde = { version = "^1.0.138", features = ["derive"] }
+serde_json = { version = "^1.0.82", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
 serde_yaml = "^0.8.24"
 thiserror = "^1.0.31"
-tokio = { version = "^1.18.2", features = ["full"] }
-tracing = "^0.1.34"
-tracing-subscriber = { version = "^0.3.11", default-features = false, features = ["std", "ansi", "tracing-log"] }
-tracing-opentelemetry = { version = "^0.17.2", optional = true }
+tokio = { version = "^1.19.2", features = ["full"] }
+tracing = "^0.1.35"
+tracing-subscriber = { version = "^0.3.14", default-features = false, features = ["std", "ansi", "tracing-log"] }
+tracing-opentelemetry = { version = "^0.17.4", optional = true }
 
 [features]
 default = [
