@@ -157,7 +157,7 @@ where
                 .inc();
 
             #[cfg(not(feature = "trace"))]
-            let result = Self::delete(&ctx, obj.to_owned()).await;
+            let result = Self::delete(ctx, obj.to_owned()).await;
             #[cfg(feature = "trace")]
             let result = Self::delete(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))

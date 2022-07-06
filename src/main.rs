@@ -34,6 +34,7 @@ pub enum Error {
     Configuration(svc::cfg::Error),
     #[error("failed to set subscriber, {0}")]
     Subscriber(tracing::subscriber::SetGlobalDefaultError),
+    #[cfg(feature = "trace")]
     #[error("failed to build tracing subscription")]
     Subscription(opentelemetry::trace::TraceError),
 }
@@ -62,6 +63,7 @@ impl From<tracing::subscriber::SetGlobalDefaultError> for Error {
     }
 }
 
+#[cfg(feature = "trace")]
 impl From<opentelemetry::trace::TraceError> for Error {
     fn from(err: opentelemetry::trace::TraceError) -> Self {
         Self::Subscription(err)
@@ -100,22 +102,22 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
     });
 
     #[cfg(feature = "trace")]
-    if let Some(jaeger) = &config.jaeger {
+    if !config.jaeger.endpoint.is_empty() {
         info!(
             "Start to trace using jaeger with opentelemetry compatibility on endpoint {}",
-            jaeger.endpoint
+            &config.jaeger.endpoint
         );
         global::set_text_map_propagator(Propagator::new());
 
         let mut builder = opentelemetry_jaeger::new_pipeline()
-            .with_collector_endpoint(jaeger.endpoint.to_owned())
+            .with_collector_endpoint(config.jaeger.endpoint.to_owned())
             .with_service_name(env!("CARGO_PKG_NAME"));
 
-        if let Some(user) = &jaeger.user {
+        if let Some(user) = &config.jaeger.user {
             builder = builder.with_collector_username(user);
         }
 
-        if let Some(password) = &jaeger.password {
+        if let Some(password) = &config.jaeger.password {
             builder = builder.with_collector_password(password);
         }
 
