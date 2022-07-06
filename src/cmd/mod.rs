@@ -4,7 +4,7 @@
 use std::{io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
 
 use async_trait::async_trait;
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use clevercloud_sdk::{
     oauth10a::{
         connector::HttpsConnector,
@@ -96,8 +96,8 @@ impl Executor for Command {
 #[clap(author, version, about)]
 pub struct Args {
     /// Increase log verbosity
-    #[clap(short = 'v', global = true, parse(from_occurrences))]
-    pub verbosity: usize,
+    #[clap(short = 'v', global = true, action = ArgAction::Count)]
+    pub verbosity: u8,
     /// Specify location of kubeconfig
     #[clap(short = 'k', long = "kubeconfig", global = true)]
     pub kubeconfig: Option<PathBuf>,
