@@ -19,7 +19,7 @@ consumerSecret = ""
 # dsn = ""
 
 # Proxy configuration
-# [proxu]
+# [proxy]
 # http = "http://localhost:3108"
 # https = "http://localhost:3108"
 # no = ["10.0.0.1/8", "domain.example.com"]
