@@ -74,7 +74,7 @@ impl From<opentelemetry::trace::TraceError> for Error {
 #[paw::main]
 #[tokio::main]
 pub(crate) async fn main(args: Args) -> Result<(), Error> {
-    logging::initialize(args.verbosity)?;
+    logging::initialize(args.verbosity as usize)?;
 
     let config = Arc::new(match &args.config {
         Some(path) => Configuration::try_from(path.to_owned())?,
