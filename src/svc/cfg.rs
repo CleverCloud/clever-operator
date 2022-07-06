@@ -9,9 +9,9 @@ use std::{
 };
 
 use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, File};
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn};
+use tracing::warn;
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -122,7 +122,7 @@ pub struct Configuration {
     pub sentry: Sentry,
     #[cfg(feature = "trace")]
     #[serde(rename = "jaeger")]
-    pub jaeger: Option<Jaeger>,
+    pub jaeger: Jaeger,
 }
 
 impl TryFrom<PathBuf> for Configuration {
@@ -131,21 +131,75 @@ impl TryFrom<PathBuf> for Configuration {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         Config::builder()
-            .set_default("api.endpoint", PUBLIC_ENDPOINT)
+            // -----------------------------------------------------------------
+            // Api
+            .set_default(
+                "api.endpoint",
+                env::var("CLEVER_OPERATOR_API_ENDPOINT")
+                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
+            )
             .map_err(|err| Error::Default("api.endpoint".into(), err))?
-            .set_default("api.token", "")
+            .set_default(
+                "api.token",
+                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.token".into(), err))?
-            .set_default("api.secret", "")
+            .set_default(
+                "api.secret",
+                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.secret".into(), err))?
-            .set_default("api.consumerKey", "")
+            .set_default(
+                "api.consumerKey",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.consumerKey".into(), err))?
-            .set_default("api.consumerSecret", "")
+            .set_default(
+                "api.consumerSecret",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
+                    .unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
-            .set_default("operator.listen", OPERATOR_LISTEN)
+            // -----------------------------------------------------------------
+            // Operator
+            .set_default(
+                "operator.listen",
+                env::var("CLEVER_OPERATOR_OPERATOR_LISTEN")
+                    .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
+            )
             .map_err(|err| Error::Default("operator.listen".into(), err))?
-            .add_source(Environment::with_prefix(
-                &env!("CARGO_PKG_NAME").replace('-', "_"),
-            ))
+            // -----------------------------------------------------------------
+            // Sentry
+            .set_default(
+                "sentry.dsn",
+                env::var("CLEVER_OPERATOR_SENTRY_DSN")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("sentry.dsn".into(), err))?
+            // -----------------------------------------------------------------
+            // Jaeger
+            .set_default(
+                "jaeger.endpoint",
+                env::var("CLEVER_OPERATOR_JAEGER_ENDPOINT").unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("jaeger.endpoint".into(), err))?
+            .set_default(
+                "jaeger.user",
+                env::var("CLEVER_OPERATOR_JAEGER_USER")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("jaeger.user".into(), err))?
+            .set_default(
+                "jaeger.password",
+                env::var("CLEVER_OPERATOR_JAEGER_PASSWORD")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("jaeger.password".into(), err))?
+            // -----------------------------------------------------------------
+            // Files
             .add_source(File::from(path).required(true))
             .build()
             .map_err(Error::Build)?
@@ -158,21 +212,75 @@ impl Configuration {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn try_default() -> Result<Self, Error> {
         Config::builder()
-            .set_default("api.endpoint", PUBLIC_ENDPOINT)
+            // -----------------------------------------------------------------
+            // Api
+            .set_default(
+                "api.endpoint",
+                env::var("CLEVER_OPERATOR_API_ENDPOINT")
+                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
+            )
             .map_err(|err| Error::Default("api.endpoint".into(), err))?
-            .set_default("api.token", "")
+            .set_default(
+                "api.token",
+                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.token".into(), err))?
-            .set_default("api.secret", "")
+            .set_default(
+                "api.secret",
+                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.secret".into(), err))?
-            .set_default("api.consumerKey", "")
+            .set_default(
+                "api.consumerKey",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.consumerKey".into(), err))?
-            .set_default("api.consumerSecret", "")
+            .set_default(
+                "api.consumerSecret",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
+                    .unwrap_or_else(|_err| "".to_string()),
+            )
             .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
-            .set_default("operator.listen", OPERATOR_LISTEN)
+            // -----------------------------------------------------------------
+            // Operator
+            .set_default(
+                "operator.listen",
+                env::var("CLEVER_OPERATOR_OPERATOR_LISTEN")
+                    .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
+            )
             .map_err(|err| Error::Default("operator.listen".into(), err))?
-            .add_source(Environment::with_prefix(
-                &env!("CARGO_PKG_NAME").replace('-', "_"),
-            ))
+            // -----------------------------------------------------------------
+            // Sentry
+            .set_default(
+                "sentry.dsn",
+                env::var("CLEVER_OPERATOR_SENTRY_DSN")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("sentry.dsn".into(), err))?
+            // -----------------------------------------------------------------
+            // Jaeger
+            .set_default(
+                "jaeger.endpoint",
+                env::var("CLEVER_OPERATOR_JAEGER_ENDPOINT").unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("jaeger.endpoint".into(), err))?
+            .set_default(
+                "jaeger.user",
+                env::var("CLEVER_OPERATOR_JAEGER_USER")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("jaeger.user".into(), err))?
+            .set_default(
+                "jaeger.password",
+                env::var("CLEVER_OPERATOR_JAEGER_PASSWORD")
+                    .map(Some)
+                    .unwrap_or_else(|_err| None),
+            )
+            .map_err(|err| Error::Default("jaeger.password".into(), err))?
+            // -----------------------------------------------------------------
+            // Files
             .add_source(
                 File::from(PathBuf::from(format!(
                     "/usr/share/{}/config",
@@ -214,16 +322,16 @@ impl Configuration {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn help(&self) {
         #[cfg(feature = "logging")]
-        info!("Build with 'logging' feature flag");
+        tracing::info!("Build with 'logging' feature flag");
 
         #[cfg(feature = "metrics")]
-        info!("Build with 'metrics' feature flag");
+        tracing::info!("Build with 'metrics' feature flag");
 
         #[cfg(feature = "trace")]
-        info!("Build with 'trace' feature flag");
+        tracing::info!("Build with 'trace' feature flag");
 
         #[cfg(feature = "tracker")]
-        info!("Build with 'tracker' feature flag");
+        tracing::info!("Build with 'tracker' feature flag");
 
         if self.api.consumer_key.is_empty() {
             warn!("Configuration key 'api.consumerKey' has an empty value");
