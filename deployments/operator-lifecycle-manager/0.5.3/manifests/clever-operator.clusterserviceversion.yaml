@@ -151,7 +151,7 @@ spec:
   maturity: alpha
   provider:
     name: Clever Cloud
-  version: 0.5.2
+  version: 0.5.3
   relatedImages:
   - name: clever-operator
     image: clevercloud/clever-operator:e7cfe6efc4c4da80c722416fe1de373b789612f6
