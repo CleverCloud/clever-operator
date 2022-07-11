@@ -4,7 +4,7 @@
 
 ## Pre-requisites
 
-Before going further, you will need to follow instructions about 
+Before going further, you will need to follow instructions about
 [set up a development environment](20-set-up-development-environment.md).
 
 - The [curl](https://curl.se/) command line
