@@ -71,7 +71,6 @@ impl Into<addon::Opts> for Opts {
 #[kube(shortname = "pg")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
-#[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
 pub struct Spec {
     #[serde(rename = "organisation")]
@@ -367,7 +366,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
             let action = &Action::UpsertSecret;
-            let message = &format!("Create kubernetes secret '{}'", secret.name());
+            let message = &format!("Create kubernetes secret '{}'", secret.name_any());
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
 

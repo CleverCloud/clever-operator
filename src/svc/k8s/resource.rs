@@ -79,7 +79,7 @@ where
     (
         obj.namespace()
             .expect("resource to be owned by a namespace"),
-        obj.name(),
+        obj.name_any(),
     )
 }
 
@@ -499,7 +499,7 @@ where
         block_owner_deletion: Some(true),
         controller: None,
         kind: api_resource.kind,
-        name: obj.name(),
+        name: obj.name_any(),
         uid: obj
             .uid()
             .expect("to have an unique identifier provided by kubernetes"),
@@ -517,7 +517,7 @@ where
     ObjectReference {
         api_version: Some(api_resource.api_version),
         kind: Some(api_resource.kind),
-        name: Some(obj.name()),
+        name: Some(obj.name_any()),
         uid: obj.uid(),
         namespace: obj.namespace(),
         resource_version: obj.resource_version(),

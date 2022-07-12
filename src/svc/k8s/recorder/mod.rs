@@ -135,7 +135,7 @@ where
         "Create '{}' event for resource '{}/{}', {}",
         action.to_string(),
         &obj.namespace().unwrap_or_else(|| "<none>".to_string()),
-        &obj.name(),
+        &obj.name_any(),
         message
     );
     resource::upsert(client, &event::new(obj, kind, action, message), false).await
