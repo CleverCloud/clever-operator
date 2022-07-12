@@ -29,7 +29,7 @@ use tracing::{debug, error, info};
 
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
-    k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
+    k8s::{self, finalizer, recorder, resource, secret, Context, ControllerBuilder},
 };
 
 // -----------------------------------------------------------------------------
@@ -49,7 +49,6 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/config-provider";
 #[kube(shortname = "cp")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
-#[kube(apiextensions = "v1")]
 #[kube(derive = "PartialEq")]
 pub struct Spec {
     #[serde(rename = "organisation")]
@@ -220,8 +219,8 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 pub struct Reconciler {}
 
 impl ControllerBuilder<ConfigProvider> for Reconciler {
-    fn build(&self, state: State) -> Controller<ConfigProvider> {
-        Controller::new(Api::all(state.kube), ListParams::default())
+    fn build(&self, state: Arc<Context>) -> Controller<ConfigProvider> {
+        Controller::new(Api::all(state.kube.to_owned()), ListParams::default())
     }
 }
 
@@ -229,8 +228,8 @@ impl ControllerBuilder<ConfigProvider> for Reconciler {
 impl k8s::Reconciler<ConfigProvider> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<State>, origin: Arc<ConfigProvider>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<ConfigProvider>) -> Result<(), ReconcilerError> {
+        let Context {
             kube,
             apis,
             config: _,
@@ -326,14 +325,14 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
         let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
         let action = &Action::UpsertSecret;
-        let message = &format!("Create kubernetes secret '{}'", secret.name());
+        let message = &format!("Create kubernetes secret '{}'", secret.name_any());
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         Ok(())
     }
 
-    async fn delete(ctx: Arc<State>, origin: Arc<ConfigProvider>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn delete(ctx: Arc<Context>, origin: Arc<ConfigProvider>) -> Result<(), ReconcilerError> {
+        let Context {
             apis,
             kube,
             config: _,

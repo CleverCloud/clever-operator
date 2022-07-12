@@ -1,7 +1,7 @@
 //! # Command module
 //!
 //! This module provide command line interface structures and helpers
-use std::{io, net::AddrParseError, path::PathBuf, process::abort, sync::Arc};
+use std::{io, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 use clap::{ArgAction, Parser, Subcommand};
@@ -13,10 +13,6 @@ use clevercloud_sdk::{
     },
     Client,
 };
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Server,
-};
 use paw::ParseArgs;
 use tracing::{error, info};
 
@@ -25,8 +21,8 @@ use crate::{
     svc::{
         cfg::Configuration,
         crd::{config_provider, elasticsearch, mongodb, mysql, postgresql, pulsar, redis},
-        k8s::{client, State, Watcher},
-        telemetry::router,
+        http,
+        k8s::{client, Context, Watcher},
     },
 };
 
@@ -51,14 +47,30 @@ pub enum Error {
     Execution(String, Arc<Error>),
     #[error("failed to execute command, {0}")]
     CustomResourceDefinition(CustomResourceDefinitionError),
-    #[error("failed to parse listen address '{0}', {1}")]
-    Listen(String, AddrParseError),
     #[error("failed to handle termintion signal, {0}")]
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
     Client(client::Error),
     #[error("failed to create clever cloud client, {0}")]
     CleverClient(clevercloud_sdk::oauth10a::proxy::Error),
+    #[error("failed to watch PostgreSql resources, {0}")]
+    WatchPostgreSql(postgresql::ReconcilerError),
+    #[error("failed to watch Redis resources, {0}")]
+    WatchRedis(redis::ReconcilerError),
+    #[error("failed to watch MySql resources, {0}")]
+    WatchMySql(mysql::ReconcilerError),
+    #[error("failed to watch ElasticSearch resources, {0}")]
+    WatchElasticSearch(elasticsearch::ReconcilerError),
+    #[error("failed to watch MongoDb resources, {0}")]
+    WatchMongoDb(mongodb::ReconcilerError),
+    #[error("failed to watch ConfigProvider resources, {0}")]
+    WatchConfigProvider(config_provider::ReconcilerError),
+    #[error("failed to watch Pulsar resources, {0}")]
+    WatchPulsar(pulsar::ReconcilerError),
+    #[error("failed to serve http content, {0}")]
+    Serve(http::server::Error),
+    #[error("failed to spawn task on tokio, {0}")]
+    Join(tokio::task::JoinError),
 }
 
 // -----------------------------------------------------------------------------
@@ -158,155 +170,73 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
         .build(connector);
 
     // -------------------------------------------------------------------------
-    // Create state to give to each reconciler
-    let postgresql_state = State::new(kube_client, clever_client, config.to_owned());
-    let redis_state = postgresql_state.to_owned();
-    let mysql_state = postgresql_state.to_owned();
-    let mongodb_state = postgresql_state.to_owned();
-    let pulsar_state = postgresql_state.to_owned();
-    let config_provider_state = postgresql_state.to_owned();
-    let elasticsearch_state = postgresql_state.to_owned();
+    // Create context to give to each reconciler
+    let context = Arc::new(Context::new(kube_client, clever_client, config.to_owned()));
+
+    let postgresql_ctx = context.to_owned();
+    let mysql_ctx = context.to_owned();
+    let mongodb_ctx = context.to_owned();
+    let redis_ctx = context.to_owned();
+    let elasticsearch_ctx = context.to_owned();
+    let config_provider_ctx = context.to_owned();
+    let pulsar_ctx = context.to_owned();
 
     // -------------------------------------------------------------------------
-    // Create reconcilers
-    let handles = vec![
-        tokio::spawn(async {
-            let reconciler = postgresql::Reconciler::default();
+    // Start services
 
+    tokio::select! {
+        r = tokio::spawn(async move {
             info!("Start to listen for events of postgresql addon custom resource");
-            if let Err(err) = reconciler.watch(postgresql_state).await {
-                error!(
-                    "Could not reconcile postgresql addon custom resource, {}",
-                    err
-                );
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = redis::Reconciler::default();
-
+            postgresql::Reconciler::default()
+                .watch(postgresql_ctx)
+                .await
+                .map_err(Error::WatchPostgreSql)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of redis addon custom resource");
-            if let Err(err) = reconciler.watch(redis_state).await {
-                error!("Could not reconcile redis addon custom resource, {}", err);
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = mysql::Reconciler::default();
-
+            redis::Reconciler::default()
+                .watch(redis_ctx)
+                .await
+                .map_err(Error::WatchRedis)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of mysql addon custom resource");
-            if let Err(err) = reconciler.watch(mysql_state).await {
-                error!("Could not reconcile mysql addon custom resource, {}", err);
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = mongodb::Reconciler::default();
-
+            mysql::Reconciler::default()
+                .watch(mysql_ctx)
+                .await
+                .map_err(Error::WatchMySql)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of mongodb addon custom resource");
-            if let Err(err) = reconciler.watch(mongodb_state).await {
-                error!("Could not reconcile mongodb addon custom resource, {}", err);
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = pulsar::Reconciler::default();
-
+            mongodb::Reconciler::default()
+                .watch(mongodb_ctx)
+                .await
+                .map_err(Error::WatchMongoDb)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of pulsar addon custom resource");
-            if let Err(err) = reconciler.watch(pulsar_state).await {
-                error!("Could not reconcile plusar addon custom resource, {}", err);
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = config_provider::Reconciler::default();
-
+            pulsar::Reconciler::default()
+                .watch(pulsar_ctx)
+                .await
+                .map_err(Error::WatchPulsar)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of config-provider addon custom resource");
-            if let Err(err) = reconciler.watch(config_provider_state).await {
-                error!(
-                    "Could not reconcile config-provider addon custom resource, {}",
-                    err
-                );
-            }
-
-            abort();
-        }),
-        tokio::spawn(async {
-            let reconciler = elasticsearch::Reconciler::default();
-
+            config_provider::Reconciler::default()
+                .watch(config_provider_ctx)
+                .await
+                .map_err(Error::WatchConfigProvider)
+        }) => r,
+        r = tokio::spawn(async move {
             info!("Start to listen for events of elasticsearch addon custom resource");
-            if let Err(err) = reconciler.watch(elasticsearch_state).await {
-                error!(
-                    "Could not reconcile elasticsearch addon custom resource, {}",
-                    err
-                );
-            }
-
-            abort();
-        }),
-    ];
-
-    // -------------------------------------------------------------------------
-    // Create http server
-    let addr = config
-        .operator
-        .listen
-        .parse()
-        .map_err(|err| Error::Listen(config.operator.listen.to_owned(), err))?;
-
-    let server = tokio::spawn(async move {
-        let builder = match Server::try_bind(&addr) {
-            Ok(builder) => builder,
-            Err(err) => {
-                error!("Could not bind http server, {}", err);
-                abort();
-            }
-        };
-
-        let server = builder.serve(make_service_fn(|_| async {
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(service_fn(router))
-        }));
-
-        info!("Start to listen for http request on {}", addr);
-        if let Err(err) = server.await {
-            error!("Could not serve http server, {}", err);
-        }
-
-        abort()
-    });
-
-    // -------------------------------------------------------------------------
-    // Wait for termination signal
-    tokio::signal::ctrl_c().await.map_err(Error::SigTerm)?;
-
-    // -------------------------------------------------------------------------
-    // Cancel reconcilers
-    handles.iter().for_each(|handle| handle.abort());
-
-    for handle in handles {
-        if let Err(err) = handle.await {
-            if !err.is_cancelled() {
-                error!("Could not wait for the task to complete, {}", err);
-            }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Cancel http server
-    server.abort();
-    if let Err(err) = server.await {
-        if !err.is_cancelled() {
-            error!(
-                "Could not wait for the http server to gracefully close, {}",
-                err
-            );
-        }
-    }
+            elasticsearch::Reconciler::default()
+                .watch(elasticsearch_ctx)
+                .await
+                .map_err(Error::WatchElasticSearch)
+        }) => r,
+        r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
+        r = tokio::spawn(async move { http::server::serve(config.to_owned()).await.map_err(Error::Serve) }) => r,
+    }.map_err(Error::Join)??;
 
     Ok(())
 }

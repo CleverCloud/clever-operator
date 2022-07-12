@@ -81,19 +81,19 @@ lazy_static! {
 
 /// contains clients to interact with kubernetes and clever-cloud apis.
 #[derive(Clone)]
-pub struct State {
+pub struct Context {
     pub kube: kube::Client,
     pub apis: clevercloud::Client,
     pub config: Arc<Configuration>,
 }
 
-impl From<(kube::Client, clevercloud::Client, Arc<Configuration>)> for State {
+impl From<(kube::Client, clevercloud::Client, Arc<Configuration>)> for Context {
     fn from((kube, apis, config): (kube::Client, clevercloud::Client, Arc<Configuration>)) -> Self {
         Self { kube, apis, config }
     }
 }
 
-impl State {
+impl Context {
     pub fn new(k: kube::Client, a: clevercloud::Client, c: Arc<Configuration>) -> Self {
         Self::from((k, a, c))
     }
@@ -110,7 +110,7 @@ where
     <T as Resource>::DynamicType: Eq + Hash,
 {
     /// returns a new created kubernetes controller
-    fn build(&self, state: State) -> Controller<T>;
+    fn build(&self, context: Arc<Context>) -> Controller<T>;
 }
 
 // -----------------------------------------------------------------------------
@@ -126,13 +126,13 @@ where
     type Error: Error + Send + Sync;
 
     /// create or update the object, this is part of the the reconcile function
-    async fn upsert(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn upsert(ctx: Arc<Context>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// delete the object from kubernetes and third parts
-    async fn delete(ctx: Arc<State>, obj: Arc<T>) -> Result<(), Self::Error>;
+    async fn delete(ctx: Arc<Context>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// returns a [`Action`] to perform following the given error
-    fn retry(err: &Self::Error, _ctx: Arc<State>) -> Action {
+    fn retry(err: &Self::Error, _ctx: Arc<Context>) -> Action {
         // Implements a basic reconciliation which always re-schedule the event
         // 500 ms later
         trace!("Requeue failed reconciliation for 500ms, {}", err);
@@ -142,7 +142,7 @@ where
     /// process the object and perform actions on kubernetes and/or
     /// clever-cloud api returns a [`Action`] to maybe perform another
     /// reconciliation or an error, if something gets wrong.
-    async fn reconcile(obj: Arc<T>, ctx: Arc<State>) -> Result<Action, Self::Error> {
+    async fn reconcile(obj: Arc<T>, ctx: Arc<Context>) -> Result<Action, Self::Error> {
         let (namespace, name) = resource::namespaced_name(&*obj);
         let api_resource = T::api_resource();
 
@@ -236,11 +236,10 @@ where
     type Error: WatcherError + Send + Sync;
 
     /// listen for events of the custom resource as generic parameter
-    async fn watch(&self, state: State) -> Result<(), <Self as Watcher<T>>::Error> {
-        let context = Arc::new(state.to_owned());
+    async fn watch(&self, context: Arc<Context>) -> Result<(), <Self as Watcher<T>>::Error> {
         let api_resource = T::api_resource();
         let mut stream = self
-            .build(state.to_owned())
+            .build(context.to_owned())
             .run(Self::reconcile, Self::retry, context)
             .boxed();
 

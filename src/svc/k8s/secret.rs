@@ -14,7 +14,7 @@ pub fn name<T>(obj: &T) -> String
 where
     T: ResourceExt + Debug,
 {
-    format!("{}-secrets", obj.name())
+    format!("{}-secrets", obj.name_any())
 }
 
 #[cfg_attr(feature = "trace", tracing::instrument)]

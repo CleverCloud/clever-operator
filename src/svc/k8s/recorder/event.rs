@@ -36,7 +36,7 @@ where
             namespace: obj.namespace(),
             name: Some(format!(
                 "{}-{}-{}",
-                obj.name(),
+                obj.name_any(),
                 action.to_string().to_lowercase(),
                 now.timestamp()
             )),
