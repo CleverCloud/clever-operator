@@ -29,7 +29,7 @@ use tracing::{debug, error, info};
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
     crd::Instance,
-    k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
+    k8s::{self, finalizer, recorder, resource, secret, Context, ControllerBuilder},
 };
 
 // -----------------------------------------------------------------------------
@@ -253,8 +253,8 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 pub struct Reconciler {}
 
 impl ControllerBuilder<ElasticSearch> for Reconciler {
-    fn build(&self, state: State) -> Controller<ElasticSearch> {
-        Controller::new(Api::all(state.kube), ListParams::default())
+    fn build(&self, state: Arc<Context>) -> Controller<ElasticSearch> {
+        Controller::new(Api::all(state.kube.to_owned()), ListParams::default())
     }
 }
 
@@ -262,8 +262,8 @@ impl ControllerBuilder<ElasticSearch> for Reconciler {
 impl k8s::Reconciler<ElasticSearch> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<State>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
+        let Context {
             kube,
             apis,
             config: _,
@@ -390,8 +390,8 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: Arc<State>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn delete(ctx: Arc<Context>, origin: Arc<ElasticSearch>) -> Result<(), ReconcilerError> {
+        let Context {
             apis,
             kube,
             config: _,

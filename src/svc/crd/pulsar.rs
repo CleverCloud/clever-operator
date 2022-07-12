@@ -25,7 +25,7 @@ use tracing::{debug, error, info};
 
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
-    k8s::{self, finalizer, recorder, resource, secret, ControllerBuilder, State},
+    k8s::{self, finalizer, recorder, resource, secret, Context, ControllerBuilder},
 };
 
 // -----------------------------------------------------------------------------
@@ -218,8 +218,8 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
 pub struct Reconciler {}
 
 impl ControllerBuilder<Pulsar> for Reconciler {
-    fn build(&self, state: State) -> Controller<Pulsar> {
-        Controller::new(Api::all(state.kube), ListParams::default())
+    fn build(&self, state: Arc<Context>) -> Controller<Pulsar> {
+        Controller::new(Api::all(state.kube.to_owned()), ListParams::default())
     }
 }
 
@@ -227,8 +227,8 @@ impl ControllerBuilder<Pulsar> for Reconciler {
 impl k8s::Reconciler<Pulsar> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+        let Context {
             kube,
             apis,
             config: _,
@@ -311,8 +311,8 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: Arc<State>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
-        let State {
+    async fn delete(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+        let Context {
             apis,
             kube,
             config: _,
