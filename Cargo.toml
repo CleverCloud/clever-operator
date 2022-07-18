@@ -15,8 +15,8 @@ keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 [dependencies]
 async-trait = "^0.1.56"
 chrono = "^0.4.19"
-clap = { version = "^3.2.10", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.5", features = ["jsonschemas"] }
+clap = { version = "^3.2.12", features = ["derive"] }
+clevercloud-sdk = { version = "^0.10.6", features = ["jsonschemas"] }
 config = "^0.13.1"
 futures = "^0.3.21"
 hostname = "^0.3.1"
@@ -58,9 +58,9 @@ serde_json = { version = "^1.0.82", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.8.25"
+serde_yaml = "^0.8.26"
 thiserror = "^1.0.31"
-tokio = { version = "^1.19.2", features = ["full"] }
+tokio = { version = "^1.20.0", features = ["full"] }
 tracing = "^0.1.35"
 tracing-subscriber = { version = "^0.3.14", default-features = false, features = ["std", "ansi", "tracing-log"] }
 tracing-opentelemetry = { version = "^0.17.4", optional = true }
