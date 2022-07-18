@@ -56,7 +56,7 @@ dependencies = [
  "futures-core",
  "memchr",
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -232,9 +232,9 @@ checksum = "300bccc729b1ada84523246038aad61fead689ac362bb9d44beea6f6a188c34b"
 
 [[package]]
 name = "clap"
-version = "3.2.10"
+version = "3.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69c5a7f9997be616e47f0577ee38c91decb33392c5be4866494f34cdf329a9aa"
+checksum = "ab8b79fe3946ceb4a0b1c080b4018992b8d27e9ff363644c1c9b6387c854614d"
 dependencies = [
  "atty",
  "bitflags",
@@ -297,7 +297,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "thiserror",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
@@ -305,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "clevercloud-sdk"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dba2d77521614c36eadcdbf30215b01072a8927e83b02060f5867be666fa1dc2"
+checksum = "8874bd77449df0ac6367ad87efc77b492d8f582c13f5e15c3438a5a61ba6e93c"
 dependencies = [
  "async-trait",
  "hyper",
@@ -454,9 +454,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ccfd8c0ee4cce11e45b3fd6f9d5e69e0cc62912aa6a0cb1bf4617b0eba5a12f"
+checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
 dependencies = [
  "generic-array 0.14.5",
  "typenum",
@@ -803,7 +803,7 @@ dependencies = [
  "http",
  "indexmap",
  "slab",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-util",
  "tracing",
 ]
@@ -941,7 +941,7 @@ dependencies = [
  "itoa",
  "pin-project-lite",
  "socket2",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tower-service",
  "tracing",
  "want",
@@ -960,7 +960,7 @@ dependencies = [
  "hyper",
  "hyper-tls",
  "native-tls",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-native-tls",
  "tower-service",
 ]
@@ -976,7 +976,7 @@ dependencies = [
  "log",
  "rustls",
  "rustls-native-certs",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-rustls",
 ]
 
@@ -988,7 +988,7 @@ checksum = "bbb958482e8c7be4bc3cf272a766a2b0bf1a6755e7a6ae777f017a31d11b13b1"
 dependencies = [
  "hyper",
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-io-timeout",
 ]
 
@@ -1001,7 +1001,7 @@ dependencies = [
  "bytes 1.1.0",
  "hyper",
  "native-tls",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-native-tls",
 ]
 
@@ -1177,7 +1177,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "thiserror",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-tungstenite",
  "tokio-util",
  "tower",
@@ -1235,7 +1235,7 @@ dependencies = [
  "serde_json",
  "smallvec 1.9.0",
  "thiserror",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-util",
  "tracing",
 ]
@@ -1479,9 +1479,9 @@ dependencies = [
 
 [[package]]
 name = "oauth10a"
-version = "1.3.10"
+version = "1.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aa2324d75eeba90435c2230646450ce1891c44aa6128f4d61a8f5dd917738bf"
+checksum = "875f5c7bad48da606cd26cc6c071c71c24f5c34ddea42d247deb6dff8d94bc6b"
 dependencies = [
  "async-trait",
  "base64",
@@ -1590,7 +1590,7 @@ dependencies = [
  "pin-project",
  "rand",
  "thiserror",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-stream",
 ]
 
@@ -1620,7 +1620,7 @@ dependencies = [
  "opentelemetry-semantic-conventions",
  "thiserror",
  "thrift",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -2022,7 +2022,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-native-tls",
  "tower-service",
  "url",
@@ -2252,7 +2252,7 @@ dependencies = [
  "sentry-contexts",
  "sentry-core",
  "sentry-panic",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -2398,9 +2398,9 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.25"
+version = "0.8.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ec0091e1f5aa338283ce049bd9dfefd55e1f168ac233e85c1ffe0038fb48cbe"
+checksum = "578a7433b776b56a35785ed5ce9a7e777ac0598aac5a6dd1b4b18a307c7fc71b"
 dependencies = [
  "indexmap",
  "ryu",
@@ -2663,10 +2663,11 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.19.2"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c51a52ed6686dd62c320f9b89299e9dfb46f730c7a48e635c19f21d116cb1439"
+checksum = "57aec3cfa4c296db7255446efb4928a6be304b431a806216105542a67b6ca82e"
 dependencies = [
+ "autocfg",
  "bytes 1.1.0",
  "libc",
  "memchr",
@@ -2741,7 +2742,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30b74022ada614a1b4834de765f9bb43877f910cc8ce4be40e89042c9223a8bf"
 dependencies = [
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -2762,7 +2763,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7d995660bd2b7f8c1568414c1126076c13fbb725c40112dc0120b78eb9b717b"
 dependencies = [
  "native-tls",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -2791,7 +2792,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
  "rustls",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "webpki",
 ]
 
@@ -2803,7 +2804,7 @@ checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
 dependencies = [
  "futures-core",
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
 ]
 
 [[package]]
@@ -2867,7 +2868,7 @@ checksum = "06cda1232a49558c46f8a504d5b93101d42c0bf7f911f12a105ba48168f821ae"
 dependencies = [
  "futures-util",
  "log",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tungstenite",
 ]
 
@@ -2915,7 +2916,7 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "slab",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tracing",
 ]
 
@@ -2938,7 +2939,7 @@ dependencies = [
  "futures-util",
  "pin-project",
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-util",
  "tower-layer",
  "tower-service",
@@ -2961,7 +2962,7 @@ dependencies = [
  "http-body",
  "http-range-header",
  "pin-project-lite",
- "tokio 1.19.2",
+ "tokio 1.20.0",
  "tokio-util",
  "tower-layer",
  "tower-service",
