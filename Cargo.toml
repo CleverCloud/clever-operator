@@ -13,11 +13,11 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.56"
-chrono = "^0.4.19"
-clap = { version = "^3.2.12", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.6", features = ["jsonschemas"] }
-config = "^0.13.1"
+async-trait = "^0.1.57"
+chrono = "^0.4.21"
+clap = { version = "^3.2.16", features = ["derive"] }
+clevercloud-sdk = { version = "^0.10.7", features = ["jsonschemas"] }
+config = "^0.13.2"
 futures = "^0.3.21"
 hostname = "^0.3.1"
 hyper = { version = "^0.14.20", features = ["server", "tcp", "http1"] }
@@ -53,16 +53,16 @@ schemars = { version = "^0.8.10", features = [
     "url",
 ] }
 sentry = { version = "^0.27.0", optional = true }
-serde = { version = "^1.0.139", features = ["derive"] }
-serde_json = { version = "^1.0.82", features = [
+serde = { version = "1.0.143", features = ["derive"] }
+serde_json = { version = "^1.0.83", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.8.26"
-thiserror = "^1.0.31"
-tokio = { version = "^1.20.0", features = ["full"] }
-tracing = "^0.1.35"
-tracing-subscriber = { version = "^0.3.14", default-features = false, features = ["std", "ansi", "tracing-log"] }
+serde_yaml = "^0.9.4"
+thiserror = "^1.0.32"
+tokio = { version = "^1.20.1", features = ["full"] }
+tracing = "^0.1.36"
+tracing-subscriber = { version = "^0.3.15", default-features = false, features = ["std", "ansi", "tracing-log"] }
 tracing-opentelemetry = { version = "^0.17.4", optional = true }
 
 [features]
