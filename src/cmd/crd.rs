@@ -78,7 +78,7 @@ pub enum CustomResourceDefinition {
 impl Executor for CustomResourceDefinition {
     type Error = CustomResourceDefinitionError;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::View { custom_resource } => view(config, custom_resource).await,
@@ -89,7 +89,7 @@ impl Executor for CustomResourceDefinition {
 // -----------------------------------------------------------------------------
 // view function
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "trace", tracing::instrument(skip(_config)))]
 pub async fn view(
     _config: Arc<Configuration>,
     custom_resource: &Option<CustomResource>,

@@ -81,7 +81,7 @@ pub enum Command {
 impl Executor for Command {
     type Error = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::CustomResourceDefinition(crd) => crd
@@ -128,7 +128,7 @@ impl ParseArgs for Args {
 // -----------------------------------------------------------------------------
 // daemon function
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
 pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> Result<(), Error> {
     // -------------------------------------------------------------------------
     // Create a new kubernetes client from path if defined, or via the

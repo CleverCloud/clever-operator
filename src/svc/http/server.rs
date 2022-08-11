@@ -24,7 +24,7 @@ pub enum Error {
     Serve(hyper::Error),
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(config))]
 pub async fn serve(config: Arc<Configuration>) -> Result<(), Error> {
     let addr = config
         .operator
