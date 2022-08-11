@@ -4,18 +4,12 @@
 //! and the `clevercloud-sdk` crate.
 
 use clevercloud_sdk::{
-    oauth10a::connector::{GaiResolver, HttpConnector, HttpsConnector, ProxyConnector},
     v2,
     v4::addon_provider::{config_provider::addon::environment, plan},
 };
 
+pub mod client;
 pub mod ext;
-
-// -----------------------------------------------------------------------------
-// type aliases
-
-pub type Client =
-    clevercloud_sdk::Client<ProxyConnector<HttpsConnector<HttpConnector<GaiResolver>>>>;
 
 // -----------------------------------------------------------------------------
 // Error enumeration

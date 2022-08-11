@@ -108,6 +108,8 @@ $ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator
 
 ## Configuration
 
+### Global
+
 To work properly the operator need to be configured with at least credentials to connect the Clever Cloud's API. Those
 configurations could be provided through a ConfigMap, a Secret or by the environment.
 
@@ -134,6 +136,11 @@ retrieve its configuration:
 - `$HOME/.config/clever-operator/config.{toml,yaml,json}`
 - `$HOME/.local/share/clever-operator/config.{toml,yaml,json}`
 - `config.{toml,yaml,json}`
+
+### Namespace
+
+It is possible to override configuration to connect the Clever Cloud's api through a `Secret` named `clever-operator` and using the `config` key.
+Only available configuration keys are `api` and `proxy` from the [`Configuration`](config.sample.toml).
 
 ## License
 

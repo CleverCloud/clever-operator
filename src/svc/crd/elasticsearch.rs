@@ -19,6 +19,7 @@ use clevercloud_sdk::{
     },
 };
 use futures::TryFutureExt;
+use k8s_openapi::api::core::v1::Secret;
 use kube::{api::ListParams, Api, Resource, ResourceExt};
 use kube_derive::CustomResource;
 use kube_runtime::{controller, watcher, Controller};
@@ -29,7 +30,11 @@ use tracing::{debug, error, info};
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
     crd::Instance,
-    k8s::{self, finalizer, recorder, resource, secret, Context, ControllerBuilder},
+    k8s::{
+        self, finalizer, recorder, resource,
+        secret::{self, OVERRIDE_CONFIGURATION_NAME},
+        Context, ControllerBuilder,
+    },
 };
 
 // -----------------------------------------------------------------------------
@@ -204,6 +209,8 @@ pub enum ReconcilerError {
     Reconcile(String),
     #[error("failed to execute request on clever-cloud api, {0}")]
     CleverClient(clevercloud::Error),
+    #[error("failed to create clevercloud client, {0}")]
+    CreateCleverClient(clevercloud::client::Error),
     #[error("failed to execute request on kubernetes api, {0}")]
     KubeClient(kube::Error),
     #[error("failed to compute diff between the original and modified object, {0}")]
@@ -245,6 +252,12 @@ impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
     }
 }
 
+impl From<clevercloud::client::Error> for ReconcilerError {
+    fn from(err: clevercloud::client::Error) -> Self {
+        Self::CreateCleverClient(err)
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Reconciler structure
 
@@ -269,6 +282,29 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         } = ctx.as_ref();
         let kind = ElasticSearch::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
+
+        // ---------------------------------------------------------------------
+        // Step 0: verify if there is a clever cloud client override
+        debug!(
+            "Try to retrieve the optional secret '{}' on namespace '{}'",
+            OVERRIDE_CONFIGURATION_NAME, namespace
+        );
+
+        let secret: Option<Secret> =
+            resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
+        let apis = match secret {
+            Some(secret) => {
+                info!(
+                    "Use custom Clever Cloud client to connect the api using secret '{}/{}'",
+                    namespace, OVERRIDE_CONFIGURATION_NAME
+                );
+                clevercloud::client::try_from(secret).await?
+            }
+            None => {
+                info!("Use default Clever Cloud client to connect the api");
+                apis.to_owned()
+            }
+        };
 
         // ---------------------------------------------------------------------
         // Step 1: set finalizer
@@ -299,7 +335,7 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
                 &kind, &namespace, &name, &modified.spec.instance.plan
             );
             let plan = plan::find(
-                apis,
+                &apis,
                 &AddonProviderId::ElasticSearch,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
@@ -346,7 +382,7 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
             "Upsert addon for custom resource '{}' ('{}/{}')",
             &kind, &namespace, &name
         );
-        let addon = modified.upsert(apis).await?;
+        let addon = modified.upsert(&apis).await?;
 
         modified.set_addon_id(Some(addon.id.to_owned()));
 
@@ -369,7 +405,7 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 4: create the secret
 
-        let secrets = modified.secrets(apis).await?;
+        let secrets = modified.secrets(&apis).await?;
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
@@ -400,13 +436,36 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
+        // Step 0: verify if there is a clever cloud client override
+        debug!(
+            "Try to retrieve the optional secret '{}' on namespace '{}'",
+            OVERRIDE_CONFIGURATION_NAME, namespace
+        );
+
+        let secret: Option<Secret> =
+            resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
+        let apis = match secret {
+            Some(secret) => {
+                info!(
+                    "Use custom Clever Cloud client to connect the api using secret '{}/{}'",
+                    namespace, OVERRIDE_CONFIGURATION_NAME
+                );
+                clevercloud::client::try_from(secret).await?
+            }
+            None => {
+                info!("Use default Clever Cloud client to connect the api");
+                apis.to_owned()
+            }
+        };
+
+        // ---------------------------------------------------------------------
         // Step 1: delete the addon
 
         info!(
             "Delete addon for custom resource '{}' ('{}/{}')",
             &kind, &namespace, &name
         );
-        modified.delete(apis).await?;
+        modified.delete(&apis).await?;
         modified.set_addon_id(None);
 
         debug!(
@@ -429,8 +488,8 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
             "Remove finalizer on custom resource '{}' ('{}/{}')",
             &kind, &namespace, &name
         );
-        let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
+        let modified = finalizer::remove(modified, ADDON_FINALIZER);
         let action = &Action::DeleteFinalizer;
         let message = "Delete finalizer from custom resource";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
