@@ -13,7 +13,7 @@ use clevercloud_sdk::{
 use hyper::StatusCode;
 use tracing::{debug, trace};
 
-use crate::svc::clevercloud;
+use crate::svc::clevercloud::client::Client;
 
 // -----------------------------------------------------------------------------
 // AddonExt trait
@@ -39,7 +39,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn get(&self, client: &clevercloud::Client) -> Result<Option<Addon>, Self::Error> {
+    async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!(
                 "Retrieve the addon from the identifier '{}' ({})",
@@ -77,7 +77,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn upsert(&self, client: &clevercloud::Client) -> Result<Addon, Self::Error> {
+    async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
         debug!(
             "Try to retrieve the addon '{}' ({}), before creating a new one",
             self.id().unwrap_or_else(|| "<none>".to_string()),
@@ -92,7 +92,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     }
 
     #[cfg_attr(feature = "trace", tracing::instrument)]
-    async fn delete(&self, client: &clevercloud::Client) -> Result<(), Self::Error> {
+    async fn delete(&self, client: &Client) -> Result<(), Self::Error> {
         if let Some(a) = self.get(client).await? {
             addon::delete(client, &self.organisation(), &a.id).await?;
         }
@@ -103,7 +103,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn secrets(
         &self,
-        client: &clevercloud::Client,
+        client: &Client,
     ) -> Result<Option<BTreeMap<String, String>>, Self::Error> {
         if let Some(id) = &self.id() {
             return Ok(Some(

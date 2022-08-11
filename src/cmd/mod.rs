@@ -5,14 +5,7 @@ use std::{io, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 use clap::{ArgAction, Parser, Subcommand};
-use clevercloud_sdk::{
-    oauth10a::{
-        connector::HttpsConnector,
-        proxy::{ProxyBuilder, ProxyConnectorBuilder},
-        Credentials,
-    },
-    Client,
-};
+use clevercloud_sdk::oauth10a::Credentials;
 use paw::ParseArgs;
 use tracing::{error, info};
 
@@ -20,6 +13,7 @@ use crate::{
     cmd::crd::CustomResourceDefinitionError,
     svc::{
         cfg::Configuration,
+        clevercloud,
         crd::{config_provider, elasticsearch, mongodb, mysql, postgresql, pulsar, redis},
         http,
         k8s::{client, Context, Watcher},
@@ -51,8 +45,8 @@ pub enum Error {
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
     Client(client::Error),
-    #[error("failed to create clever cloud client, {0}")]
-    CleverClient(clevercloud_sdk::oauth10a::proxy::Error),
+    #[error("failed to create clevercloud client, {0}")]
+    CleverClient(clevercloud::client::Error),
     #[error("failed to watch PostgreSql resources, {0}")]
     WatchPostgreSql(postgresql::ReconcilerError),
     #[error("failed to watch Redis resources, {0}")]
@@ -144,30 +138,8 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
     let credentials: Credentials = config.api.to_owned().into();
-    let connector = match &config.proxy {
-        Some(proxy) if proxy.https.is_some() || proxy.http.is_some() => {
-            let proxy = ProxyBuilder::try_from(
-                proxy.https.to_owned().unwrap_or_else(|| {
-                    proxy
-                        .http
-                        .to_owned()
-                        .expect("to have one of http or https value in proxy configuration file")
-                }),
-                proxy.no.to_owned(),
-            )
-            .map_err(Error::CleverClient)?;
-
-            ProxyConnectorBuilder::default()
-                .with_proxy(proxy)
-                .build(HttpsConnector::new())
-                .map_err(Error::CleverClient)?
-        }
-        _ => ProxyConnectorBuilder::try_from_env().map_err(Error::CleverClient)?,
-    };
-
-    let clever_client = Client::builder()
-        .with_credentials(credentials)
-        .build(connector);
+    let clever_client =
+        clevercloud::client::try_new(credentials, &config.proxy).map_err(Error::CleverClient)?;
 
     // -------------------------------------------------------------------------
     // Create context to give to each reconciler

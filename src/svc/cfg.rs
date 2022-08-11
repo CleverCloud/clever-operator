@@ -107,6 +107,62 @@ pub struct Jaeger {
 }
 
 // -----------------------------------------------------------------------------
+// NamespaceConfiguration structures
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+pub struct NamespaceConfiguration {
+    #[serde(rename = "proxy")]
+    pub proxy: Option<Proxy>,
+    #[serde(rename = "api")]
+    pub api: Api,
+}
+
+impl TryFrom<PathBuf> for NamespaceConfiguration {
+    type Error = Error;
+
+    #[cfg_attr(feature = "trace", tracing::instrument)]
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        Config::builder()
+            // -----------------------------------------------------------------
+            // Api
+            .set_default(
+                "api.endpoint",
+                env::var("CLEVER_OPERATOR_API_ENDPOINT")
+                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
+            )
+            .map_err(|err| Error::Default("api.endpoint".into(), err))?
+            .set_default(
+                "api.token",
+                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("api.token".into(), err))?
+            .set_default(
+                "api.secret",
+                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("api.secret".into(), err))?
+            .set_default(
+                "api.consumerKey",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
+            .set_default(
+                "api.consumerSecret",
+                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
+                    .unwrap_or_else(|_err| "".to_string()),
+            )
+            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
+            // -----------------------------------------------------------------
+            // Files
+            .add_source(File::from(path).required(true))
+            .build()
+            .map_err(Error::Build)?
+            .try_deserialize()
+            .map_err(Error::Deserialize)
+    }
+}
+
+// -----------------------------------------------------------------------------
 // Configuration structures
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]

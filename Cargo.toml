@@ -14,6 +14,7 @@ keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
 async-trait = "^0.1.57"
+base64 = "^0.13.0"
 chrono = "^0.4.21"
 clap = { version = "^3.2.16", features = ["derive"] }
 clevercloud-sdk = { version = "^0.10.7", features = ["jsonschemas"] }
@@ -59,6 +60,7 @@ serde_json = { version = "^1.0.83", features = [
     "float_roundtrip",
 ] }
 serde_yaml = "^0.9.4"
+tempfile = "^3.3.0"
 thiserror = "^1.0.32"
 tokio = { version = "^1.20.1", features = ["full"] }
 tracing = "^0.1.36"

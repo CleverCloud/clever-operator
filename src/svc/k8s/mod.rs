@@ -83,18 +83,30 @@ lazy_static! {
 #[derive(Clone)]
 pub struct Context {
     pub kube: kube::Client,
-    pub apis: clevercloud::Client,
+    pub apis: clevercloud::client::Client,
     pub config: Arc<Configuration>,
 }
 
-impl From<(kube::Client, clevercloud::Client, Arc<Configuration>)> for Context {
-    fn from((kube, apis, config): (kube::Client, clevercloud::Client, Arc<Configuration>)) -> Self {
+impl
+    From<(
+        kube::Client,
+        clevercloud::client::Client,
+        Arc<Configuration>,
+    )> for Context
+{
+    fn from(
+        (kube, apis, config): (
+            kube::Client,
+            clevercloud::client::Client,
+            Arc<Configuration>,
+        ),
+    ) -> Self {
         Self { kube, apis, config }
     }
 }
 
 impl Context {
-    pub fn new(k: kube::Client, a: clevercloud::Client, c: Arc<Configuration>) -> Self {
+    pub fn new(k: kube::Client, a: clevercloud::client::Client, c: Arc<Configuration>) -> Self {
         Self::from((k, a, c))
     }
 }

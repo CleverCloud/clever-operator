@@ -9,6 +9,14 @@ use kube::{api::ObjectMeta, CustomResourceExt, ResourceExt};
 
 use crate::svc::k8s::resource;
 
+// -----------------------------------------------------------------------------
+// Constants
+
+pub const OVERRIDE_CONFIGURATION_NAME: &str = "clever-operator";
+
+// -----------------------------------------------------------------------------
+// Helpers
+
 #[cfg_attr(feature = "trace", tracing::instrument)]
 pub fn name<T>(obj: &T) -> String
 where
