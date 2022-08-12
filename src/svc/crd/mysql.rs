@@ -45,7 +45,7 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/mysql";
 // -----------------------------------------------------------------------------
 // Opts structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Opts {
     #[serde(rename = "version")]
     pub version: mysql::Version,
@@ -67,7 +67,7 @@ impl Into<addon::Opts> for Opts {
 // -----------------------------------------------------------------------------
 // Spec structure
 
-#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
 #[kube(kind = "MySql")]
@@ -77,6 +77,24 @@ impl Into<addon::Opts> for Opts {
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
+#[kube(
+    printcolumn = r#"{"name":"organisation", "type":"string", "description":"Organisation", "jsonPath":".spec.organisation"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"addon", "type":"string", "description":"Addon", "jsonPath":".status.addon"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"region", "type":"string", "description":"Region", "jsonPath":".spec.instance.region"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"instance", "type":"string", "description":"Instance", "jsonPath":".spec.instance.plan"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"version", "type":"integer", "description":"Version", "jsonPath":".spec.options.version"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"encrypted", "type":"boolean", "description":"Cold encryption", "jsonPath":".spec.options.encryption"}"#
+)]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
@@ -89,7 +107,7 @@ pub struct Spec {
 // -----------------------------------------------------------------------------
 // Status structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
@@ -135,7 +153,7 @@ impl AddonExt for MySql {
 
         Self::prefix()
             + &delimiter
-            + &Self::kind(&()).to_string()
+            + &Self::kind(&())
             + &delimiter
             + &self
                 .uid()
