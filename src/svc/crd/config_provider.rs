@@ -45,7 +45,7 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/config-provider";
 // -----------------------------------------------------------------------------
 // MySqlSpec structure
 
-#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
 #[kube(kind = "ConfigProvider")]
@@ -55,6 +55,12 @@ pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/config-provider";
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
+#[kube(
+    printcolumn = r#"{"name":"organisation", "type":"string", "description":"Organisation", "jsonPath":".spec.organisation"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"addon", "type":"string", "description":"Addon", "jsonPath":".status.addon"}"#
+)]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
@@ -65,7 +71,7 @@ pub struct Spec {
 // -----------------------------------------------------------------------------
 // MySqlStatus structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
@@ -111,7 +117,7 @@ impl AddonExt for ConfigProvider {
 
         Self::prefix()
             + &delimiter
-            + &Self::kind(&()).to_string()
+            + &Self::kind(&())
             + &delimiter
             + &self
                 .uid()

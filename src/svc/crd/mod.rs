@@ -17,7 +17,7 @@ pub mod redis;
 // -----------------------------------------------------------------------------
 // Instance structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Instance {
     #[serde(rename = "region")]
     pub region: String,
