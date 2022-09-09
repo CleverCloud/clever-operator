@@ -130,6 +130,6 @@ pub async fn view(
         ]
     };
 
-    print!("{}", crds.join(""));
+    print!("{}", crds.join("\n---\n"));
     Ok(())
 }

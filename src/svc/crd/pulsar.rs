@@ -42,7 +42,7 @@ pub const ADDON_BETA_PLAN: &str = "plan_3ad3c5be-5c1e-4dae-bf9a-87120b88fc13";
 // -----------------------------------------------------------------------------
 // Instance structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Instance {
     #[serde(rename = "region")]
     pub region: String,
@@ -51,7 +51,7 @@ pub struct Instance {
 // -----------------------------------------------------------------------------
 // Spec structure
 
-#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1beta1")]
 #[kube(kind = "Pulsar")]
@@ -62,6 +62,15 @@ pub struct Instance {
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
+#[kube(
+    printcolumn = r#"{"name":"organisation", "type":"string", "description":"Organisation", "jsonPath":".spec.organisation"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"addon", "type":"string", "description":"Addon", "jsonPath":".status.addon"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"region", "type":"string", "description":"Region", "jsonPath":".spec.instance.region"}"#
+)]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
@@ -72,7 +81,7 @@ pub struct Spec {
 // -----------------------------------------------------------------------------
 // Status structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
@@ -118,7 +127,7 @@ impl AddonExt for Pulsar {
 
         Self::prefix()
             + &delimiter
-            + &Self::kind(&()).to_string()
+            + &Self::kind(&())
             + &delimiter
             + &self
                 .uid()
