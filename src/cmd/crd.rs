@@ -66,8 +66,7 @@ pub enum CustomResourceDefinitionError {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum CustomResourceDefinition {
-    /// View custom resource definition
-    #[clap(name = "view", aliases = &["v"])]
+    #[clap(name = "view", aliases = &["v"], about = "View custom resource definition")]
     View {
         #[clap(name = "custom-resource")]
         custom_resource: Option<CustomResource>,

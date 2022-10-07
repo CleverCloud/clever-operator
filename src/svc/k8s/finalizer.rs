@@ -5,13 +5,14 @@
 
 use std::fmt::Debug;
 
+use k8s_openapi::NamespaceResourceScope;
 use kube::Resource;
 
 #[cfg_attr(feature = "trace", tracing::instrument)]
 /// returns if there is the given finalizer on the resource
 pub fn contains<T>(obj: &T, finalizer: &str) -> bool
 where
-    T: Resource + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + Debug,
 {
     if let Some(finalizers) = &obj.meta().finalizers {
         finalizers.iter().any(|f| finalizer == f)
@@ -24,9 +25,9 @@ where
 /// add finalizer to the resource
 pub fn add<T>(mut obj: T, finalizer: &str) -> T
 where
-    T: Resource + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + Debug,
 {
-    if (&obj.meta().finalizers).is_some() {
+    if obj.meta().finalizers.is_some() {
         if !contains(&obj, finalizer) {
             obj.meta_mut().finalizers.as_mut().map(|finalizers| {
                 finalizers.push(finalizer.into());
@@ -44,7 +45,7 @@ where
 /// remove finalizer from the resource
 pub fn remove<T>(mut obj: T, finalizer: &str) -> T
 where
-    T: Resource + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + Debug,
 {
     if let Some(finalizers) = &obj.meta().finalizers {
         obj.meta_mut().finalizers = Some(

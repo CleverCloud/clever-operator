@@ -72,8 +72,7 @@ pub enum Error {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Interact with custom resource definition
-    #[clap(name = "custom-resource-definition", aliases= &["crd"], subcommand)]
+    #[clap(name = "custom-resource-definition", aliases= &["crd"], subcommand, about = "Interact with custom resource definition")]
     CustomResourceDefinition(crd::CustomResourceDefinition),
 }
 

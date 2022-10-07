@@ -109,19 +109,20 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
         );
         global::set_text_map_propagator(Propagator::new());
 
-        let mut builder = opentelemetry_jaeger::new_pipeline()
-            .with_collector_endpoint(config.jaeger.endpoint.to_owned())
+        let mut builder = opentelemetry_jaeger::new_collector_pipeline()
+            .with_endpoint(config.jaeger.endpoint.to_owned())
             .with_service_name(env!("CARGO_PKG_NAME"));
 
         if let Some(user) = &config.jaeger.user {
-            builder = builder.with_collector_username(user);
+            builder = builder.with_username(user);
         }
 
         if let Some(password) = &config.jaeger.password {
-            builder = builder.with_collector_password(password);
+            builder = builder.with_password(password);
         }
 
-        let layer = tracing_opentelemetry::layer().with_tracer(builder.install_simple()?);
+        let layer = tracing_opentelemetry::layer()
+            .with_tracer(builder.install_batch(opentelemetry::runtime::Tokio)?);
 
         tracing::subscriber::set_global_default(Registry::default().with(layer))?;
     }
