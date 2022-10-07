@@ -8,6 +8,7 @@ use std::time::Instant;
 
 use k8s_openapi::{
     api::core::v1::ObjectReference, apimachinery::pkg::apis::meta::v1::OwnerReference,
+    NamespaceResourceScope,
 };
 use kube::{
     api::{ListParams, Patch, PatchParams, PostParams},
@@ -60,7 +61,7 @@ lazy_static! {
 /// returns if the resource is considered from kubernetes point of view as deleted
 pub fn deleted<T>(obj: &T) -> bool
 where
-    T: Resource + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + Debug,
 {
     obj.meta().deletion_timestamp.is_some()
 }
@@ -99,7 +100,7 @@ where
 /// make a patch request on the given resource using the given patch
 pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ipatch(client, obj, patch).await
@@ -109,7 +110,7 @@ where
 /// make a patch request on the given resource using the given patch
 pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ipatch(client, obj, patch)
@@ -119,7 +120,7 @@ where
 
 async fn ipatch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     let (namespace, name) = namespaced_name(obj);
@@ -175,7 +176,7 @@ pub async fn patch_status<T>(
     patch: json_patch::Patch,
 ) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ipatch_status(client, obj, patch).await
@@ -189,7 +190,7 @@ pub async fn patch_status<T>(
     patch: json_patch::Patch,
 ) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ipatch_status(client, obj, patch)
@@ -204,7 +205,7 @@ async fn ipatch_status<T>(
     patch: json_patch::Patch,
 ) -> Result<T, kube::Error>
 where
-    T: Resource + DeserializeOwned + Serialize + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Serialize + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     let (namespace, name) = namespaced_name(&obj);
@@ -256,7 +257,7 @@ where
 /// returns the list of resources matching the query
 pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ifind_by_labels(client, ns, query).await
@@ -266,7 +267,7 @@ where
 /// returns the list of resources matching the query
 pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     ifind_by_labels(client, ns, query)
@@ -277,7 +278,7 @@ where
 /// returns the list of resources matching the query
 async fn ifind_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     trace!(
@@ -314,7 +315,7 @@ where
 /// returns the object using namespace and name by asking kubernetes
 pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     iget(client, ns, name).await
@@ -324,7 +325,7 @@ where
 /// returns the object using namespace and name by asking kubernetes
 pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     iget(client, ns, name)
@@ -334,7 +335,7 @@ where
 
 async fn iget<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
-    T: Resource + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + DeserializeOwned + Clone + Debug,
     <T as Resource>::DynamicType: Default,
 {
     let api: Api<T> = Api::namespaced(client, ns);
@@ -381,7 +382,12 @@ where
 /// this function should be avoid in favor of the [`upsert`] one
 pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     icreate(client, obj).await
@@ -392,7 +398,12 @@ where
 /// this function should be avoid in favor of the [`upsert`] one
 pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     icreate(client, obj)
@@ -404,7 +415,12 @@ where
 /// this function should be avoid in favor of the [`upsert`] one
 async fn icreate<T>(client: Client, obj: &T) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     let (namespace, name) = namespaced_name(obj);
@@ -444,7 +460,12 @@ where
 /// exist or else patch it
 pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     iupsert(client, obj, status).await
@@ -455,7 +476,12 @@ where
 /// exist or else patch it
 pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     iupsert(client, obj, status)
@@ -467,7 +493,12 @@ where
 /// exist or else patch it
 async fn iupsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
 where
-    T: ResourceExt + Serialize + DeserializeOwned + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + Serialize
+        + DeserializeOwned
+        + Clone
+        + Debug,
     <T as Resource>::DynamicType: Default,
 {
     let (ns, name) = namespaced_name(obj);
@@ -490,7 +521,7 @@ where
 /// returns a owner reference object pointing to the given resource
 pub fn owner_reference<T>(obj: &T) -> OwnerReference
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
 {
     let api_resource = T::api_resource();
 
@@ -510,7 +541,7 @@ where
 /// returns a object reference pointing to the given resource
 pub fn object_reference<T>(obj: &T) -> ObjectReference
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
 {
     let api_resource = T::api_resource();
 

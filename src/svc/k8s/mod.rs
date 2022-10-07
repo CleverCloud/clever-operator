@@ -8,6 +8,7 @@ use std::{error::Error, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
 use async_trait::async_trait;
 
 use futures::{StreamExt, TryStreamExt};
+use k8s_openapi::NamespaceResourceScope;
 use kube::{CustomResourceExt, Resource, ResourceExt};
 use kube_runtime::{
     controller::{self, Action},
@@ -118,7 +119,7 @@ impl Context {
 /// controller [`Controller<T>`]
 pub trait ControllerBuilder<T>
 where
-    T: Resource + Clone + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + Clone + Debug,
     <T as Resource>::DynamicType: Eq + Hash,
 {
     /// returns a new created kubernetes controller
@@ -133,7 +134,14 @@ where
 #[async_trait]
 pub trait Reconciler<T>
 where
-    T: ResourceExt + CustomResourceExt + Debug + Clone + Send + Sync + 'static,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + CustomResourceExt
+        + Debug
+        + Clone
+        + Send
+        + Sync
+        + 'static,
 {
     type Error: Error + Send + Sync;
 
@@ -144,7 +152,7 @@ where
     async fn delete(ctx: Arc<Context>, obj: Arc<T>) -> Result<(), Self::Error>;
 
     /// returns a [`Action`] to perform following the given error
-    fn retry(err: &Self::Error, _ctx: Arc<Context>) -> Action {
+    fn retry(_obj: Arc<T>, err: &Self::Error, _ctx: Arc<Context>) -> Action {
         // Implements a basic reconciliation which always re-schedule the event
         // 500 ms later
         trace!("Requeue failed reconciliation for 500ms, {}", err);
@@ -240,7 +248,15 @@ where
 #[async_trait]
 pub trait Watcher<T>: ControllerBuilder<T> + Reconciler<T>
 where
-    T: DeserializeOwned + ResourceExt + CustomResourceExt + Clone + Debug + Send + Sync + 'static,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + CustomResourceExt
+        + DeserializeOwned
+        + Clone
+        + Debug
+        + Send
+        + Sync
+        + 'static,
     <T as Resource>::DynamicType: Unpin + Eq + Hash + Clone + Debug + Send + Sync,
     Self: Send + Sync + 'static,
     <Self as Reconciler<T>>::Error: WatcherError + Send + Sync,
@@ -320,7 +336,15 @@ where
 /// Blanklet implementation for [`Watcher<T>`]
 impl<T, U> Watcher<T> for U
 where
-    T: DeserializeOwned + ResourceExt + CustomResourceExt + Clone + Debug + Send + Sync + 'static,
+    T: Resource<Scope = NamespaceResourceScope>
+        + ResourceExt
+        + CustomResourceExt
+        + DeserializeOwned
+        + Clone
+        + Debug
+        + Send
+        + Sync
+        + 'static,
     <T as Resource>::DynamicType: Unpin + Eq + Hash + Clone + Debug + Send + Sync,
     U: Reconciler<T> + ControllerBuilder<T>,
     U::Error: WatcherError + Send + Sync,

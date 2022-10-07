@@ -13,8 +13,8 @@ use std::{
     str::FromStr,
 };
 
-use k8s_openapi::api::core::v1::Event;
-use kube::{Client, CustomResourceExt, ResourceExt};
+use k8s_openapi::{api::core::v1::Event, NamespaceResourceScope};
+use kube::{Client, CustomResourceExt, Resource, ResourceExt};
 use tracing::debug;
 #[cfg(feature = "trace")]
 use tracing::Instrument;
@@ -35,8 +35,9 @@ pub enum Error {
 // -----------------------------------------------------------------------------
 // Level enumeration
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Default)]
 pub enum Level {
+    #[default]
     Warning,
     Normal,
 }
@@ -95,7 +96,7 @@ pub async fn record<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     irecord(client, obj, kind, action, message).await
@@ -111,7 +112,7 @@ pub async fn record<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     irecord(client, obj, kind, action, message)
@@ -128,7 +129,7 @@ async fn irecord<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     debug!(
@@ -150,7 +151,7 @@ pub async fn normal<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     inormal(client, obj, action, message).await
@@ -165,7 +166,7 @@ pub async fn normal<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     inormal(client, obj, action, message)
@@ -181,7 +182,7 @@ async fn inormal<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     record(client, obj, &Level::Normal, action, message).await
@@ -196,7 +197,7 @@ pub async fn warning<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     iwarning(client, obj, action, message).await
@@ -211,7 +212,7 @@ pub async fn warning<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     iwarning(client, obj, action, message)
@@ -227,7 +228,7 @@ async fn iwarning<T, U>(
     message: &str,
 ) -> Result<Event, kube::Error>
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     record(client, obj, &Level::Warning, action, message).await

@@ -9,8 +9,9 @@ use chrono::Utc;
 use k8s_openapi::{
     api::core::v1::{Event, EventSource},
     apimachinery::pkg::apis::meta::v1::{MicroTime, Time},
+    NamespaceResourceScope,
 };
-use kube::{api::ObjectMeta, CustomResourceExt, ResourceExt};
+use kube::{api::ObjectMeta, CustomResourceExt, Resource, ResourceExt};
 
 use crate::svc::k8s::{recorder::Level, resource};
 
@@ -26,7 +27,7 @@ pub const EVENT_FOR: &str = "for";
 /// create a new event from the given parameters
 pub fn new<T, U>(obj: &T, kind: &Level, action: &U, message: &str) -> Event
 where
-    T: ResourceExt + CustomResourceExt + Debug,
+    T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,
     U: ToString + Debug,
 {
     let now = Utc::now();
