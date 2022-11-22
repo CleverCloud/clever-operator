@@ -12,17 +12,17 @@ DOCKER_OPTS			?= --log-level debug
 DOCKER_IMG			?= clevercloud/$(NAME):$(VERSION)
 
 KUBE				?= $(shell which kubectl)
-KUBE_VERSION		?= v1.21.0
+KUBE_VERSION		?= v1.24.0
 
 OLM_SDK		    	?= $(shell which operator-sdk)
-OLM_SDK_VERSION		?= 1.22.0
+OLM_SDK_VERSION		?= 1.25.2
 OLM_VERSION			?= 0.5.3
 
 OCP_VALIDATOR		?= $(shell which ocp-olm-catalog-validator)
-OCP_VERSION			?= 0.0.1
+OCP_VERSION			?= 0.1.0
 
 K8S_VALIDATOR		?= $(shell which k8s-community-bundle-validator)
-K8S_VERSION			?= 0.0.1
+K8S_VERSION			?= 0.1.0
 
 KUBE_SCORE_VERSION  ?= 1.14.0
 KUBE_SCORE			?= $(shell which kube-score)
