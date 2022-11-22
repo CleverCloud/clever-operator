@@ -54,7 +54,6 @@ $(DIST)/$(NAME): $(shell $(FIND) -type f -name '*.rs')
 install-cli-tools:
 	$(MKDIR) -p $(BIN_DIR)
 	$(CURL) -L https://github.com/operator-framework/operator-sdk/releases/download/v$(OLM_SDK_VERSION)/operator-sdk_linux_amd64 > $(BIN_DIR)/operator-sdk && $(CHMOD) +x $(BIN_DIR)/operator-sdk
-	$(CURL) -L https://github.com/redhat-openshift-ecosystem/ocp-olm-catalog-validator/releases/download/v$(OCP_VERSION)/linux-amd64-ocp-olm-catalog-validator > $(BIN_DIR)/ocp-olm-catalog-validator && $(CHMOD) +x $(BIN_DIR)/ocp-olm-catalog-validator
 	$(CURL) -L https://github.com/k8s-operatorhub/bundle-validator/releases/download/v$(K8S_VERSION)/linux-amd64-k8s-community-bundle-validator > $(BIN_DIR)/k8s-community-bundle-validator && $(CHMOD) +x $(BIN_DIR)/k8s-community-bundle-validator
 	$(CURL) -L https://github.com/zegl/kube-score/releases/download/v$(KUBE_SCORE_VERSION)/kube-score_$(KUBE_SCORE_VERSION)_linux_amd64 >  $(BIN_DIR)/kube-score && $(CHMOD) +x $(BIN_DIR)/kube-score
 
@@ -101,7 +100,7 @@ $(DEPLOY_OLM)/manifests/clever-operator-config-provider.crd.yaml:
 validate: $(shell $(FIND) -type f -name '*.yaml')
 	$(KUBE_SCORE) score $(shell $(FIND) $(DEPLOY_KUBE) -type f -name '*.yaml')
 	$(OLM_SDK) bundle validate $(DEPLOY_OLM)
-	$(OCP_VALIDATOR) $(DEPLOY_OLM) --optional-values="file=$(DEPLOY_OLM)/metadata/annotations.yaml" --output json-alpha1
+#	$(OCP_VALIDATOR) $(DEPLOY_OLM) --optional-values="file=$(DEPLOY_OLM)/metadata/annotations.yaml" --output json-alpha1
 	$(K8S_VALIDATOR) $(DEPLOY_OLM) --output json-alpha1
 
 .PHONY: deploy-kubernetes-crd
