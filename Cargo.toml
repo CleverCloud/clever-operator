@@ -13,17 +13,19 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.57"
-base64 = "^0.13.0"
-chrono = { version = "^0.4.22", default-features = false }
-clap = { version = "^4.0.10", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.9", features = ["jsonschemas"] }
+async-trait = "^0.1.58"
+# Pin ahash version as the latest versions does not build
+ahash = "=0.7.5"
+base64 = "^0.13.1"
+chrono = { version = "^0.4.23", default-features = false }
+clap = { version = "^4.0.26", features = ["derive"] }
+clevercloud-sdk = { version = "^0.10.10", features = ["jsonschemas"] }
 config = "^0.13.2"
-futures = "^0.3.24"
+futures = "^0.3.25"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.20", features = ["server", "tcp", "http1"] }
+hyper = { version = "^0.14.23", features = ["server", "tcp", "http1"] }
 json-patch = "^0.2.6"
-kube = { version = "^0.75.0", default-features = false, features = [
+kube = { version = "^0.76.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -31,8 +33,8 @@ kube = { version = "^0.75.0", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.75.0"
-kube-runtime = "^0.75.0"
+kube-derive = "^0.76.0"
+kube-runtime = "^0.76.0"
 k8s-openapi = { version = "^0.16.0", default-features = false, features = [
     "v1_21",
 ] }
@@ -45,7 +47,7 @@ opentelemetry-jaeger = { version = "^0.17.0", features = [
     "collector_client",
 ], optional = true }
 paw = "^1.0.0"
-prometheus = { version = "^0.13.2", optional = true }
+prometheus = { version = "^0.13.3", optional = true }
 schemars = { version = "^0.8.11", features = [
     "chrono",
     "indexmap1",
@@ -53,16 +55,16 @@ schemars = { version = "^0.8.11", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.27.0", optional = true }
-serde = { version = "1.0.145", features = ["derive"] }
-serde_json = { version = "^1.0.85", features = [
+sentry = { version = "^0.29.0", optional = true }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = { version = "^1.0.89", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.9.13"
+serde_yaml = "^0.9.14"
 tempfile = "^3.3.0"
 thiserror = "^1.0.37"
-tokio = { version = "^1.21.2", features = ["full"] }
+tokio = { version = "^1.22.0", features = ["full"] }
 tracing = "^0.1.37"
 tracing-subscriber = { version = "^0.3.16", default-features = false, features = ["std", "ansi", "tracing-log"] }
 tracing-opentelemetry = { version = "^0.18.0", optional = true }
