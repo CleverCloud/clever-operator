@@ -5,7 +5,7 @@ metadata:
   namespace: default
   name: config-provider
 spec:
-  organisation: orga_41ec34a5-957f-4f5a-912c-234ee3b922d0
+  organisation: orga_<uuid-v4>
   variables:
     region: par
     instance: m_med

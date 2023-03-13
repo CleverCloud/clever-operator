@@ -159,6 +159,7 @@ spec:
                   version:
                     enum:
                     - 626
+                    - 704
                     type: integer
                 required:
                 - encryption
@@ -576,6 +577,7 @@ spec:
                     enum:
                     - 6
                     - 7
+                    - 8
                     type: integer
                 required:
                 - apm

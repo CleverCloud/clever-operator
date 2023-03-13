@@ -5,7 +5,7 @@ metadata:
   namespace: default
   name: pulsar
 spec:
-  organisation: orga_xxxx
+  organisation: orga_<uuid-v4>
   instance:
     region: par
 ---
