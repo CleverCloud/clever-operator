@@ -10,7 +10,8 @@ consumerSecret = ""
 
 # Jaeger configuration
 # [jaeger]
-# endpoint = ""
+# endpoint = "http://localhost:14268/api/trace"
+# User and password are optional, but it is strongly recommended to use them
 # user = ""
 # password = ""
 
