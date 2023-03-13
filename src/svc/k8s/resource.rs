@@ -15,7 +15,7 @@ use kube::{
     Api, Client, CustomResourceExt, Resource, ResourceExt,
 };
 #[cfg(feature = "metrics")]
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
@@ -27,32 +27,40 @@ use tracing::{debug, level_enabled, trace, Level};
 // Telemetry
 
 #[cfg(feature = "metrics")]
-lazy_static! {
-    static ref CLIENT_REQUEST_SUCCESS: CounterVec = register_counter_vec!(
+static CLIENT_REQUEST_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_client_request_success",
             "number of successful kubernetes request",
         ),
         &["action", "namespace"]
     )
-    .expect("metrics 'kubernetes_client_request_success' to not be already registered");
-    static ref CLIENT_REQUEST_FAILURE: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_client_request_success' to not be already registered")
+});
+
+#[cfg(feature = "metrics")]
+static CLIENT_REQUEST_FAILURE: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_client_request_failure",
             "number of failed kubernetes request",
         ),
         &["action", "namespace"]
     )
-    .expect("metrics 'kubernetes_client_request_failure' to not be already registered");
-    static ref CLIENT_REQUEST_DURATION: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_client_request_failure' to not be already registered")
+});
+
+#[cfg(feature = "metrics")]
+static CLIENT_REQUEST_DURATION: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_client_request_duration",
             "duration of kubernetes request",
         ),
         &["action", "namespace", "unit"]
     )
-    .expect("metrics 'kubernetes_client_request_duration' to not be already registered");
-}
+    .expect("metrics 'kubernetes_client_request_duration' to not be already registered")
+});
 
 // -----------------------------------------------------------------------------
 // Helpers functions
@@ -127,19 +135,21 @@ where
 
     if patch.0.is_empty() {
         debug!(
-            "skip patch request on resource '{}/{}', no operation to apply",
-            &namespace, &name
+            namespace = &namespace,
+            name = &name,
+            "skip patch request on resource, no operation to apply",
         );
+
         return Ok(obj.to_owned());
     }
 
     if level_enabled!(Level::TRACE) {
         trace!(
-            "execute patch request on resource '{}/{}', {}",
-            &namespace,
-            &name,
-            serde_json::to_string_pretty(&patch)
-                .expect("Serialize patch as JSON string without error")
+            namespace = &namespace,
+            name = &name,
+            payload = serde_json::to_string(&patch)
+                .expect("Serialize patch as JSON string without error"),
+            "execute patch request on resource",
         );
     }
 
@@ -212,19 +222,21 @@ where
 
     if patch.0.is_empty() {
         debug!(
-            "skip patch request on resource's status ('{}/{}'), no operation to apply",
-            &namespace, &name
+            namespace = &namespace,
+            name = &name,
+            "skip patch request on resource's status, no operation to apply",
         );
+
         return Ok(obj.to_owned());
     }
 
     if level_enabled!(Level::TRACE) {
         trace!(
-            "execute patch request on resource's status ('{}/{}'), {}",
-            &namespace,
-            &name,
-            serde_json::to_string_pretty(&patch)
-                .expect("Serialize patch to JSON string without error")
+            namespace = &namespace,
+            name = &name,
+            payload = serde_json::to_string(&patch)
+                .expect("Serialize patch as JSON string without error"),
+            "execute patch request status on resource",
         );
     }
 
@@ -282,10 +294,11 @@ where
     <T as Resource>::DynamicType: Default,
 {
     trace!(
-        "execute a request to find by labels resources on namespace '{}' with query {}",
-        &ns,
-        query
+        namespace = &ns,
+        query = query,
+        "execute a request to find by labels resources on namespace",
     );
+
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, ns)
@@ -340,7 +353,12 @@ where
 {
     let api: Api<T> = Api::namespaced(client, ns);
 
-    trace!("execute a request to retrieve resource '{}/{}'", &ns, &name);
+    trace!(
+        namespace = &ns,
+        name = &name,
+        "execute a request to retrieve resource"
+    );
+
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     match api.get(name).await {
@@ -426,10 +444,11 @@ where
     let (namespace, name) = namespaced_name(obj);
 
     trace!(
-        "execute a request to create a resource '{}, {}'",
-        &namespace,
-        &name
+        namespace = &namespace,
+        name = &name,
+        "execute a request to create a resource",
     );
+
     #[cfg(feature = "metrics")]
     let instant = Instant::now();
     let result = Api::namespaced(client, &namespace)

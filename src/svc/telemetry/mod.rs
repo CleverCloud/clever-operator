@@ -10,7 +10,7 @@ use hyper::{
     Body, Method, Request, Response, StatusCode,
 };
 #[cfg(feature = "metrics")]
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use tracing::info;
@@ -22,32 +22,40 @@ pub mod metrics;
 // Telemetry
 
 #[cfg(feature = "metrics")]
-lazy_static! {
-    static ref SERVER_REQUEST_SUCCESS: CounterVec = register_counter_vec!(
+static SERVER_REQUEST_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_server_request_success",
             "number of successful request handled by the server",
         ),
         &["method", "path", "status"]
     )
-    .expect("metrics 'kubernetes_operator_server_request_success' to not be already registered");
-    static ref SERVER_REQUEST_FAILURE: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_operator_server_request_success' to not be already registered")
+});
+
+#[cfg(feature = "metrics")]
+static SERVER_REQUEST_FAILURE: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_server_request_failure",
             "number of failed request handled by the server",
         ),
         &["method", "path", "status"]
     )
-    .expect("metrics 'kubernetes_operator_server_request_failure' to not be already registered");
-    static ref SERVER_REQUEST_DURATION: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_operator_server_request_failure' to not be already registered")
+});
+
+#[cfg(feature = "metrics")]
+static SERVER_REQUEST_DURATION: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_server_request_duration",
             "duration of request handled by the server",
         ),
         &["method", "path", "status", "unit"]
     )
-    .expect("metrics 'kubernetes_operator_server_request_duration' to not be already registered");
-}
+    .expect("metrics 'kubernetes_operator_server_request_duration' to not be already registered")
+});
 
 // -----------------------------------------------------------------------------
 // Error enum
@@ -81,16 +89,26 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
 
     // -------------------------------------------------------------------------
     // recover error
+    let host = match req.uri().host() {
+        Some(host) => host.to_string(),
+        None => req
+            .headers()
+            .get("host")
+            .map(|header| String::from_utf8_lossy(header.as_bytes()).to_string())
+            .unwrap_or_else(|| String::from("<none>")),
+    };
+
     match result {
         Ok(res) => {
             info!(
-                "Receive request, {} {} {} - {} {}us",
-                req.method().as_str(),
-                req.uri().host().unwrap_or("<none>"),
-                req.uri().path(),
-                res.status().as_u16(),
-                duration
+                method = req.method().as_str(),
+                host = host,
+                path = req.uri().path(),
+                status = res.status().as_u16(),
+                duration = duration,
+                "Receive request"
             );
+
             #[cfg(feature = "metrics")]
             SERVER_REQUEST_SUCCESS
                 .with_label_values(&[
@@ -136,12 +154,12 @@ pub async fn router(req: Request<Body>) -> Result<Response<Body>, Error> {
                 Body::from(serde_json::to_string_pretty(&map).map_err(Error::Serialize)?);
 
             info!(
-                "Receive request, {} {} {} - {} {}us",
-                req.method().as_str(),
-                req.uri().host().unwrap_or("<none>"),
-                req.uri().path(),
-                res.status().as_u16(),
-                duration
+                method = req.method().as_str(),
+                host = host,
+                path = req.uri().path(),
+                status = res.status().as_u16(),
+                duration = duration,
+                "Receive request"
             );
 
             #[cfg(feature = "metrics")]

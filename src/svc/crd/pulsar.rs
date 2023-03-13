@@ -254,14 +254,16 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             apis,
             config: _,
         } = ctx.as_ref();
+
         let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
         // Step 0: verify if there is a clever cloud client override
         debug!(
-            "Try to retrieve the optional secret '{}' on namespace '{}'",
-            OVERRIDE_CONFIGURATION_NAME, namespace
+            namespace = namespace,
+            secret = OVERRIDE_CONFIGURATION_NAME,
+            "Try to retrieve the optional secret on namespace",
         );
 
         let secret: Option<Secret> =
@@ -269,9 +271,11 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         let apis = match secret {
             Some(secret) => {
                 info!(
-                    "Use custom Clever Cloud client to connect the api using secret '{}/{}'",
-                    namespace, OVERRIDE_CONFIGURATION_NAME
+                    namespace = namespace,
+                    secret = OVERRIDE_CONFIGURATION_NAME,
+                    "Use custom Clever Cloud client to connect the api using secret",
                 );
+
                 clevercloud::client::try_from(secret).await?
             }
             None => {
@@ -284,15 +288,21 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // Step 1: set finalizer
 
         info!(
-            "Set finalizer on custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Set finalizer on custom resource",
         );
+
         let modified = finalizer::add((*origin).to_owned(), ADDON_FINALIZER);
 
         debug!(
-            "Update information of custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Update information of custom resource",
         );
+
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
@@ -309,17 +319,23 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // Step 3: upsert addon
 
         info!(
-            "Upsert addon for custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Upsert addon for custom resource",
         );
+
         let addon = modified.upsert(&apis).await?;
 
         modified.set_addon_id(Some(addon.id.to_owned()));
 
         debug!(
-            "Update information and status of custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Update information and status of custom resource",
         );
+
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -341,10 +357,18 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             let (s_ns, s_name) = resource::namespaced_name(&s);
 
             info!(
-                "Upsert kubernetes secret resource for custom resource '{}' ('{}/{}')",
-                &kind, &namespace, &name
+                kind = &kind,
+                namespace = &namespace,
+                name = &name,
+                "Upsert kubernetes secret resource for custom resource",
             );
-            info!("Upsert kubernetes secret '{}/{}'", &s_ns, &s_name);
+
+            info!(
+                namespace = &s_ns,
+                name = &s_name,
+                "Upsert kubernetes secret",
+            );
+
             let secret = resource::upsert(kube.to_owned(), &s, false).await?;
 
             let action = &Action::UpsertSecret;
@@ -361,6 +385,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             kube,
             config: _,
         } = ctx.as_ref();
+
         let mut modified = (*origin).to_owned();
         let kind = Pulsar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
@@ -368,18 +393,22 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 0: verify if there is a clever cloud client override
         debug!(
-            "Try to retrieve the optional secret '{}' on namespace '{}'",
-            OVERRIDE_CONFIGURATION_NAME, namespace
+            namespace = namespace,
+            secret = OVERRIDE_CONFIGURATION_NAME,
+            "Try to retrieve the optional secret",
         );
 
         let secret: Option<Secret> =
             resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
+
         let apis = match secret {
             Some(secret) => {
                 info!(
-                    "Use custom Clever Cloud client to connect the api using secret '{}/{}'",
-                    namespace, OVERRIDE_CONFIGURATION_NAME
+                    namespace = namespace,
+                    secret = OVERRIDE_CONFIGURATION_NAME,
+                    "Use custom Clever Cloud client to connect the api using secret",
                 );
+
                 clevercloud::client::try_from(secret).await?
             }
             None => {
@@ -392,16 +421,22 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // Step 1: delete the addon
 
         info!(
-            "Delete addon for custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Delete addon for custom resource",
         );
+
         modified.delete(&apis).await?;
         modified.set_addon_id(None);
 
         debug!(
-            "Update information and status of custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Update information and status of custom resource",
         );
+
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
@@ -415,9 +450,12 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         // Step 2: remove the finalizer
 
         info!(
-            "Remove finalizer on custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Remove finalizer on custom resource",
         );
+
         let modified = finalizer::remove(modified, ADDON_FINALIZER);
 
         let action = &Action::DeleteFinalizer;
@@ -425,9 +463,12 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         debug!(
-            "Update information of custom resource '{}' ('{}/{}')",
-            &kind, &namespace, &name
+            kind = &kind,
+            namespace = &namespace,
+            name = &name,
+            "Update information of custom resource",
         );
+
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
 

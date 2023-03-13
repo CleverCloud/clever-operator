@@ -375,34 +375,40 @@ impl Configuration {
     }
 
     /// Prints a message about missing value for configuration key
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "trace", tracing::instrument(skip_all))]
     pub fn help(&self) {
         #[cfg(feature = "logging")]
-        tracing::info!("Build with 'logging' feature flag");
+        tracing::info!(feature = "logging", "Build with feature flag");
 
         #[cfg(feature = "metrics")]
-        tracing::info!("Build with 'metrics' feature flag");
+        tracing::info!(feature = "metrics", "Build with feature flag");
 
         #[cfg(feature = "trace")]
-        tracing::info!("Build with 'trace' feature flag");
+        tracing::info!(feature = "trace", "Build with feature flag");
 
         #[cfg(feature = "tracker")]
-        tracing::info!("Build with 'tracker' feature flag");
+        tracing::info!(feature = "tracker", "Build with feature flag");
 
         if self.api.consumer_key.is_empty() {
-            warn!("Configuration key 'api.consumerKey' has an empty value");
+            warn!(
+                key = "api.consumerKey",
+                "Configuration key has an empty value"
+            );
         }
 
         if self.api.consumer_secret.is_empty() {
-            warn!("Configuration key 'api.consumerSecret' has an empty value");
+            warn!(
+                key = "api.consumerSecret",
+                "Configuration key has an empty value"
+            );
         }
 
         if self.api.token.is_empty() {
-            warn!("Configuration key 'api.token' has an empty value");
+            warn!(key = "api.token", "Configuration key has an empty value");
         }
 
         if self.api.secret.is_empty() {
-            warn!("Configuration key 'api.secret' has an empty value");
+            warn!(key = "api.secret", "Configuration key has an empty value");
         }
     }
 }

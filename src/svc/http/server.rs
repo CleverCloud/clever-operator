@@ -2,6 +2,7 @@
 //!
 //! This module provide a HTTP server to handle health request
 
+use std::net::SocketAddr;
 use std::{net::AddrParseError, sync::Arc};
 
 use hyper::{
@@ -26,13 +27,16 @@ pub enum Error {
 
 #[tracing::instrument(skip(config))]
 pub async fn serve(config: Arc<Configuration>) -> Result<(), Error> {
-    let addr = config
+    let addr: SocketAddr = config
         .operator
         .listen
         .parse()
         .map_err(|err| Error::Listen(config.operator.listen.to_owned(), err))?;
 
-    info!("Start to listen for http request on {}", addr);
+    info!(
+        address = addr.to_string(),
+        "Start to listen for http request"
+    );
     Server::try_bind(&addr)
         .map_err(Error::Bind)?
         .serve(make_service_fn(|_| async {

@@ -133,12 +133,13 @@ where
     U: ToString + Debug,
 {
     debug!(
-        "Create '{}' event for resource '{}/{}', {}",
-        action.to_string(),
-        &obj.namespace().unwrap_or_else(|| "<none>".to_string()),
-        &obj.name_any(),
-        message
+        action = action.to_string(),
+        namespace = &obj.namespace().unwrap_or_else(|| "<none>".to_string()),
+        name = &obj.name_any(),
+        message = message,
+        "Create an event for resource",
     );
+
     resource::upsert(client, &event::new(obj, kind, action, message), false).await
 }
 
