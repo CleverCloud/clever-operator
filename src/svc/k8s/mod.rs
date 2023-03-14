@@ -15,7 +15,7 @@ use kube_runtime::{
     watcher, Controller,
 };
 #[cfg(feature = "metrics")]
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 #[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
@@ -42,40 +42,52 @@ pub const RECONCILIATION_DELETE_EVENT: &str = "delete";
 // Telemetry
 
 #[cfg(feature = "metrics")]
-lazy_static! {
-    static ref RECONCILIATION_SUCCESS: CounterVec = register_counter_vec!(
+static RECONCILIATION_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_success",
             "number of successful reconciliation"
         ),
         &["kind"]
     )
-    .expect("metrics 'kubernetes_operator_reconciliation_success' to not be already initialized");
-    static ref RECONCILIATION_FAILED: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_operator_reconciliation_success' to not be already initialized")
+});
+
+#[cfg(feature = "metrics")]
+static RECONCILIATION_FAILED: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_failed",
             "number of failed reconciliation"
         ),
         &["kind"]
     )
-    .expect("metrics 'kubernetes_operator_reconciliation_failed' to not be already initialized");
-    static ref RECONCILIATION_EVENT: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_operator_reconciliation_failed' to not be already initialized")
+});
+
+#[cfg(feature = "metrics")]
+static RECONCILIATION_EVENT: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_event",
             "number of usert event",
         ),
         &["kind", "namespace", "event"]
     )
-    .expect("metrics 'kubernetes_operator_reconciliation_event' to not be already initialized");
-    static ref RECONCILIATION_DURATION: CounterVec = register_counter_vec!(
+    .expect("metrics 'kubernetes_operator_reconciliation_event' to not be already initialized")
+});
+
+#[cfg(feature = "metrics")]
+static RECONCILIATION_DURATION: Lazy<CounterVec> = Lazy::new(|| {
+    register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_duration",
             "duration of reconciliation",
         ),
         &["kind", "unit"]
     )
-    .expect("metrics 'kubernetes_operator_reconciliation_duration' to not be already initialized");
-}
+    .expect("metrics 'kubernetes_operator_reconciliation_duration' to not be already initialized")
+});
 
 // -----------------------------------------------------------------------------
 // State structure
@@ -168,9 +180,12 @@ where
 
         if resource::deleted(obj.as_ref()) {
             info!(
-                "Received deletion event for custom resource '{}' named '{}/{}'",
-                &api_resource.kind, &namespace, &name
+                kind = &api_resource.kind,
+                namespace = &namespace,
+                name = &name,
+                "Received deletion event for custom resource",
             );
+
             #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
@@ -178,6 +193,7 @@ where
 
             #[cfg(not(feature = "trace"))]
             let result = Self::delete(ctx, obj.to_owned()).await;
+
             #[cfg(feature = "trace")]
             let result = Self::delete(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))
@@ -185,16 +201,23 @@ where
 
             if let Err(err) = result {
                 error!(
-                    "Failed to delete custom resource '{}' named '{}/{}', {}",
-                    &api_resource.kind, &namespace, &name, err
+                    kind = &api_resource.kind,
+                    namespace = &namespace,
+                    name = &name,
+                    error = err.to_string(),
+                    "Failed to delete custom resource"
                 );
+
                 return Err(err);
             }
         } else {
             info!(
-                "Received upsertion event for custom resource '{}' named '{}/{}'",
-                &api_resource.kind, &namespace, &name
+                kind = &api_resource.kind,
+                namespace = &namespace,
+                name = &name,
+                "Received upsertion event for custom resource",
             );
+
             #[cfg(feature = "metrics")]
             RECONCILIATION_EVENT
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
@@ -202,6 +225,7 @@ where
 
             #[cfg(not(feature = "trace"))]
             let result = Self::upsert(ctx, obj.to_owned()).await;
+
             #[cfg(feature = "trace")]
             let result = Self::upsert(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::upsert"))
@@ -209,9 +233,13 @@ where
 
             if let Err(err) = result {
                 error!(
-                    "Failed to upsert custom resource '{}' named '{}/{}', {}",
-                    &api_resource.kind, &namespace, &name, err
+                    kind = &api_resource.kind,
+                    namespace = &namespace,
+                    name = &name,
+                    error = err.to_string(),
+                    "Failed to upsert custom resource"
                 );
+
                 return Err(err);
             }
         }
@@ -281,11 +309,12 @@ where
                 }
                 Ok(Some((obj, _action))) => {
                     info!(
-                        "Successfully reconcile resource '{}' named '{}/{}'",
-                        &api_resource.kind,
-                        &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
-                        &obj.name
+                        kind = &api_resource.kind,
+                        namespace = &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        name = &obj.name,
+                        "Successfully reconcile resource",
                     );
+
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
@@ -293,11 +322,12 @@ where
                 }
                 Err(controller::Error::ObjectNotFound(obj)) => {
                     debug!(
-                        "Received an event about an already deleted resource '{}' named '{}/{}'",
-                        &api_resource.kind,
-                        &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
-                        &obj.name
+                        kind = &api_resource.kind,
+                        namespace = &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        name = &obj.name,
+                        "Received an event about an already deleted resource",
                     );
+
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_SUCCESS
                         .with_label_values(&[&api_resource.kind])
@@ -305,9 +335,11 @@ where
                 }
                 Err(err) => {
                     error!(
-                        "Failed to reconcile resource '{}', {}",
-                        &api_resource.kind, err
+                        kind = &api_resource.kind,
+                        error = err.to_string(),
+                        "Failed to reconcile resource",
                     );
+
                     #[cfg(feature = "metrics")]
                     RECONCILIATION_FAILED
                         .with_label_values(&[&api_resource.kind])
@@ -316,13 +348,14 @@ where
             }
 
             trace!(
-                "Put watch event loop for resource '{}' to sleep for {}ms",
-                &api_resource.kind,
-                Instant::now()
+                kind = &api_resource.kind,
+                duration = Instant::now()
                     .checked_duration_since(instant + Duration::from_millis(100))
                     .map(|d| d.as_millis())
-                    .unwrap_or_else(|| 0)
+                    .unwrap_or_else(|| 0),
+                "Put watch event loop for resource to sleep",
             );
+
             #[cfg(feature = "metrics")]
             RECONCILIATION_DURATION
                 .with_label_values(&[&api_resource.kind, "us"])

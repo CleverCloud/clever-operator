@@ -2,15 +2,10 @@
 //!
 //! A kubernetes operator that expose clever cloud's resources through custom
 //! resource definition
+
 use std::{convert::TryFrom, sync::Arc};
 
-#[cfg(feature = "trace")]
-use opentelemetry::global;
-#[cfg(feature = "trace")]
-use opentelemetry_jaeger::Propagator;
-use tracing::{debug, error, info};
-#[cfg(feature = "trace")]
-use tracing_subscriber::{layer::SubscriberExt, Registry};
+use tracing::{error, info};
 
 use crate::{
     cmd::{daemon, Args, Executor},
@@ -35,8 +30,11 @@ pub enum Error {
     #[error("failed to set subscriber, {0}")]
     Subscriber(tracing::subscriber::SetGlobalDefaultError),
     #[cfg(feature = "trace")]
-    #[error("failed to build tracing subscription")]
+    #[error("failed to build tracing subscription, {0}")]
     Subscription(opentelemetry::trace::TraceError),
+    #[cfg(feature = "tracker")]
+    #[error("failed to parse sentry dsn uri, {0}")]
+    ParseSentryDsn(sentry_types::ParseDsnError),
 }
 
 impl From<cmd::Error> for Error {
@@ -76,56 +74,34 @@ impl From<opentelemetry::trace::TraceError> for Error {
 #[paw::main]
 #[tokio::main]
 pub(crate) async fn main(args: Args) -> Result<(), Error> {
-    logging::initialize(args.verbosity as usize)?;
-
     let config = Arc::new(match &args.config {
         Some(path) => Configuration::try_from(path.to_owned())?,
         None => Configuration::try_default()?,
     });
 
     config.help();
+    logging::initialize(&config, args.verbosity as usize)?;
     if args.check {
-        debug!("{:#?}", config);
-        info!("{} configuration is healthy!", env!("CARGO_PKG_NAME"));
+        println!("{} configuration is healthy!", env!("CARGO_PKG_NAME"));
         return Ok(());
     }
 
     #[cfg(feature = "tracker")]
-    let _sguard = config.sentry.dsn.as_ref().map(|dsn| {
-        sentry::init((
-            dsn.to_owned(),
-            sentry::ClientOptions {
+    let _sguard = match config.sentry.dsn.as_ref() {
+        None => None,
+        Some(dsn) => {
+            info!(
+                dsn = dsn,
+                "Configure sentry integration using the given dsn"
+            );
+
+            Some(sentry::init(sentry::ClientOptions {
+                dsn: Some(dsn.parse().map_err(Error::ParseSentryDsn)?),
                 release: sentry::release_name!(),
                 ..Default::default()
-            },
-        ))
-    });
-
-    #[cfg(feature = "trace")]
-    if !config.jaeger.endpoint.is_empty() {
-        info!(
-            "Start to trace using jaeger with opentelemetry compatibility on endpoint {}",
-            &config.jaeger.endpoint
-        );
-        global::set_text_map_propagator(Propagator::new());
-
-        let mut builder = opentelemetry_jaeger::new_collector_pipeline()
-            .with_endpoint(config.jaeger.endpoint.to_owned())
-            .with_service_name(env!("CARGO_PKG_NAME"));
-
-        if let Some(user) = &config.jaeger.user {
-            builder = builder.with_username(user);
+            }))
         }
-
-        if let Some(password) = &config.jaeger.password {
-            builder = builder.with_password(password);
-        }
-
-        let layer = tracing_opentelemetry::layer()
-            .with_tracer(builder.install_batch(opentelemetry::runtime::Tokio)?);
-
-        tracing::subscriber::set_global_default(Registry::default().with(layer))?;
-    }
+    };
 
     let result = match &args.command {
         Some(cmd) => cmd.execute(config).await,
@@ -135,15 +111,16 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
 
     if let Err(err) = result {
         error!(
-            "could not execute {} properly, {}",
+            error = err.to_string(),
+            "could not execute {} properly",
             env!("CARGO_PKG_NAME"),
-            err
         );
+
         return Err(err);
     }
 
     #[cfg(feature = "trace")]
-    global::shutdown_tracer_provider();
+    opentelemetry::global::shutdown_tracer_provider();
 
     info!("{} halted!", env!("CARGO_PKG_NAME"));
     Ok(())

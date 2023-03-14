@@ -13,19 +13,17 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.58"
-# Pin ahash version as the latest versions does not build
-ahash = "=0.7.5"
-base64 = "^0.13.1"
-chrono = { version = "^0.4.23", default-features = false }
-clap = { version = "^4.0.26", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.10", features = ["jsonschemas"] }
-config = "^0.13.2"
-futures = "^0.3.25"
+async-trait = "^0.1.66"
+base64 = "^0.21.0"
+chrono = { version = "^0.4.24", default-features = false }
+clap = { version = "^4.1.8", features = ["derive"] }
+clevercloud-sdk = { version = "^0.10.13", features = ["jsonschemas"] }
+config = "^0.13.3"
+futures = "^0.3.27"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.23", features = ["server", "tcp", "http1"] }
-json-patch = "^0.2.6"
-kube = { version = "^0.76.0", default-features = false, features = [
+hyper = { version = "^0.14.25", default-features = false, features = ["server", "tcp", "http1"] }
+json-patch = "^0.3.0"
+kube = { version = "^0.80.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -33,40 +31,43 @@ kube = { version = "^0.76.0", default-features = false, features = [
     "derive",
     "jsonpatch",
 ] }
-kube-derive = "^0.76.0"
-kube-runtime = "^0.76.0"
-k8s-openapi = { version = "^0.16.0", default-features = false, features = [
+kube-derive = "^0.80.0"
+kube-runtime = "^0.80.0"
+k8s-openapi = { version = "^0.17.0", default-features = false, features = [
     "v1_24",
 ] }
-lazy_static = { version = "^1.4.0", optional = true }
+once_cell = { version = "^1.17.1", optional = true }
 opentelemetry = { version = "^0.18.0", features = [
     "rt-tokio",
 ], optional = true }
 opentelemetry-jaeger = { version = "^0.17.0", features = [
     "rt-tokio",
     "collector_client",
+    "hyper_tls_collector_client",
 ], optional = true }
 paw = "^1.0.0"
 prometheus = { version = "^0.13.3", optional = true }
-schemars = { version = "^0.8.11", features = [
+schemars = { version = "^0.8.12", features = [
     "chrono",
     "indexmap1",
     "uuid1",
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.29.0", optional = true }
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = { version = "^1.0.89", features = [
+sentry = { version = "^0.30.0", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"], optional = true }
+sentry-types = { version = "^0.30.0", optional = true }
+sentry-tracing = { version = "^0.30.0", optional = true }
+serde = { version = "1.0.155", features = ["derive"] }
+serde_json = { version = "^1.0.94", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.9.14"
-tempfile = "^3.3.0"
-thiserror = "^1.0.37"
-tokio = { version = "^1.22.0", features = ["full"] }
+serde_yaml = "^0.9.19"
+tempfile = "^3.4.0"
+thiserror = "^1.0.39"
+tokio = { version = "^1.26.0", features = ["full"] }
 tracing = "^0.1.37"
-tracing-subscriber = { version = "^0.3.16", default-features = false, features = ["std", "ansi", "tracing-log"] }
+tracing-subscriber = { version = "^0.3.16", default-features = false, features = ["std", "ansi"] }
 tracing-opentelemetry = { version = "^0.18.0", optional = true }
 
 [features]
@@ -78,8 +79,8 @@ default = [
 logging = [
     "clevercloud-sdk/logging",
 ]
-metrics = ["clevercloud-sdk/metrics", "lazy_static", "prometheus"]
-tracker = ["sentry"]
+metrics = ["clevercloud-sdk/metrics", "once_cell", "prometheus"]
+tracker = ["sentry", "sentry-tracing", "sentry-types"]
 trace = [
     "clevercloud-sdk/trace",
     "clevercloud-sdk/tokio",

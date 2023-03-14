@@ -2,6 +2,7 @@
 //!
 //! This module provides helpers to create a clever-cloud client
 
+use base64::{engine::general_purpose::STANDARD as BASE64_ENGINE, Engine};
 use clevercloud_sdk::oauth10a::{
     connector::{GaiResolver, HttpsConnector, ProxyConnector},
     proxy::{self, ProxyBuilder, ProxyConnectorBuilder},
@@ -112,7 +113,8 @@ pub async fn try_from(secret: Secret) -> Result<Client, Error> {
         };
 
         match data.get("config") {
-            Some(bytestr) => base64::decode_config(&bytestr.0, base64::STANDARD)
+            Some(bytestr) => BASE64_ENGINE
+                .decode(&bytestr.0)
                 .map_err(|err| Error::Base64Decode("config", namespace, name, err)),
             None => Err(Error::SecretKey("config", namespace, name)),
         }

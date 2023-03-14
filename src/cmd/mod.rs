@@ -127,7 +127,6 @@ impl ParseArgs for Args {
 // -----------------------------------------------------------------------------
 // daemon function
 
-#[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
 pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> Result<(), Error> {
     // -------------------------------------------------------------------------
     // Create a new kubernetes client from path if defined, or via the
@@ -157,49 +156,49 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
 
     tokio::select! {
         r = tokio::spawn(async move {
-            info!("Start to listen for events of postgresql addon custom resource");
+            info!(kind = "PostgreSql", "Start to listen for events of custom resource");
             postgresql::Reconciler::default()
                 .watch(postgresql_ctx)
                 .await
                 .map_err(Error::WatchPostgreSql)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of redis addon custom resource");
+            info!(kind = "Redis", "Start to listen for events of custom resource");
             redis::Reconciler::default()
                 .watch(redis_ctx)
                 .await
                 .map_err(Error::WatchRedis)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of mysql addon custom resource");
+            info!(kind = "MySql", "Start to listen for events of custom resource");
             mysql::Reconciler::default()
                 .watch(mysql_ctx)
                 .await
                 .map_err(Error::WatchMySql)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of mongodb addon custom resource");
+            info!(kind = "MongoDb", "Start to listen for events of custom resource");
             mongodb::Reconciler::default()
                 .watch(mongodb_ctx)
                 .await
                 .map_err(Error::WatchMongoDb)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of pulsar addon custom resource");
+            info!(kind = "Pulsar", "Start to listen for events of custom resource");
             pulsar::Reconciler::default()
                 .watch(pulsar_ctx)
                 .await
                 .map_err(Error::WatchPulsar)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of config-provider addon custom resource");
+            info!(kind = "ConfigProvider", "Start to listen for events of custom resource");
             config_provider::Reconciler::default()
                 .watch(config_provider_ctx)
                 .await
                 .map_err(Error::WatchConfigProvider)
         }) => r,
         r = tokio::spawn(async move {
-            info!("Start to listen for events of elasticsearch addon custom resource");
+            info!(kind = "ElasticSearch", "Start to listen for events of custom resource");
             elasticsearch::Reconciler::default()
                 .watch(elasticsearch_ctx)
                 .await

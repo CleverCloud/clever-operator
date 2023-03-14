@@ -42,10 +42,11 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!(
-                "Retrieve the addon from the identifier '{}' ({})",
-                &id,
-                self.name()
+                id = &id,
+                name = self.name(),
+                "Retrieve the addon from the identifier",
             );
+
             match addon::get(client, &self.organisation(), id).await {
                 Ok(addon) => {
                     return Ok(Some(addon));
@@ -55,10 +56,11 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
                 {
                     // try to retrieve the addon from the name
                     trace!(
-                        "Trying to retrieve the addon by name '{}' for the addon '{}'",
-                        self.name(),
-                        &id
+                        id = &id,
+                        name = self.name(),
+                        "Trying to retrieve the addon by name for the addon",
                     );
+
                     return Ok(addon::list(client, &self.organisation())
                         .await
                         .map_err(Into::into)?
@@ -79,15 +81,16 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
         debug!(
-            "Try to retrieve the addon '{}' ({}), before creating a new one",
-            self.id().unwrap_or_else(|| "<none>".to_string()),
-            self.name()
+            id = self.id().unwrap_or_else(|| "<none>".to_string()),
+            name = self.name(),
+            "Try to retrieve the addon, before creating a new one",
         );
+
         if let Some(addon) = self.get(client).await? {
             return Ok(addon);
         }
 
-        debug!("Creating a new addon '{}'", self.name());
+        debug!(name = self.name(), "Creating a new addon");
         Ok(addon::create(client, &self.organisation(), &self.to_owned().into()).await?)
     }
 
