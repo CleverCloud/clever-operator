@@ -9,7 +9,7 @@ metadata:
     categories: Developer Tools, Integration & Delivery, Cloud Provider
     description: A kubernetes operator that expose clever cloud's resources through custom resource definition
     certified: "false"
-    containerImage: docker.io/clevercloud/clever-operator:78464b50fd6230fe78f5e031048dc81d62308322
+    containerImage: docker.io/clevercloud/clever-operator:877afd560ee97317ce163c2a596adbd3954c0b17
     createdAt: 2021-09-21T12:00:00.000Z
     repository: https://github.com/CleverCloud/clever-operator
     alm-examples: |
@@ -154,7 +154,7 @@ spec:
   version: 0.5.4
   relatedImages:
   - name: clever-operator
-    image: docker.io/clevercloud/clever-operator:78464b50fd6230fe78f5e031048dc81d62308322
+    image: docker.io/clevercloud/clever-operator:877afd560ee97317ce163c2a596adbd3954c0b17
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
@@ -481,7 +481,7 @@ spec:
                 app: clever-operator
             spec:
               containers:
-                - image: docker.io/clevercloud/clever-operator:78464b50fd6230fe78f5e031048dc81d62308322
+                - image: docker.io/clevercloud/clever-operator:877afd560ee97317ce163c2a596adbd3954c0b17
                   imagePullPolicy: Always
                   name: clever-operator
                   command: ["/usr/local/bin/clever-operator"]
