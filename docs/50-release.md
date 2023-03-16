@@ -8,7 +8,7 @@
 
 ### Create operator-lifecycle-manager manifests for the new release
 
-Firstly, you will need to duplicate manifests located in `deployments/operator-lifecycle-manager/<latest-release>` to the new release. 
+Firstly, you will need to duplicate manifests located in `deployments/operator-lifecycle-manager/bundle-<latest-release>` to the new release. 
 Once, this is done, you will got something like below.
 
 ```
@@ -74,4 +74,4 @@ Now, you are able once, the continuous integration is ok, to create GitHub relea
 
 You are now able to publish a new release on the OperatorHub, to do that create a pull request 
 on the [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators/) 
-with the freshly created manifests in `deployments/operator-lifecycle-manager/<new-release>`.
+with the freshly created manifests in `deployments/operator-lifecycle-manager/bundle-<new-release>`.

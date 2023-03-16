@@ -15,7 +15,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: 'true'
-        prometheus.io/port: '7080'
+        prometheus.io/port: '8000'
     {{- if .Values.podAnnotations }}
         {{ toYaml .Values.podAnnotations | nindent 8 }}
     {{- end }}

@@ -39,7 +39,7 @@ spec:
 ### Supported version
 
 | Version | Code |
-| ------- | ---- |
+|---------|------|
 | `10`    | 10   |
 | `11`    | 11   |
 | `12`    | 12   |
@@ -51,7 +51,7 @@ spec:
 For region, the code could be used to select the desired region.
 
 | Name                             | Code     |
-| -------------------------------- | -------- |
+|----------------------------------|----------|
 | Jeddah                           | `jed`    |
 | Paris                            | `par`    |
 | Singapore                        | `sgp`    |
@@ -67,7 +67,7 @@ For region, the code could be used to select the desired region.
 For plan, both name and code could be used to select the desired plan.
 
 | Name                | Code       |
-| ------------------- | ---------- |
+|---------------------|------------|
 | `DEV`               | `dev`      |
 | `XXS Small Space`   | `xxs_sml`  |
 | `XXS Medium Space`  | `xxs_med`  |
@@ -124,7 +124,7 @@ spec:
 ### Supported version
 
 | Version | Code |
-| ------- | ---- |
+|---------|------|
 | `5.7`   | 57   |
 | `8.0`   | 80   |
 
@@ -133,7 +133,7 @@ spec:
 For region, the code could be used to select the desired region.
 
 | Name                             | Code     |
-| -------------------------------- | -------- |
+|----------------------------------|----------|
 | Jeddah                           | `jed`    |
 | Paris                            | `par`    |
 | Singapore                        | `sgp`    |
@@ -149,7 +149,7 @@ For region, the code could be used to select the desired region.
 For plan, both name and code could be used to select the desired plan.
 
 | Name               | Code      |
-| ------------------ | --------- |
+|--------------------|-----------|
 | `DEV`              | `dev`     |
 | `XXS Small Space`  | `xxs_sml` |
 | `XXS Medium Space` | `xxs_med` |
@@ -190,7 +190,7 @@ metadata:
 spec:
   organisation: orga_xxxx
   options:
-    version: 6010
+    version:
     encryption: false
   instance:
     region: par
@@ -201,15 +201,16 @@ spec:
 ### Supported version
 
 | Version | Code |
-| ------- | ---- |
+|---------|------|
 | `6.2.6` | 626  |
+| `7.0.4` | 704  |
 
 ### Supported region
 
 For region, the code could be used to select the desired region.
 
 | Name                             | Code     |
-| -------------------------------- | -------- |
+|----------------------------------|----------|
 | Jeddah                           | `jed`    |
 | Paris                            | `par`    |
 | Singapore                        | `sgp`    |
@@ -225,7 +226,7 @@ For region, the code could be used to select the desired region.
 For plan, both name and code could be used to select the desired plan.
 
 | Name  | Code         |
-| ----- | ------------ |
+|-------|--------------|
 | `S`   | `s_mono`     |
 | `M`   | `m_mono`     |
 | `L`   | `l_mono`     |
@@ -260,7 +261,7 @@ spec:
 ### Supported version
 
 | Version | Code |
-| ------- | ---- |
+|---------|------|
 | `4.0.3` | 403  |
 
 ### Supported region
@@ -268,7 +269,7 @@ spec:
 For region, the code could be used to select the desired region.
 
 | Name                             | Code     |
-| -------------------------------- | -------- |
+|----------------------------------|----------|
 | Jeddah                           | `jed`    |
 | Paris                            | `par`    |
 | Singapore                        | `sgp`    |
@@ -284,7 +285,7 @@ For region, the code could be used to select the desired region.
 For plan, both name and code could be used to select the desired plan.
 
 | Name               | Code      |
-| ------------------ | --------- |
+|--------------------|-----------|
 | `DEV`              | `dev`     |
 | `XS Small Space`   | `xs_sml`  |
 | `XS Medium Space`  | `xs_med`  |
@@ -362,7 +363,7 @@ metadata:
 spec:
   organisation: orga_xxxx
   options:
-    version: 13
+    version: 8
     encryption: true
     kibana: true
     apm: true
@@ -375,16 +376,17 @@ spec:
 ### Supported version
 
 | Version | Code |
-| ------- | ---- |
+|---------|------|
 | `6`     | 6    |
 | `7`     | 7    |
+| `8`     | 8    |
 
 ### Supported region
 
 For region, the code could be used to select the desired region.
 
 | Name                             | Code     |
-| -------------------------------- | -------- |
+|----------------------------------|----------|
 | Jeddah                           | `jed`    |
 | Paris                            | `par`    |
 | Singapore                        | `sgp`    |
@@ -400,7 +402,7 @@ For region, the code could be used to select the desired region.
 For plan, both name and code could be used to select the desired plan.
 
 | Name   | Code     |
-| ------ | -------- |
+|--------|----------|
 | `XS`   | `xs`     |
 | `S`    | `s`      |
 | `M`    | `m`      |

@@ -32,6 +32,10 @@ rules:
   - redis/status
   - mongodbs
   - mongodbs/status
+  - configproviders
+  - configproviders/status
+  - elasticsearches
+  - elasticsearches/status
   verbs:
   - get
   - list
