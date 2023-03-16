@@ -28,7 +28,7 @@ KUBE_SCORE_VERSION  ?= 1.16.1
 KUBE_SCORE			?= $(shell which kube-score)
 
 DEPLOY_KUBE			?= deployments/kubernetes/$(KUBE_VERSION)
-DEPLOY_OLM			?= deployments/operator-lifecycle-manager/$(OLM_VERSION)
+DEPLOY_OLM			?= deployments/operator-lifecycle-manager/bundle-$(OLM_VERSION)
 
 FIND 				?= $(shell which find)
 
