@@ -4,7 +4,7 @@
 
 ## Update operator-lifecycle-manager manifests
 
-> This part explain how to create manifests for the clever-operator on [OperatorHub](https://operatorhub.io/operator/clever-operator).
+> This part explains how to create manifests for the clever-operator on [OperatorHub](https://operatorhub.io/operator/clever-operator).
 
 ### Create operator-lifecycle-manager manifests for the new release
 
@@ -12,7 +12,7 @@ Firstly, you will need to duplicate manifests located in `deployments/operator-l
 Once, this is done, you will got something like below.
 
 ```
-deployments/operator-lifecycle-manager/<new-release>
+deployments/operator-lifecycle-manager/bundle-<new-release>
 ├── bundle.Dockerfile
 ├── manifests
 │  ├── clever-operator-mongodb.crd.yaml
