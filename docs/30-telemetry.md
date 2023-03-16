@@ -5,7 +5,7 @@
 ## Metrics
 
 This section explains metrics exposed by the application, part by part. Metrics
-are exposed by default on `http://0.0.0.0:7080/metrics` using the prometheus
+are exposed by default on `http://0.0.0.0:8000/metrics` using the prometheus
 format.
 
 ### Clever-Cloud client related metrics

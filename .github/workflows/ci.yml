@@ -150,10 +150,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v2
         with:
-          context: deployments/operator-lifecycle-manager/bundle-0.5.4
+          context: deployments/operator-lifecycle-manager/bundle-0.5.5
           push: 'true'
           tags: clevercloud/clever-operator-manifest:${{ github.sha }}
-          file: deployments/operator-lifecycle-manager/bundle-0.5.4/bundle.Dockerfile
+          file: deployments/operator-lifecycle-manager/bundle-0.5.5/bundle.Dockerfile
   kubernetes-deployment-scripts-validation:
     name: Kubernetes validate deployment scripts
     runs-on: ubuntu-latest

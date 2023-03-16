@@ -2,7 +2,7 @@
 
 [![Continuous integration](https://github.com/CleverCloud/clever-operator/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CleverCloud/clever-operator/actions/workflows/ci.yml)
 
-> A kubernetes operator that expose clever cloud's resources through custom resource definition
+> A kubernetes operator that exposes clever cloud's resources through custom resource definition
 
 ## How it works
 
@@ -73,7 +73,7 @@ Then, push it to your registry.
 $ DOCKER_IMG=<your-registry>/<your-namespace>/clever-operator:latest make docker-push
 ```
 
-Then, update the kubernetes deployment script located in `deployments/kubernetes/v1.21.0/20-deployment.yaml` to deploy
+Then, update the kubernetes deployment script located in `deployments/kubernetes/v1.24.0/20-deployment.yaml` to deploy
 your docker image in your kubernetes cluster. Finally, apply the deployment script.
 
 ```
@@ -81,7 +81,7 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f deployments/kubernetes/v1.21.0
+$ kubectl apply -f deployments/kubernetes/v1.24.0
 ```
 
 #### From the helm chart
@@ -102,8 +102,8 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.21.0/10-custom-resource-definition.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.21.0/20-deployment.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/10-custom-resource-definition.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/20-deployment.yaml
 ```
 
 ## Configuration

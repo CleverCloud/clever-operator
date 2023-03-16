@@ -3,4 +3,4 @@ name: clever-operator
 description: A kubernetes operator that expose clever cloud's resources through custom resource definition
 type: application
 version: 0.1.0
-appVersion: "0.5.4"
+appVersion: "0.5.5"
