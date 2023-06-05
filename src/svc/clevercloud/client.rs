@@ -4,7 +4,7 @@
 
 use base64::{engine::general_purpose::STANDARD as BASE64_ENGINE, Engine};
 use clevercloud_sdk::oauth10a::{
-    connector::{GaiResolver, HttpsConnector, ProxyConnector},
+    connector::{GaiResolver, HttpsConnector, HttpsConnectorBuilder, ProxyConnector},
     proxy::{self, ProxyBuilder, ProxyConnectorBuilder},
     Credentials,
 };
@@ -89,9 +89,13 @@ pub fn try_new(credentials: Credentials, proxy: &Option<Proxy>) -> Result<Client
                 proxy.no.to_owned(),
             )?;
 
-            ProxyConnectorBuilder::default()
-                .with_proxy(proxy)
-                .build(HttpsConnector::new())?
+            ProxyConnectorBuilder::default().with_proxy(proxy).build(
+                HttpsConnectorBuilder::new()
+                    .with_webpki_roots()
+                    .https_or_http()
+                    .enable_http1()
+                    .build(),
+            )?
         }
         _ => ProxyConnectorBuilder::try_from_env()?,
     };

@@ -13,37 +13,37 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.66"
-base64 = "^0.21.0"
-chrono = { version = "^0.4.24", default-features = false }
-clap = { version = "^4.1.8", features = ["derive"] }
-clevercloud-sdk = { version = "^0.10.13", features = ["jsonschemas"] }
+async-trait = "^0.1.68"
+base64 = "^0.21.2"
+chrono = { version = "^0.4.26", default-features = false }
+clap = { version = "^4.3.0", features = ["derive"] }
+clevercloud-sdk = { version = "^0.11.0", features = ["jsonschemas"] }
 config = "^0.13.3"
-futures = "^0.3.27"
+futures = "^0.3.28"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.25", default-features = false, features = ["server", "tcp", "http1"] }
-json-patch = "^0.3.0"
-kube = { version = "^0.80.0", default-features = false, features = [
+hyper = { version = "^0.14.26", default-features = false, features = ["server", "tcp", "http1"] }
+json-patch = "^1.0.0"
+kube = { version = "^0.82.2", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
     "gzip",
     "derive",
     "jsonpatch",
+    "runtime",
 ] }
-kube-derive = "^0.80.0"
-kube-runtime = "^0.80.0"
-k8s-openapi = { version = "^0.17.0", default-features = false, features = [
+k8s-openapi = { version = "^0.18.0", default-features = false, features = [
     "v1_24",
 ] }
-once_cell = { version = "^1.17.1", optional = true }
-opentelemetry = { version = "^0.18.0", features = [
+once_cell = { version = "^1.18.0", optional = true }
+opentelemetry = { version = "^0.19.0", features = [
     "rt-tokio",
 ], optional = true }
-opentelemetry-jaeger = { version = "^0.17.0", features = [
+opentelemetry-jaeger = { version = "^0.18.0", features = [
     "rt-tokio",
     "collector_client",
-    "hyper_tls_collector_client",
+    "reqwest_collector_client",
+    "reqwest_rustls_collector_client"
 ], optional = true }
 paw = "^1.0.0"
 prometheus = { version = "^0.13.3", optional = true }
@@ -54,21 +54,21 @@ schemars = { version = "^0.8.12", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.30.0", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"], optional = true }
-sentry-types = { version = "^0.30.0", optional = true }
-sentry-tracing = { version = "^0.30.0", optional = true }
-serde = { version = "1.0.155", features = ["derive"] }
-serde_json = { version = "^1.0.94", features = [
+sentry = { version = "^0.31.3", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"], optional = true }
+sentry-types = { version = "^0.31.3", optional = true }
+sentry-tracing = { version = "^0.31.3", optional = true }
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = { version = "^1.0.96", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.9.19"
-tempfile = "^3.4.0"
-thiserror = "^1.0.39"
-tokio = { version = "^1.26.0", features = ["full"] }
+serde_yaml = "^0.9.21"
+tempfile = "^3.5.0"
+thiserror = "^1.0.40"
+tokio = { version = "^1.28.2", features = ["full"] }
 tracing = "^0.1.37"
-tracing-subscriber = { version = "^0.3.16", default-features = false, features = ["std", "ansi"] }
-tracing-opentelemetry = { version = "^0.18.0", optional = true }
+tracing-subscriber = { version = "^0.3.17", default-features = false, features = ["std", "ansi"] }
+tracing-opentelemetry = { version = "^0.19.0", optional = true }
 
 [features]
 default = [
