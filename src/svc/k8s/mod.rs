@@ -6,13 +6,14 @@
 use std::{error::Error, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-
 use futures::{StreamExt, TryStreamExt};
 use k8s_openapi::NamespaceResourceScope;
-use kube::{CustomResourceExt, Resource, ResourceExt};
-use kube_runtime::{
-    controller::{self, Action},
-    watcher, Controller,
+use kube::{
+    runtime::{
+        controller::{self, Action},
+        watcher, Controller,
+    },
+    CustomResourceExt, Resource, ResourceExt,
 };
 #[cfg(feature = "metrics")]
 use once_cell::sync::Lazy;

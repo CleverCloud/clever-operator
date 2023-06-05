@@ -51,7 +51,7 @@ pub mod tracer {
             .with_service_name(env!("CARGO_PKG_NAME"))
             .with_instrumentation_library_tags(true)
             .with_timeout(std::time::Duration::from_secs(600))
-            .with_hyper()
+            .with_reqwest()
             .with_trace_config(
                 trace::config()
                     .with_sampler(Sampler::AlwaysOn)

@@ -20,9 +20,10 @@ use clevercloud_sdk::{
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::Secret;
-use kube::{api::ListParams, Api, Resource, ResourceExt};
-use kube_derive::CustomResource;
-use kube_runtime::{controller, watcher, Controller};
+use kube::{
+    runtime::{controller, watcher, Controller},
+    Api, CustomResource, Resource, ResourceExt,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
@@ -268,7 +269,11 @@ pub struct Reconciler {}
 
 impl ControllerBuilder<MongoDb> for Reconciler {
     fn build(&self, state: Arc<Context>) -> Controller<MongoDb> {
-        Controller::new(Api::all(state.kube.to_owned()), ListParams::default())
+        let client = state.kube.to_owned();
+        let secret = Api::<Secret>::all(client.to_owned());
+
+        Controller::new(Api::all(client), watcher::Config::default())
+            .owns(secret, watcher::Config::default())
     }
 }
 
