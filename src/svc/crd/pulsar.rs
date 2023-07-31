@@ -139,7 +139,7 @@ impl AddonExt for Pulsar {
 impl Pulsar {
     #[cfg_attr(feature = "trace", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
-        let mut status = self.status.get_or_insert_with(Status::default);
+        let status = self.status.get_or_insert_with(Status::default);
 
         status.addon = id;
         self.status = Some(status.to_owned());
