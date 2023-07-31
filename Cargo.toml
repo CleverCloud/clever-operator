@@ -5,7 +5,7 @@ name = "clever-operator"
 description = "A kubernetes operator that expose clever cloud's resources through custom resource definition"
 version = "0.5.5"
 edition = "2021"
-rust-version = "1.66.1"
+rust-version = "1.67.0"
 authors = ["Florentin Dubois <florentin.dubois@clever-cloud.com>"]
 license-file = "LICENSE"
 repository = "https://github.com/CleverCloud/clever-operator"
@@ -13,17 +13,17 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.68"
+async-trait = "^0.1.72"
 base64 = "^0.21.2"
 chrono = { version = "^0.4.26", default-features = false }
-clap = { version = "^4.3.0", features = ["derive"] }
-clevercloud-sdk = { version = "^0.11.0", features = ["jsonschemas"] }
+clap = { version = "^4.3.19", features = ["derive"] }
+clevercloud-sdk = { version = "^0.11.1", features = ["jsonschemas"] }
 config = "^0.13.3"
 futures = "^0.3.28"
 hostname = "^0.3.1"
-hyper = { version = "^0.14.26", default-features = false, features = ["server", "tcp", "http1"] }
+hyper = { version = "^0.14.27", default-features = false, features = ["server", "tcp", "http1"] }
 json-patch = "^1.0.0"
-kube = { version = "^0.82.2", default-features = false, features = [
+kube = { version = "^0.84.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
@@ -54,18 +54,18 @@ schemars = { version = "^0.8.12", features = [
     "bytes",
     "url",
 ] }
-sentry = { version = "^0.31.3", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"], optional = true }
-sentry-types = { version = "^0.31.3", optional = true }
-sentry-tracing = { version = "^0.31.3", optional = true }
-serde = { version = "1.0.163", features = ["derive"] }
-serde_json = { version = "^1.0.96", features = [
+sentry = { version = "^0.31.5", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls"], optional = true }
+sentry-types = { version = "^0.31.5", optional = true }
+sentry-tracing = { version = "^0.31.5", optional = true }
+serde = { version = "1.0.179", features = ["derive"] }
+serde_json = { version = "^1.0.104", features = [
     "preserve_order",
     "float_roundtrip",
 ] }
-serde_yaml = "^0.9.21"
-tempfile = "^3.5.0"
-thiserror = "^1.0.40"
-tokio = { version = "^1.28.2", features = ["full"] }
+serde_yaml = "^0.9.25"
+tempfile = "^3.7.0"
+thiserror = "^1.0.44"
+tokio = { version = "^1.29.1", features = ["full"] }
 tracing = "^0.1.37"
 tracing-subscriber = { version = "^0.3.17", default-features = false, features = ["std", "ansi"] }
 tracing-opentelemetry = { version = "^0.19.0", optional = true }
