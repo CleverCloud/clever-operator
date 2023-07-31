@@ -30,7 +30,7 @@ pub async fn handler(_req: &Request<Body>) -> Result<Response<Body>, Error> {
     // Step 1: gather and encode metrics
 
     let families = gather();
-    let encoder = TextEncoder::default();
+    let encoder = TextEncoder;
     let mut buf = vec![];
     encoder
         .encode(&families, &mut buf)
