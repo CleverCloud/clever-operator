@@ -1,6 +1,6 @@
-//! # Pulsar addon
+//! # Materia Key-Value addon
 //!
-//! This module provide the puslar custom resource and its definition
+//! This module provides the materia key-value custom resource and its definition
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -37,8 +37,8 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/pulsar";
-pub const ADDON_BETA_PLAN: &str = "plan_3ad3c5be-5c1e-4dae-bf9a-87120b88fc13";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/materia-kv";
+pub const ADDON_ALPHA_PLAN: &str = "plan_53a1728d-4b9e-4254-94c4-b19163af587b";
 
 // -----------------------------------------------------------------------------
 // Instance structure
@@ -54,12 +54,10 @@ pub struct Instance {
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
-#[kube(version = "v1beta1")]
-#[kube(kind = "Pulsar")]
-#[kube(singular = "pulsar")]
-#[kube(plural = "pulsars")]
-#[kube(shortname = "pulse")]
-#[kube(shortname = "pul")]
+#[kube(version = "v1alpha1")]
+#[kube(kind = "KV")]
+#[kube(singular = "kv")]
+#[kube(plural = "kvs")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
@@ -92,20 +90,20 @@ pub struct Status {
 // Pulsar implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for Pulsar {
+impl Into<CreateOpts> for KV {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::Pulsar.to_string(),
-            plan: ADDON_BETA_PLAN.to_string(),
+            provider_id: AddonProviderId::KV.to_string(),
+            plan: ADDON_ALPHA_PLAN.to_string(),
             options: addon::Opts::default(),
         }
     }
 }
 
-impl AddonExt for Pulsar {
+impl AddonExt for KV {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
@@ -136,7 +134,7 @@ impl AddonExt for Pulsar {
     }
 }
 
-impl Pulsar {
+impl KV {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -239,8 +237,8 @@ impl From<clevercloud::client::Error> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<Pulsar> for Reconciler {
-    fn build(&self, state: Arc<Context>) -> Controller<Pulsar> {
+impl ControllerBuilder<KV> for Reconciler {
+    fn build(&self, state: Arc<Context>) -> Controller<KV> {
         let client = state.kube.to_owned();
         let secret = Api::<Secret>::all(client.to_owned());
 
@@ -250,17 +248,17 @@ impl ControllerBuilder<Pulsar> for Reconciler {
 }
 
 #[async_trait]
-impl k8s::Reconciler<Pulsar> for Reconciler {
+impl k8s::Reconciler<KV> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<KV>) -> Result<(), ReconcilerError> {
         let Context {
             kube,
             apis,
             config: _,
         } = ctx.as_ref();
 
-        let kind = Pulsar::kind(&()).to_string();
+        let kind = KV::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -384,7 +382,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<Context>, origin: Arc<KV>) -> Result<(), ReconcilerError> {
         let Context {
             apis,
             kube,
@@ -392,7 +390,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         } = ctx.as_ref();
 
         let mut modified = (*origin).to_owned();
-        let kind = Pulsar::kind(&()).to_string();
+        let kind = KV::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------

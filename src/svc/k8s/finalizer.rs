@@ -1,6 +1,6 @@
 //! # Finalizer module
 //!
-//! This module provide helpers methods to interact with kubernetes' resource
+//! This module provides helpers methods to interact with kubernetes's resource
 //! finalizer
 
 use std::fmt::Debug;
@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use k8s_openapi::NamespaceResourceScope;
 use kube::Resource;
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns if there is the given finalizer on the resource
 pub fn contains<T>(obj: &T, finalizer: &str) -> bool
 where
@@ -21,7 +21,7 @@ where
     }
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// add finalizer to the resource
 pub fn add<T>(mut obj: T, finalizer: &str) -> T
 where
@@ -29,6 +29,7 @@ where
 {
     if obj.meta().finalizers.is_some() {
         if !contains(&obj, finalizer) {
+            #[allow(clippy::manual_inspect)]
             obj.meta_mut().finalizers.as_mut().map(|finalizers| {
                 finalizers.push(finalizer.into());
                 finalizers
@@ -41,7 +42,7 @@ where
     obj
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// remove finalizer from the resource
 pub fn remove<T>(mut obj: T, finalizer: &str) -> T
 where

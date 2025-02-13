@@ -1,6 +1,6 @@
 //! # Clever operator
 //!
-//! A kubernetes operator that expose clever cloud's resources through custom
+//! A kubernetes operator that exposes clever cloud resources through custom
 //! resource definition
 
 use std::{convert::TryFrom, sync::Arc};
@@ -27,14 +27,6 @@ pub enum Error {
     Logging(logging::Error),
     #[error("failed to load configuration, {0}")]
     Configuration(svc::cfg::Error),
-    #[error("failed to set subscriber, {0}")]
-    Subscriber(tracing::subscriber::SetGlobalDefaultError),
-    #[cfg(feature = "trace")]
-    #[error("failed to build tracing subscription, {0}")]
-    Subscription(opentelemetry::trace::TraceError),
-    #[cfg(feature = "tracker")]
-    #[error("failed to parse sentry dsn uri, {0}")]
-    ParseSentryDsn(sentry_types::ParseDsnError),
 }
 
 impl From<cmd::Error> for Error {
@@ -52,19 +44,6 @@ impl From<logging::Error> for Error {
 impl From<svc::cfg::Error> for Error {
     fn from(err: svc::cfg::Error) -> Self {
         Self::Configuration(err)
-    }
-}
-
-impl From<tracing::subscriber::SetGlobalDefaultError> for Error {
-    fn from(err: tracing::subscriber::SetGlobalDefaultError) -> Self {
-        Self::Subscriber(err)
-    }
-}
-
-#[cfg(feature = "trace")]
-impl From<opentelemetry::trace::TraceError> for Error {
-    fn from(err: opentelemetry::trace::TraceError) -> Self {
-        Self::Subscription(err)
     }
 }
 
@@ -86,23 +65,6 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
         return Ok(());
     }
 
-    #[cfg(feature = "tracker")]
-    let _sguard = match config.sentry.dsn.as_ref() {
-        None => None,
-        Some(dsn) => {
-            info!(
-                dsn = dsn,
-                "Configure sentry integration using the given dsn"
-            );
-
-            Some(sentry::init(sentry::ClientOptions {
-                dsn: Some(dsn.parse().map_err(Error::ParseSentryDsn)?),
-                release: sentry::release_name!(),
-                ..Default::default()
-            }))
-        }
-    };
-
     let result = match &args.command {
         Some(cmd) => cmd.execute(config).await,
         None => daemon(args.kubeconfig, config).await,
@@ -118,9 +80,6 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
 
         return Err(err);
     }
-
-    #[cfg(feature = "trace")]
-    opentelemetry::global::shutdown_tracer_provider();
 
     info!("{} halted!", env!("CARGO_PKG_NAME"));
     Ok(())

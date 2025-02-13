@@ -4,7 +4,7 @@
 
 use std::fmt::Debug;
 #[cfg(feature = "metrics")]
-use std::time::Instant;
+use std::{sync::LazyLock, time::Instant};
 
 use k8s_openapi::{
     api::core::v1::ObjectReference, apimachinery::pkg::apis::meta::v1::OwnerReference,
@@ -15,11 +15,9 @@ use kube::{
     Api, Client, CustomResourceExt, Resource, ResourceExt,
 };
 #[cfg(feature = "metrics")]
-use once_cell::sync::Lazy;
-#[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::{de::DeserializeOwned, Serialize};
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 use tracing::Instrument;
 use tracing::{debug, level_enabled, trace, Level};
 
@@ -27,7 +25,7 @@ use tracing::{debug, level_enabled, trace, Level};
 // Telemetry
 
 #[cfg(feature = "metrics")]
-static CLIENT_REQUEST_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
+static CLIENT_REQUEST_SUCCESS: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_client_request_success",
@@ -39,7 +37,7 @@ static CLIENT_REQUEST_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
 });
 
 #[cfg(feature = "metrics")]
-static CLIENT_REQUEST_FAILURE: Lazy<CounterVec> = Lazy::new(|| {
+static CLIENT_REQUEST_FAILURE: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_client_request_failure",
@@ -51,7 +49,7 @@ static CLIENT_REQUEST_FAILURE: Lazy<CounterVec> = Lazy::new(|| {
 });
 
 #[cfg(feature = "metrics")]
-static CLIENT_REQUEST_DURATION: Lazy<CounterVec> = Lazy::new(|| {
+static CLIENT_REQUEST_DURATION: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_client_request_duration",
@@ -65,7 +63,7 @@ static CLIENT_REQUEST_DURATION: Lazy<CounterVec> = Lazy::new(|| {
 // -----------------------------------------------------------------------------
 // Helpers functions
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns if the resource is considered from kubernetes point of view as deleted
 pub fn deleted<T>(obj: &T) -> bool
 where
@@ -74,7 +72,7 @@ where
     obj.meta().deletion_timestamp.is_some()
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns the namespace and name of the kubernetes resource.
 ///
 /// # Panic
@@ -92,7 +90,7 @@ where
     )
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns differnce between the two given object serialize as json patch
 pub fn diff<T>(origin: &T, modified: &T) -> Result<json_patch::Patch, serde_json::Error>
 where
@@ -104,7 +102,7 @@ where
     ))
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// make a patch request on the given resource using the given patch
 pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
@@ -114,7 +112,7 @@ where
     ipatch(client, obj, patch).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// make a patch request on the given resource using the given patch
 pub async fn patch<T>(client: Client, obj: &T, patch: json_patch::Patch) -> Result<T, kube::Error>
 where
@@ -178,7 +176,7 @@ where
     result
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// make a patch request on the given resource's status using the given patch
 pub async fn patch_status<T>(
     client: Client,
@@ -192,7 +190,7 @@ where
     ipatch_status(client, obj, patch).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// make a patch request on the given resource's status using the given patch
 pub async fn patch_status<T>(
     client: Client,
@@ -265,7 +263,7 @@ where
     result
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// returns the list of resources matching the query
 pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
@@ -275,7 +273,7 @@ where
     ifind_by_labels(client, ns, query).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// returns the list of resources matching the query
 pub async fn find_by_labels<T>(client: Client, ns: &str, query: &str) -> Result<Vec<T>, kube::Error>
 where
@@ -324,7 +322,7 @@ where
     Ok(result?.items)
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// returns the object using namespace and name by asking kubernetes
 pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
@@ -334,7 +332,7 @@ where
     iget(client, ns, name).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// returns the object using namespace and name by asking kubernetes
 pub async fn get<T>(client: Client, ns: &str, name: &str) -> Result<Option<T>, kube::Error>
 where
@@ -395,7 +393,7 @@ where
     }
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// create the given kubernetes object and return it completed by kubernetes,
 /// this function should be avoid in favor of the [`upsert`] one
 pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
@@ -411,7 +409,7 @@ where
     icreate(client, obj).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// create the given kubernetes object and return it completed by kubernetes,
 /// this function should be avoid in favor of the [`upsert`] one
 pub async fn create<T>(client: Client, obj: &T) -> Result<T, kube::Error>
@@ -474,7 +472,7 @@ where
     result
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// upsert the given kubernetes object, get it and create it, if it does not
 /// exist or else patch it
 pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
@@ -490,7 +488,7 @@ where
     iupsert(client, obj, status).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// upsert the given kubernetes object, get it and create it, if it does not
 /// exist or else patch it
 pub async fn upsert<T>(client: Client, obj: &T, status: bool) -> Result<T, kube::Error>
@@ -536,7 +534,7 @@ where
     create(client, obj).await
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns a owner reference object pointing to the given resource
 pub fn owner_reference<T>(obj: &T) -> OwnerReference
 where
@@ -556,7 +554,7 @@ where
     }
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns a object reference pointing to the given resource
 pub fn object_reference<T>(obj: &T) -> ObjectReference
 where

@@ -83,7 +83,7 @@ pub struct Status {
 
 #[allow(clippy::from_over_into)]
 impl Into<CreateOpts> for ConfigProvider {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
@@ -98,7 +98,7 @@ impl Into<CreateOpts> for ConfigProvider {
 impl AddonExt for ConfigProvider {
     type Error = ReconcilerError;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn id(&self) -> Option<String> {
         if let Some(status) = &self.status {
             return status.addon.to_owned();
@@ -107,12 +107,12 @@ impl AddonExt for ConfigProvider {
         None
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn organisation(&self) -> String {
         self.spec.organisation.to_owned()
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn name(&self) -> String {
         let delimiter = Self::delimiter();
 
@@ -127,7 +127,7 @@ impl AddonExt for ConfigProvider {
 }
 
 impl ConfigProvider {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
 
@@ -135,7 +135,7 @@ impl ConfigProvider {
         self.status = Some(status.to_owned());
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn get_addon_id(&self) -> Option<String> {
         self.status.to_owned().unwrap_or_default().addon
     }
@@ -185,42 +185,42 @@ pub enum ReconcilerError {
 }
 
 impl From<kube::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: kube::Error) -> Self {
         Self::KubeClient(err)
     }
 }
 
 impl From<clevercloud::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: clevercloud::Error) -> Self {
         Self::CleverClient(err)
     }
 }
 
 impl From<v2::addon::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: v2::addon::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
 
 impl From<plan::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: plan::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
 
 impl From<environment::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: environment::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
 
 impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: controller::Error<ReconcilerError, watcher::Error>) -> Self {
         Self::Reconcile(err.to_string())
     }
@@ -357,7 +357,7 @@ impl k8s::Reconciler<ConfigProvider> for Reconciler {
             "Upsert environment variables for custom resource for addon",
         );
 
-        // We could not used the "addon_xxxx" identifier, we have to used the "config_xxxx" identifier
+        // We could not use the "addon_xxxx" identifier, we have to use the "config_xxxx" identifier
         let variables = environment::get(&apis, &addon.real_id).await?.iter().fold(
             BTreeMap::new(),
             |mut acc, var| {

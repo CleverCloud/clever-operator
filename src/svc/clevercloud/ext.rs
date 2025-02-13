@@ -7,10 +7,9 @@ use std::{collections::BTreeMap, fmt::Debug};
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
-    oauth10a::ClientError,
+    oauth10a::{reqwest::StatusCode, ClientError},
     v2::addon::{self, Addon, CreateOpts, Error},
 };
-use hyper::StatusCode;
 use tracing::{debug, trace};
 
 use crate::svc::clevercloud::client::Client;
@@ -28,17 +27,17 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
 
     fn name(&self) -> String;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn prefix() -> String {
         "kubernetes".to_string()
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn delimiter() -> String {
         "::".to_string()
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     async fn get(&self, client: &Client) -> Result<Option<Addon>, Self::Error> {
         if let Some(id) = &self.id() {
             trace!(
@@ -78,7 +77,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
         Ok(None)
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     async fn upsert(&self, client: &Client) -> Result<Addon, Self::Error> {
         debug!(
             id = self.id().unwrap_or_else(|| "<none>".to_string()),
@@ -94,7 +93,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
         Ok(addon::create(client, &self.organisation(), &self.to_owned().into()).await?)
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     async fn delete(&self, client: &Client) -> Result<(), Self::Error> {
         if let Some(a) = self.get(client).await? {
             addon::delete(client, &self.organisation(), &a.id).await?;
@@ -103,7 +102,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
         Ok(())
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     async fn secrets(
         &self,
         client: &Client,

@@ -9,7 +9,7 @@
 ### Create operator-lifecycle-manager manifests for the new release
 
 Firstly, you will need to duplicate manifests located in `deployments/operator-lifecycle-manager/bundle-<latest-release>` to the new release. 
-Once, this is done, you will got something like below.
+Once this is done, you will get something like below.
 
 ```
 deployments/operator-lifecycle-manager/bundle-<new-release>
@@ -46,11 +46,11 @@ You will have to update the `Makefile` to bump the variable `OLM_VERSION` to the
 
 ## Update Kubernetes manifests
 
-> This part explain how to update manifests for the deployment of the operator in Kubernetes
+> This part explains how to update manifests for the deployment of the operator in Kubernetes
 
 You have to update the Kubernetes' Deployment and helm charts with the latest docker image of the branch `main`. That's all!
 
-## Update version of clever-operator
+## Update a version of clever-operator
 
 You will have to update the version of the project in the following file `Cargo.toml` which correspond to the Rust manifest.
 
@@ -68,7 +68,7 @@ Then, create a git tag using the command below:
 $ git tag -a 'v<new-release>' && git push --tags
 ```
 
-Now, you are able once, the continuous integration is ok, to create GitHub release using the tag above.
+Now, you are able once the continuous integration is ok, to create GitHub release using the tag above.
 
 ## Publish new release on OperatorHub
 

@@ -1,0 +1,131 @@
+---
+apiVersion: api.clever-cloud.com/v1alpha1
+kind: KV
+metadata:
+  namespace: default
+  name: kv
+spec:
+  organisation: orga_<uuid v4>
+  instance:
+    region: par
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: debian-kv
+  name: debian-kv
+  namespace: default
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: debian-kv
+  namespace: default
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: debian-kv
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: debian-kv
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: debian-kv
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  name: debian-kv
+  labels:
+    app: debian-kv
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debian-kv
+  template:
+    metadata:
+      labels:
+        app: debian-kv
+    spec:
+      serviceAccountName: debian-kv
+      automountServiceAccountToken: true
+      containers:
+        - image: debian:bullseye-slim
+          imagePullPolicy: Always
+          name: debian-kv
+          command:
+            - "sleep"
+            - "3600"
+          env:
+          - name: KV_HOST
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets # build using the name of the addon following by -secrets
+                key: KV_HOST
+          - name: KV_PORT
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: KV_PORT
+          - name: KV_TOKEN_ID
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: KV_TOKEN_ID
+          - name: REDISCLI_AUTH
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDISCLI_AUTH
+          - name: REDIS_HOST
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDIS_HOST
+          - name: REDIS_PORT
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDIS_PORT
+          - name: REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDIS_URL
+          - name: KV_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: KV_TOKEN
+          - name: REDIS_CLI_URL
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDIS_CLI_URL
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kv-secrets
+                key: REDIS_PASSWORD
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+            limits:
+              memory: 64M
+              cpu: 100m

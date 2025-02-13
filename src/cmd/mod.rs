@@ -1,11 +1,10 @@
 //! # Command module
 //!
-//! This module provide command line interface structures and helpers
+//! This module provides command line interface structures and helpers
 use std::{io, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 use clap::{ArgAction, Parser, Subcommand};
-use clevercloud_sdk::oauth10a::Credentials;
 use paw::ParseArgs;
 use tracing::{error, info};
 
@@ -14,7 +13,7 @@ use crate::{
     svc::{
         cfg::Configuration,
         clevercloud,
-        crd::{config_provider, elasticsearch, mongodb, mysql, postgresql, pulsar, redis},
+        crd::{config_provider, elasticsearch, kv, mongodb, mysql, postgresql, pulsar, redis},
         http,
         k8s::{client, Context, Watcher},
     },
@@ -61,6 +60,8 @@ pub enum Error {
     WatchConfigProvider(config_provider::ReconcilerError),
     #[error("failed to watch Pulsar resources, {0}")]
     WatchPulsar(pulsar::ReconcilerError),
+    #[error("failed to watch kv resources, {0}")]
+    WatchKV(kv::ReconcilerError),
     #[error("failed to serve http content, {0}")]
     Serve(http::server::Error),
     #[error("failed to spawn task on tokio, {0}")]
@@ -80,7 +81,7 @@ pub enum Command {
 impl Executor for Command {
     type Error = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(config)))]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::CustomResourceDefinition(crd) => crd
@@ -103,13 +104,13 @@ pub struct Args {
     /// Increase log verbosity
     #[clap(short = 'v', global = true, action = ArgAction::Count)]
     pub verbosity: u8,
-    /// Specify location of kubeconfig
+    /// Specify the location of kubeconfig
     #[clap(short = 'k', long = "kubeconfig", global = true)]
     pub kubeconfig: Option<PathBuf>,
     /// Specify location of configuration
     #[clap(short = 'c', long = "config", global = true)]
     pub config: Option<PathBuf>,
-    /// Check if configuration is healthy
+    /// Check if the configuration is healthy
     #[clap(short = 't', long = "check", global = true)]
     pub check: bool,
     #[clap(subcommand)]
@@ -129,15 +130,13 @@ impl ParseArgs for Args {
 
 pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> Result<(), Error> {
     // -------------------------------------------------------------------------
-    // Create a new kubernetes client from path if defined, or via the
+    // Create a new kubernetes client from a path if defined, or via the
     // environment or defaults locations
     let kube_client = client::try_new(kubeconfig).await.map_err(Error::Client)?;
 
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
-    let credentials: Credentials = config.api.to_owned().into();
-    let clever_client =
-        clevercloud::client::try_new(credentials, &config.proxy).map_err(Error::CleverClient)?;
+    let clever_client = clevercloud::client::Client::from(config.api.to_owned());
 
     // -------------------------------------------------------------------------
     // Create context to give to each reconciler
@@ -150,6 +149,7 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     let elasticsearch_ctx = context.to_owned();
     let config_provider_ctx = context.to_owned();
     let pulsar_ctx = context.to_owned();
+    let kv_ctx = context.to_owned();
 
     // -------------------------------------------------------------------------
     // Start services
@@ -204,8 +204,15 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
                 .await
                 .map_err(Error::WatchElasticSearch)
         }) => r,
+        r = tokio::spawn(async move {
+            info!(kind = "KV", "Start to listen for events of custom resource");
+            kv::Reconciler::default()
+                .watch(kv_ctx)
+                .await
+                .map_err(Error::WatchKV)
+        }) => r,
         r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
-        r = tokio::spawn(async move { http::server::serve(config.to_owned()).await.map_err(Error::Serve) }) => r,
+        r = tokio::spawn(async move { http::server::serve(http::server::router(), context.config.operator.listen).await.map_err(Error::Serve) }) => r,
     }.map_err(Error::Join)??;
 
     Ok(())

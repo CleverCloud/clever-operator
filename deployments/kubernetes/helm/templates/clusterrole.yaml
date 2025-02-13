@@ -36,6 +36,8 @@ rules:
   - configproviders/status
   - elasticsearches
   - elasticsearches/status
+  - kv
+  - kv/status
   verbs:
   - get
   - list

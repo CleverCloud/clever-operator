@@ -1,50 +1,71 @@
 //! # Server module
 //!
-//! This module provide a HTTP server to handle health request
+//! This module provides a server implementation with a router based on the
+//! crate [`axum`].
 
 use std::net::SocketAddr;
-use std::{net::AddrParseError, sync::Arc};
 
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Server,
-};
-use tracing::{info, Instrument};
+use axum::routing::{any, get};
+use axum::{middleware, Router};
+use tokio::net::TcpListener;
+use tracing::info;
 
-use crate::svc::{cfg::Configuration, telemetry::router};
+#[cfg(feature = "metrics")]
+use crate::svc::http::metrics;
+use crate::svc::http::{healthz, layer, not_found};
 
 // -----------------------------------------------------------------------------
+// Error
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("failed to parse listen address '{0}', {1}")]
-    Listen(String, AddrParseError),
-    #[error("failed to bind server, {0}")]
-    Bind(hyper::Error),
-    #[error("failed to serve content, {0}")]
-    Serve(hyper::Error),
+    #[error("failed to bind on socket '{0}', {1}")]
+    Bind(SocketAddr, std::io::Error),
+    #[error("failed to listen on socket '{0}', {1}")]
+    Serve(SocketAddr, std::io::Error),
 }
 
-#[tracing::instrument(skip(config))]
-pub async fn serve(config: Arc<Configuration>) -> Result<(), Error> {
-    let addr: SocketAddr = config
-        .operator
-        .listen
-        .parse()
-        .map_err(|err| Error::Listen(config.operator.listen.to_owned(), err))?;
+// -----------------------------------------------------------------------------
+// router
 
-    info!(
-        address = addr.to_string(),
-        "Start to listen for http request"
-    );
-    Server::try_bind(&addr)
-        .map_err(Error::Bind)?
-        .serve(make_service_fn(|_| async {
-            Ok::<_, Error>(service_fn(router))
-        }))
-        .instrument(tracing::info_span!("Server::serve"))
+#[cfg(feature = "metrics")]
+#[tracing::instrument]
+pub fn router() -> Router {
+    Router::new()
+        .route("/healthz", get(healthz))
+        .route("/livez", get(healthz))
+        .route("/readyz", get(healthz))
+        .route("/status", get(healthz))
+        .route("/metrics", get(metrics::handler))
+        .fallback(any(not_found))
+        .layer(middleware::from_fn(layer::access))
+}
+
+#[cfg(not(feature = "metrics"))]
+#[tracing::instrument]
+pub fn router() -> Router {
+    Router::new()
+        .route("/healthz", get(healthz))
+        .route("/livez", get(healthz))
+        .route("/readyz", get(healthz))
+        .route("/status", get(healthz))
+        .fallback(any(not_found))
+        .layer(middleware::from_fn(layer::access))
+}
+
+// -----------------------------------------------------------------------------
+// helpers
+
+#[tracing::instrument(skip(router))]
+pub async fn serve(router: Router, addr: SocketAddr) -> Result<(), Error> {
+    let listener = TcpListener::bind(&addr)
         .await
-        .map_err(Error::Serve)?;
+        .map_err(|err| Error::Bind(addr.to_owned(), err))?;
+
+    info!(addr = addr.to_string(), "Begin to listen on address");
+    axum::serve(listener, router.into_make_service())
+        .await
+        .map_err(|err| Error::Serve(addr, err))?;
 
     Ok(())
 }
