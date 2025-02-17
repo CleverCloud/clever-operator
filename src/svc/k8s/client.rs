@@ -17,7 +17,7 @@ pub enum Error {
     CreateClient(kube::Error),
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns a new kubernetes client from the given path if defined
 /// or retrieve it from environment or defaults paths
 pub async fn try_new(path: Option<PathBuf>) -> Result<kube::Client, Error> {

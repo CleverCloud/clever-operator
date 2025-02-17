@@ -3,6 +3,8 @@
 //! This module provide kubernetes custom resources, helpers and custom resource definition
 //! generator
 
+#[cfg(feature = "metrics")]
+use std::sync::LazyLock;
 use std::{error::Error, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
@@ -16,12 +18,10 @@ use kube::{
     CustomResourceExt, Resource, ResourceExt,
 };
 #[cfg(feature = "metrics")]
-use once_cell::sync::Lazy;
-#[cfg(feature = "metrics")]
 use prometheus::{opts, register_counter_vec, CounterVec};
 use serde::de::DeserializeOwned;
 use tokio::time::{sleep_until, Instant};
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 use tracing::Instrument;
 use tracing::{debug, error, info, trace};
 
@@ -43,7 +43,7 @@ pub const RECONCILIATION_DELETE_EVENT: &str = "delete";
 // Telemetry
 
 #[cfg(feature = "metrics")]
-static RECONCILIATION_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
+static RECONCILIATION_SUCCESS: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_success",
@@ -55,7 +55,7 @@ static RECONCILIATION_SUCCESS: Lazy<CounterVec> = Lazy::new(|| {
 });
 
 #[cfg(feature = "metrics")]
-static RECONCILIATION_FAILED: Lazy<CounterVec> = Lazy::new(|| {
+static RECONCILIATION_FAILED: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_failed",
@@ -67,7 +67,7 @@ static RECONCILIATION_FAILED: Lazy<CounterVec> = Lazy::new(|| {
 });
 
 #[cfg(feature = "metrics")]
-static RECONCILIATION_EVENT: Lazy<CounterVec> = Lazy::new(|| {
+static RECONCILIATION_EVENT: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_event",
@@ -79,7 +79,7 @@ static RECONCILIATION_EVENT: Lazy<CounterVec> = Lazy::new(|| {
 });
 
 #[cfg(feature = "metrics")]
-static RECONCILIATION_DURATION: Lazy<CounterVec> = Lazy::new(|| {
+static RECONCILIATION_DURATION: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_duration",
@@ -192,10 +192,10 @@ where
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_DELETE_EVENT])
                 .inc();
 
-            #[cfg(not(feature = "trace"))]
+            #[cfg(not(feature = "tracing"))]
             let result = Self::delete(ctx, obj.to_owned()).await;
 
-            #[cfg(feature = "trace")]
+            #[cfg(feature = "tracing")]
             let result = Self::delete(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::delete"))
                 .await;
@@ -224,10 +224,10 @@ where
                 .with_label_values(&[&api_resource.kind, &namespace, RECONCILIATION_UPSERT_EVENT])
                 .inc();
 
-            #[cfg(not(feature = "trace"))]
+            #[cfg(not(feature = "tracing"))]
             let result = Self::upsert(ctx, obj.to_owned()).await;
 
-            #[cfg(feature = "trace")]
+            #[cfg(feature = "tracing")]
             let result = Self::upsert(ctx, obj.to_owned())
                 .instrument(tracing::info_span!("Reconciler::upsert"))
                 .await;

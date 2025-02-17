@@ -16,7 +16,7 @@ use std::{
 use k8s_openapi::{api::core::v1::Event, NamespaceResourceScope};
 use kube::{Client, CustomResourceExt, Resource, ResourceExt};
 use tracing::debug;
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 use tracing::Instrument;
 
 use crate::svc::k8s::resource;
@@ -45,7 +45,7 @@ pub enum Level {
 impl FromStr for Level {
     type Err = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
             "warning" => Self::Warning,
@@ -60,7 +60,7 @@ impl FromStr for Level {
 impl TryFrom<String> for Level {
     type Error = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn try_from(s: String) -> Result<Self, Self::Error> {
         Self::from_str(&s)
     }
@@ -77,7 +77,7 @@ impl Display for Level {
 
 #[allow(clippy::from_over_into)]
 impl Into<String> for Level {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> String {
         self.to_string()
     }
@@ -86,7 +86,7 @@ impl Into<String> for Level {
 // -----------------------------------------------------------------------------
 // Helper methods
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// record an event for the given object
 pub async fn record<T, U>(
     client: Client,
@@ -102,7 +102,7 @@ where
     irecord(client, obj, kind, action, message).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// record an event for the given object
 pub async fn record<T, U>(
     client: Client,
@@ -143,7 +143,7 @@ where
     resource::upsert(client, &event::new(obj, kind, action, message), false).await
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// shortcut for the [`record`] method with the 'Normal' [`Level`]
 pub async fn normal<T, U>(
     client: Client,
@@ -158,7 +158,7 @@ where
     inormal(client, obj, action, message).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// shortcut for the [`record`] method with the 'Normal' [`Level`]
 pub async fn normal<T, U>(
     client: Client,
@@ -189,7 +189,7 @@ where
     record(client, obj, &Level::Normal, action, message).await
 }
 
-#[cfg(not(feature = "trace"))]
+#[cfg(not(feature = "tracing"))]
 /// shortcut for the [`record`] method witj the 'Warning' [`Level`]
 pub async fn warning<T, U>(
     client: Client,
@@ -204,7 +204,7 @@ where
     iwarning(client, obj, action, message).await
 }
 
-#[cfg(feature = "trace")]
+#[cfg(feature = "tracing")]
 /// shortcut for the [`record`] method witj the 'Warning' [`Level`]
 pub async fn warning<T, U>(
     client: Client,

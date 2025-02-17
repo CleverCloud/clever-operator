@@ -5,7 +5,7 @@ metadata:
   namespace: default
   name: redis
 spec:
-  organisation: orga_<uuid-v4>
+  organisation: orga_<uuid v4>
   options:
     version: 626
     encryption: false

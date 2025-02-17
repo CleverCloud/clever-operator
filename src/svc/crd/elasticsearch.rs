@@ -141,7 +141,7 @@ pub struct Status {
 
 #[allow(clippy::from_over_into)]
 impl Into<CreateOpts> for ElasticSearch {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
@@ -156,7 +156,7 @@ impl Into<CreateOpts> for ElasticSearch {
 impl AddonExt for ElasticSearch {
     type Error = ReconcilerError;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn id(&self) -> Option<String> {
         if let Some(status) = &self.status {
             return status.addon.to_owned();
@@ -165,12 +165,12 @@ impl AddonExt for ElasticSearch {
         None
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn organisation(&self) -> String {
         self.spec.organisation.to_owned()
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn name(&self) -> String {
         let delimiter = Self::delimiter();
 
@@ -185,7 +185,7 @@ impl AddonExt for ElasticSearch {
 }
 
 impl ElasticSearch {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
 
@@ -193,7 +193,7 @@ impl ElasticSearch {
         self.status = Some(status.to_owned());
     }
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn get_addon_id(&self) -> Option<String> {
         self.status.to_owned().unwrap_or_default().addon
     }
@@ -243,35 +243,35 @@ pub enum ReconcilerError {
 }
 
 impl From<kube::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: kube::Error) -> Self {
         Self::KubeClient(err)
     }
 }
 
 impl From<clevercloud::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: clevercloud::Error) -> Self {
         Self::CleverClient(err)
     }
 }
 
 impl From<v2::addon::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: v2::addon::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
 
 impl From<v4::addon_provider::plan::Error> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: v4::addon_provider::plan::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
 
 impl From<controller::Error<Self, watcher::Error>> for ReconcilerError {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: controller::Error<ReconcilerError, watcher::Error>) -> Self {
         Self::Reconcile(err.to_string())
     }
@@ -399,7 +399,7 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
                 );
 
                 let oplan = modified.spec.instance.plan.to_owned();
-                modified.spec.instance.plan = plan.id.to_owned();
+                plan.id.clone_into(&mut modified.spec.instance.plan);
 
                 debug!(
                     kind = &kind,

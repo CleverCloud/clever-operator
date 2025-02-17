@@ -28,7 +28,7 @@ metadata:
 spec:
   organisation: orga_xxxx
   options:
-    version: 13
+    version: 15
     encryption: false
   instance:
     region: par
@@ -45,6 +45,7 @@ spec:
 | `12`    | 12   |
 | `13`    | 13   |
 | `14`    | 14   |
+| `15`    | 15   |
 
 ### Supported region
 
@@ -113,7 +114,7 @@ metadata:
 spec:
   organisation: orga_xxxx
   options:
-    version: 80
+    version: 84
     encryption: false
   instance:
     region: par
@@ -127,6 +128,7 @@ spec:
 |---------|------|
 | `5.7`   | 57   |
 | `8.0`   | 80   |
+| `8.4`   | 84   |
 
 ### Supported region
 
@@ -190,7 +192,7 @@ metadata:
 spec:
   organisation: orga_xxxx
   options:
-    version:
+    version: 724
     encryption: false
   instance:
     region: par
@@ -204,6 +206,7 @@ spec:
 |---------|------|
 | `6.2.6` | 626  |
 | `7.0.4` | 704  |
+| `7.2.4` | 724  |
 
 ### Supported region
 
@@ -418,3 +421,24 @@ For plan, both name and code could be used to select the desired plan.
 When you create an elasticsearch addon, we create for you a cellar addon to save your backups. This
 operator will not manage backups of the addon. It is up to you to delete backup, if you do not want
 to keep them.
+
+## Materia KV
+
+Below, you will find the custom resource in yaml format that you can use to
+deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1alpha1
+kind: KV
+metadata:
+  namespace: default
+  name: kv
+spec:
+  organisation: orga_xxxx
+  instance:
+    region: par
+...
+```
+
+Currently, the materia kv manages services is only available in the one region which name is `par`.

@@ -8,4 +8,3 @@ pub mod clevercloud;
 pub mod crd;
 pub mod http;
 pub mod k8s;
-pub mod telemetry;

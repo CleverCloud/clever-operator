@@ -1,10 +1,11 @@
 //! # Configuration module
 //!
-//! This module provide utilities and helpers to interact with the configuration
+//! This module provides utilities and helpers to interact with the configuration
 
 use std::{
     convert::TryFrom,
     env::{self, VarError},
+    net::SocketAddr,
     path::PathBuf,
 };
 
@@ -19,55 +20,12 @@ use tracing::warn;
 pub const OPERATOR_LISTEN: &str = "0.0.0.0:8000";
 
 // -----------------------------------------------------------------------------
-// Proxy structure
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Proxy {
-    #[serde(rename = "http")]
-    pub http: Option<String>,
-    #[serde(rename = "https")]
-    pub https: Option<String>,
-    #[serde(rename = "no", default = "Default::default")]
-    pub no: Vec<String>,
-}
-
-// -----------------------------------------------------------------------------
 // Operator structure
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Operator {
     #[serde(rename = "listen")]
-    pub listen: String,
-}
-
-// -----------------------------------------------------------------------------
-// Api structure
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Api {
-    #[serde(rename = "endpoint")]
-    pub endpoint: String,
-    #[serde(rename = "token")]
-    pub token: String,
-    #[serde(rename = "secret")]
-    pub secret: String,
-    #[serde(rename = "consumerKey")]
-    pub consumer_key: String,
-    #[serde(rename = "consumerSecret")]
-    pub consumer_secret: String,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<Credentials> for Api {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
-    fn into(self) -> Credentials {
-        Credentials {
-            token: self.token.to_owned(),
-            secret: self.secret.to_owned(),
-            consumer_key: self.consumer_key.to_owned(),
-            consumer_secret: self.consumer_secret,
-        }
-    }
+    pub listen: SocketAddr,
 }
 
 // -----------------------------------------------------------------------------
@@ -86,41 +44,18 @@ pub enum Error {
 }
 
 // -----------------------------------------------------------------------------
-// Sentry structure
-
-#[cfg(feature = "tracker")]
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
-pub struct Sentry {
-    #[serde(rename = "dsn")]
-    pub dsn: Option<String>,
-}
-
-// -----------------------------------------------------------------------------
-// Jaeger structure
-
-#[cfg(feature = "trace")]
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
-pub struct Jaeger {
-    pub endpoint: String,
-    pub user: Option<String>,
-    pub password: Option<String>,
-}
-
-// -----------------------------------------------------------------------------
 // NamespaceConfiguration structures
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct NamespaceConfiguration {
-    #[serde(rename = "proxy")]
-    pub proxy: Option<Proxy>,
     #[serde(rename = "api")]
-    pub api: Api,
+    pub api: Credentials,
 }
 
 impl TryFrom<PathBuf> for NamespaceConfiguration {
     type Error = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         Config::builder()
             // -----------------------------------------------------------------
@@ -167,24 +102,16 @@ impl TryFrom<PathBuf> for NamespaceConfiguration {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Configuration {
-    #[serde(rename = "proxy")]
-    pub proxy: Option<Proxy>,
     #[serde(rename = "api")]
-    pub api: Api,
+    pub api: Credentials,
     #[serde(rename = "operator")]
     pub operator: Operator,
-    #[cfg(feature = "tracker")]
-    #[serde(rename = "sentry", default = "Default::default")]
-    pub sentry: Sentry,
-    #[cfg(feature = "trace")]
-    #[serde(rename = "jaeger")]
-    pub jaeger: Jaeger,
 }
 
 impl TryFrom<PathBuf> for Configuration {
     type Error = Error;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         Config::builder()
             // -----------------------------------------------------------------
@@ -265,7 +192,7 @@ impl TryFrom<PathBuf> for Configuration {
 }
 
 impl Configuration {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn try_default() -> Result<Self, Error> {
         Config::builder()
             // -----------------------------------------------------------------
@@ -374,8 +301,8 @@ impl Configuration {
             .map_err(Error::Deserialize)
     }
 
-    /// Prints a message about missing value for configuration key
-    #[cfg_attr(feature = "trace", tracing::instrument(skip_all))]
+    /// Prints a message about missing value for a configuration key
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip_all))]
     pub fn help(&self) {
         #[cfg(feature = "logging")]
         tracing::info!(feature = "logging", "Build with feature flag");
@@ -383,32 +310,52 @@ impl Configuration {
         #[cfg(feature = "metrics")]
         tracing::info!(feature = "metrics", "Build with feature flag");
 
-        #[cfg(feature = "trace")]
-        tracing::info!(feature = "trace", "Build with feature flag");
+        #[cfg(feature = "tracing")]
+        tracing::info!(feature = "tracing", "Build with feature flag");
 
-        #[cfg(feature = "tracker")]
-        tracing::info!(feature = "tracker", "Build with feature flag");
+        match &self.api {
+            Credentials::OAuth1 {
+                consumer_key,
+                consumer_secret,
+                token,
+                secret,
+            } => {
+                if consumer_key.is_empty() {
+                    warn!(
+                        key = "api.consumer-key",
+                        "Configuration key has an empty value"
+                    );
+                }
 
-        if self.api.consumer_key.is_empty() {
-            warn!(
-                key = "api.consumerKey",
-                "Configuration key has an empty value"
-            );
-        }
+                if consumer_secret.is_empty() {
+                    warn!(
+                        key = "api.consumer-secret",
+                        "Configuration key has an empty value"
+                    );
+                }
 
-        if self.api.consumer_secret.is_empty() {
-            warn!(
-                key = "api.consumerSecret",
-                "Configuration key has an empty value"
-            );
-        }
+                if token.is_empty() {
+                    warn!(key = "api.token", "Configuration key has an empty value");
+                }
 
-        if self.api.token.is_empty() {
-            warn!(key = "api.token", "Configuration key has an empty value");
-        }
+                if secret.is_empty() {
+                    warn!(key = "api.secret", "Configuration key has an empty value");
+                }
+            }
+            Credentials::Basic { username, password } => {
+                if username.is_empty() {
+                    warn!(key = "api.username", "Configuration key has an empty value");
+                }
 
-        if self.api.secret.is_empty() {
-            warn!(key = "api.secret", "Configuration key has an empty value");
+                if password.is_empty() {
+                    warn!(key = "api.password", "Configuration key has an empty value");
+                }
+            }
+            Credentials::Bearer { token } => {
+                if token.is_empty() {
+                    warn!(key = "api.token", "Configuration key has an empty value");
+                }
+            }
         }
     }
 }

@@ -17,7 +17,7 @@ pub const OVERRIDE_CONFIGURATION_NAME: &str = "clever-operator";
 // -----------------------------------------------------------------------------
 // Helpers
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 pub fn name<T>(obj: &T) -> String
 where
     T: Resource<Scope = NamespaceResourceScope> + ResourceExt + Debug,
@@ -25,7 +25,7 @@ where
     format!("{}-secrets", obj.name_any())
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 pub fn new<T>(obj: &T, secrets: BTreeMap<String, String>) -> Secret
 where
     T: Resource<Scope = NamespaceResourceScope> + ResourceExt + CustomResourceExt + Debug,

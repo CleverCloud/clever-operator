@@ -25,21 +25,21 @@ pub enum Error {
 }
 
 impl From<v2::addon::Error> for Error {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: v2::addon::Error) -> Self {
         Self::Addon(err)
     }
 }
 
 impl From<plan::Error> for Error {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: plan::Error) -> Self {
         Self::Plan(err)
     }
 }
 
 impl From<environment::Error> for Error {
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from(err: environment::Error) -> Self {
         Self::Environment(err)
     }

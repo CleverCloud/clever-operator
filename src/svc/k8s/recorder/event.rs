@@ -23,7 +23,7 @@ pub const EVENT_FOR: &str = "for";
 // -----------------------------------------------------------------------------
 // Helper functions
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// create a new event from the given parameters
 pub fn new<T, U>(obj: &T, kind: &Level, action: &U, message: &str) -> Event
 where
@@ -64,7 +64,7 @@ where
     }
 }
 
-#[cfg_attr(feature = "trace", tracing::instrument)]
+#[cfg_attr(feature = "tracing", tracing::instrument)]
 /// returns the source of this operator
 pub fn source() -> EventSource {
     let host = hostname::get()

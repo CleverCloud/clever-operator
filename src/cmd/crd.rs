@@ -14,8 +14,8 @@ use crate::{
     svc::{
         cfg::Configuration,
         crd::{
-            config_provider::ConfigProvider, elasticsearch::ElasticSearch, mongodb::MongoDb,
-            mysql::MySql, postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
+            config_provider::ConfigProvider, elasticsearch::ElasticSearch, kv::KV,
+            mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
         },
     },
 };
@@ -32,12 +32,13 @@ pub enum CustomResource {
     Pulsar,
     ConfigProvider,
     ElasticSearch,
+    KV,
 }
 
 impl FromStr for CustomResource {
     type Err = Box<dyn Error + Send + Sync>;
 
-    #[cfg_attr(feature = "trace", tracing::instrument)]
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "postgresql" => Ok(Self::PostgreSql),
@@ -47,7 +48,8 @@ impl FromStr for CustomResource {
             "pulsar" => Ok(Self::Pulsar),
             "config-provider" => Ok(Self::ConfigProvider),
             "elasticsearch" => Ok(Self::ElasticSearch),
-            _ => Err(format!("failed to parse '{}', available options are 'elasticsearch', 'config-provider', 'pulsar', 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
+            "kv" => Ok(Self::KV),
+            _ => Err(format!("failed to parse '{}', available options are 'kv', 'elasticsearch', 'config-provider', 'pulsar', 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
         }
     }
 }
@@ -77,7 +79,7 @@ pub enum CustomResourceDefinition {
 impl Executor for CustomResourceDefinition {
     type Error = CustomResourceDefinitionError;
 
-    #[cfg_attr(feature = "trace", tracing::instrument(skip(config)))]
+    #[cfg_attr(feature = "tracing", tracing::instrument(skip(config)))]
     async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error> {
         match self {
             Self::View { custom_resource } => view(config, custom_resource).await,
@@ -88,7 +90,7 @@ impl Executor for CustomResourceDefinition {
 // -----------------------------------------------------------------------------
 // view function
 
-#[cfg_attr(feature = "trace", tracing::instrument(skip(_config)))]
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(_config)))]
 pub async fn view(
     _config: Arc<Configuration>,
     custom_resource: &Option<CustomResource>,
@@ -109,6 +111,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::ElasticSearch => serde_yaml::to_string(&ElasticSearch::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::KV => serde_yaml::to_string(&KV::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -126,6 +130,7 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&ElasticSearch::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&KV::crd()).map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };
 
