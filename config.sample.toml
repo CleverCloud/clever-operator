@@ -1,10 +1,15 @@
 # Clever-Cloud api credentials
 #
-# Could be created using this project :
-
+# We could use only the field token in the api section in the case,
+# we are using the oauthless auth backend, like the example below.
+#
+# [api]
+# token = ""
+#
+# In the case, we are using an oauth consumer group, the configuration does not change,
+# we have three additionals fields which are secret, consumer-key and consumer-secret.
 [api]
 token = ""
 secret = ""
-consumerKey = ""
-consumerSecret = ""
-
+consumer-key = ""
+consumer-secret = ""
