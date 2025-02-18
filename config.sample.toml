@@ -1,26 +1,10 @@
 # Clever-Cloud api credentials
 #
 # Could be created using this project :
-# - https://github.com/CleverCloud/oauth-consumer-server
+
 [api]
 token = ""
 secret = ""
 consumerKey = ""
 consumerSecret = ""
 
-# Jaeger configuration
-# [jaeger]
-# endpoint = "http://localhost:14268/api/trace"
-# User and password are optional, but it is strongly recommended to use them
-# user = ""
-# password = ""
-
-# Sentry configuration
-# [sentry]
-# dsn = ""
-
-# Proxy configuration
-# [proxy]
-# http = "http://localhost:3108"
-# https = "http://localhost:3108"
-# no = ["10.0.0.1/8", "domain.example.com"]

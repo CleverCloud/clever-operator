@@ -102,8 +102,8 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/10-custom-resource-definition.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/20-deployment.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.30.0/10-custom-resource-definition.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.30.0/20-deployment.yaml
 ```
 
 ## Configuration
@@ -123,10 +123,6 @@ Environment variables are:
 | `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      |             |
 | `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | yes      |             |
 | `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | yes      |             |
-| `CLEVER_OPERATOR_SENTRY_DSN`          | `Url`           | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_ENDPOINT`     | `Url`           | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_USER`         | `String`        | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_PASSWORD`     | `String`        | none                           | no       |             |
 
 By default, if the `--config` flag is not provided to the binary, the operator will look at the following paths to
 retrieve its configuration:
