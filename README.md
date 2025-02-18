@@ -81,7 +81,7 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f deployments/kubernetes/v1.24.0
+$ kubectl apply -f deployments/kubernetes/v1.30.0
 ```
 
 #### From the helm chart
@@ -102,8 +102,8 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/10-custom-resource-definition.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.24.0/20-deployment.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.30.0/10-custom-resource-definition.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-operator/main/deployments/kubernetes/v1.30.0/20-deployment.yaml
 ```
 
 ## Configuration
@@ -115,18 +115,14 @@ configurations could be provided through a ConfigMap, a Secret or by the environ
 
 Environment variables are:
 
-| Name                                  | Kind            | Default                        | Required | Description |
-| ------------------------------------- | --------------- | ------------------------------ | -------- | ----------- |
-| `CLEVER_OPERATOR_OPERATOR_LISTEN`     | `SocketAddress` | `0.0.0.0:7080`                 | yes      |             |
-| `CLEVER_OPERATOR_API_ENDPOINT`        | `Url`           | `https://api.clever-cloud.com` | yes      |             |
-| `CLEVER_OPERATOR_API_SECRET`          | `String`        | none                           | yes      |             |
-| `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      |             |
-| `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | yes      |             |
-| `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | yes      |             |
-| `CLEVER_OPERATOR_SENTRY_DSN`          | `Url`           | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_ENDPOINT`     | `Url`           | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_USER`         | `String`        | none                           | no       |             |
-| `CLEVER_OPERATOR_JAEGER_PASSWORD`     | `String`        | none                           | no       |             |
+| Name                                  | Kind            | Default                        | Required | Description                                                       |
+| ------------------------------------- | --------------- | ------------------------------ |----------|-------------------------------------------------------------------|
+| `CLEVER_OPERATOR_OPERATOR_LISTEN`     | `SocketAddress` | `0.0.0.0:7080`                 | yes      |                                                                   |
+| `CLEVER_OPERATOR_API_ENDPOINT`        | `Url`           | `https://api.clever-cloud.com` | yes      |                                                                   |
+| `CLEVER_OPERATOR_API_SECRET`          | `String`        | none                           | false    |                                                                   |
+| `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      | if used alone, we assume that we are using oauthless auth backend |
+| `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | false    |                                                                   |
+| `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | false    |                                                                   |
 
 By default, if the `--config` flag is not provided to the binary, the operator will look at the following paths to
 retrieve its configuration:
@@ -140,7 +136,7 @@ retrieve its configuration:
 ### Namespace
 
 It is possible to override configuration to connect the Clever Cloud's api through a `Secret` named `clever-operator` and using the `config` key.
-Only available configuration keys are `api` and `proxy` from the [`Configuration`](config.sample.toml).
+Only available configuration keys is `api`  from the [`Configuration`](config.sample.toml).
 
 ## License
 
