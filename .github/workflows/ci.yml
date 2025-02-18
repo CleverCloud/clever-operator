@@ -138,6 +138,13 @@ jobs:
           push: 'true'
           platforms: linux/amd64,linux/arm64
           tags: clevercloud/clever-operator:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          context: .
+          push: 'true'
+          platforms: linux/amd64,linux/arm64
+          tags: clevercloud/clever-operator:latest
   docker-build-and-push-openshift-manifest:
     name: Docker build and push openshift manifest
     runs-on: ubuntu-latest

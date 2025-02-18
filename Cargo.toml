@@ -3,7 +3,7 @@
 [package]
 name = "clever-operator"
 description = "A kubernetes operator that expose clever cloud's resources through custom resource definition"
-version = "0.5.5"
+version = "0.6.0"
 edition = "2021"
 rust-version = "1.84.1"
 authors = ["Florentin Dubois <florentin.dubois@clever-cloud.com>"]
@@ -17,7 +17,7 @@ async-trait = "^0.1.86"
 axum = { version = "^0.8.1", default-features = false, features = ["http1", "tokio", "tracing", "macros", "original-uri", "matched-path", "json"] }
 base64 = "^0.22.1"
 chrono = { version = "^0.4.39", default-features = false }
-clap = { version = "^4.5.29", features = ["derive"] }
+clap = { version = "^4.5.30", features = ["derive"] }
 clevercloud-sdk = { version = "^0.12.0", features = ["jsonschemas"] }
 config = "^0.15.8"
 futures = "^0.3.31"
