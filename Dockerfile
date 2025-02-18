@@ -16,7 +16,7 @@ MAINTAINER Florentin Dubois <florentin.dubois@clever-cloud.com>
 LABEL name="clever-operator" \
     maintainer="Florentin Dubois <florentin.dubois@clever-cloud.com>" \
     vendor="Clever Cloud S.A.S" \
-    version="v0.5.4" \
+    version="v0.6.0" \
     release="1" \
     summary="A kubernetes operator that expose clever cloud's resources through custom resource definition" \
     description="A kubernetes operator that expose clever cloud's resources through custom resource definition"
