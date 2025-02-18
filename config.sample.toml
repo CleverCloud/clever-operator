@@ -13,3 +13,9 @@ token = ""
 secret = ""
 consumer-key = ""
 consumer-secret = ""
+
+# Operator settings
+#
+# For the moment, only the listen port is available.
+[operator]
+listen = "0.0.0.0:8080"
