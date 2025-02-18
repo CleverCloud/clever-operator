@@ -121,7 +121,6 @@ Environment variables are:
 | Name                                  | Kind            | Default                        | Required | Description                                                       |
 | ------------------------------------- | --------------- | ------------------------------ |----------|-------------------------------------------------------------------|
 | `CLEVER_OPERATOR_OPERATOR_LISTEN`     | `SocketAddress` | `0.0.0.0:7080`                 | yes      |                                                                   |
-| `CLEVER_OPERATOR_API_ENDPOINT`        | `Url`           | `https://api.clever-cloud.com` | yes      |                                                                   |
 | `CLEVER_OPERATOR_API_SECRET`          | `String`        | none                           | false    |                                                                   |
 | `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      | if used alone, we assume that we are using oauthless auth backend |
 | `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | false    |                                                                   |

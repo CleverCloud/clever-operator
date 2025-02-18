@@ -136,7 +136,7 @@ spec:
         secret:
           secretName: clever-operator-configuration
       containers:
-        - image: clevercloud/clever-operator:f246f5973b4ed449615fd1f585d81c8acce3bff2
+        - image: clevercloud/clever-operator:ca53fedf01d1f813df6f061ef511b6e576084531
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]
