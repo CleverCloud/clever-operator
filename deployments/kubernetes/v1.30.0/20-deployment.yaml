@@ -102,17 +102,12 @@ spec:
     - {}
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   namespace: clever-operator-system
   name: clever-operator-configuration
 data:
-  config.toml: |
-    [api]
-    token = ""
-    secret = ""
-    consumerKey = ""
-    consumerSecret = ""
+  config.toml: W2FwaV0KdG9rZW4gPSAiIgpzZWNyZXQgPSAiIgpjb25zdW1lci1rZXkgPSAiIgpjb25zdW1lci1zZWNyZXQgPSAiIgo=
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -138,13 +133,10 @@ spec:
       automountServiceAccountToken: true
       volumes:
       - name: config
-        configMap:
-          name: clever-operator-configuration
-          items:
-          - key: "config.toml"
-            path: "config.toml"
+        secret:
+          secretName: clever-operator-configuration
       containers:
-        - image: clevercloud/clever-operator:877afd560ee97317ce163c2a596adbd3954c0b17
+        - image: clevercloud/clever-operator:f246f5973b4ed449615fd1f585d81c8acce3bff2
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]
