@@ -9,12 +9,12 @@ use std::time::Instant;
 
 use axum::{
     body::Body,
-    http::{header, Request},
+    http::{Request, header},
     middleware::Next,
 };
 #[cfg(feature = "metrics")]
-use prometheus::{register_int_counter_vec, IntCounterVec};
-use tracing::{info, info_span, Instrument};
+use prometheus::{IntCounterVec, register_int_counter_vec};
+use tracing::{Instrument, info, info_span};
 
 // -----------------------------------------------------------------------------
 // Telemetry

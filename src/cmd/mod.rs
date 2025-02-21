@@ -15,7 +15,7 @@ use crate::{
         clevercloud,
         crd::{config_provider, elasticsearch, kv, mongodb, mysql, postgresql, pulsar, redis},
         http,
-        k8s::{client, Context, Watcher},
+        k8s::{Context, Watcher, client},
     },
 };
 

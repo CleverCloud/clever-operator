@@ -5,11 +5,11 @@
 use std::{
     convert::TryFrom,
     env::{self, VarError},
-    net::SocketAddr,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
 
-use clevercloud_sdk::{oauth10a::Credentials, PUBLIC_ENDPOINT};
+use clevercloud_sdk::Credentials;
 use config::{Config, ConfigError, File};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -17,7 +17,8 @@ use tracing::warn;
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const OPERATOR_LISTEN: &str = "0.0.0.0:8000";
+pub const OPERATOR_LISTEN: SocketAddr =
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080);
 
 // -----------------------------------------------------------------------------
 // Operator structure
@@ -26,6 +27,14 @@ pub const OPERATOR_LISTEN: &str = "0.0.0.0:8000";
 pub struct Operator {
     #[serde(rename = "listen")]
     pub listen: SocketAddr,
+}
+
+impl Default for Operator {
+    fn default() -> Self {
+        Self {
+            listen: OPERATOR_LISTEN,
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -61,12 +70,6 @@ impl TryFrom<PathBuf> for NamespaceConfiguration {
             // -----------------------------------------------------------------
             // Api
             .set_default(
-                "api.endpoint",
-                env::var("CLEVER_OPERATOR_API_ENDPOINT")
-                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
-            )
-            .map_err(|err| Error::Default("api.endpoint".into(), err))?
-            .set_default(
                 "api.token",
                 env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
             )
@@ -77,16 +80,16 @@ impl TryFrom<PathBuf> for NamespaceConfiguration {
             )
             .map_err(|err| Error::Default("api.secret".into(), err))?
             .set_default(
-                "api.consumerKey",
+                "api.consumer-key",
                 env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
             )
-            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
+            .map_err(|err| Error::Default("api.consumer-key".into(), err))?
             .set_default(
-                "api.consumerSecret",
+                "api.consumer-secret",
                 env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
                     .unwrap_or_else(|_err| "".to_string()),
             )
-            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
+            .map_err(|err| Error::Default("api.consumer-secret".into(), err))?
             // -----------------------------------------------------------------
             // Files
             .add_source(File::from(path).required(true))
@@ -113,36 +116,35 @@ impl TryFrom<PathBuf> for Configuration {
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        Config::builder()
-            // -----------------------------------------------------------------
-            // Api
-            .set_default(
-                "api.endpoint",
-                env::var("CLEVER_OPERATOR_API_ENDPOINT")
-                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
-            )
-            .map_err(|err| Error::Default("api.endpoint".into(), err))?
-            .set_default(
-                "api.token",
-                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.token".into(), err))?
-            .set_default(
-                "api.secret",
-                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.secret".into(), err))?
-            .set_default(
-                "api.consumerKey",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
-            .set_default(
-                "api.consumerSecret",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
-                    .unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
+        let mut builder = Config::builder();
+
+        // -----------------------------------------------------------------
+        // Api
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_TOKEN") {
+            builder = builder
+                .set_default("api.token", value)
+                .map_err(|err| Error::Default("api.token".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_SECRET") {
+            builder = builder
+                .set_default("api.secret", value)
+                .map_err(|err| Error::Default("api.secret".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_KEY") {
+            builder = builder
+                .set_default("api.consumer-key", value)
+                .map_err(|err| Error::Default("api.consumer-key".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET") {
+            builder = builder
+                .set_default("api.consumer-secret", value)
+                .map_err(|err| Error::Default("api.consumer-secret".into(), err))?;
+        }
+
+        builder
             // -----------------------------------------------------------------
             // Operator
             .set_default(
@@ -151,36 +153,6 @@ impl TryFrom<PathBuf> for Configuration {
                     .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
             )
             .map_err(|err| Error::Default("operator.listen".into(), err))?
-            // -----------------------------------------------------------------
-            // Sentry
-            .set_default(
-                "sentry.dsn",
-                env::var("CLEVER_OPERATOR_SENTRY_DSN")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
-            )
-            .map_err(|err| Error::Default("sentry.dsn".into(), err))?
-            // -----------------------------------------------------------------
-            // Jaeger
-            .set_default(
-                "jaeger.endpoint",
-                env::var("CLEVER_OPERATOR_JAEGER_ENDPOINT").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("jaeger.endpoint".into(), err))?
-            .set_default(
-                "jaeger.user",
-                env::var("CLEVER_OPERATOR_JAEGER_USER")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
-            )
-            .map_err(|err| Error::Default("jaeger.user".into(), err))?
-            .set_default(
-                "jaeger.password",
-                env::var("CLEVER_OPERATOR_JAEGER_PASSWORD")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
-            )
-            .map_err(|err| Error::Default("jaeger.password".into(), err))?
             // -----------------------------------------------------------------
             // Files
             .add_source(File::from(path).required(true))
@@ -193,37 +165,36 @@ impl TryFrom<PathBuf> for Configuration {
 
 impl Configuration {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
-    pub fn try_default() -> Result<Self, Error> {
-        Config::builder()
-            // -----------------------------------------------------------------
-            // Api
-            .set_default(
-                "api.endpoint",
-                env::var("CLEVER_OPERATOR_API_ENDPOINT")
-                    .unwrap_or_else(|_err| PUBLIC_ENDPOINT.to_string()),
-            )
-            .map_err(|err| Error::Default("api.endpoint".into(), err))?
-            .set_default(
-                "api.token",
-                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.token".into(), err))?
-            .set_default(
-                "api.secret",
-                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.secret".into(), err))?
-            .set_default(
-                "api.consumerKey",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumerKey".into(), err))?
-            .set_default(
-                "api.consumerSecret",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
-                    .unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumerSecret".into(), err))?
+    pub fn try_from_clever_tools() -> Result<Self, Error> {
+        let mut builder = Config::builder();
+
+        // -----------------------------------------------------------------
+        // Api
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_TOKEN") {
+            builder = builder
+                .set_default("api.token", value)
+                .map_err(|err| Error::Default("api.token".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_SECRET") {
+            builder = builder
+                .set_default("api.secret", value)
+                .map_err(|err| Error::Default("api.secret".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_KEY") {
+            builder = builder
+                .set_default("api.consumer-key", value)
+                .map_err(|err| Error::Default("api.consumer-key".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET") {
+            builder = builder
+                .set_default("api.consumer-secret", value)
+                .map_err(|err| Error::Default("api.consumer-secret".into(), err))?;
+        }
+
+        let credentials: Credentials = builder
             // -----------------------------------------------------------------
             // Operator
             .set_default(
@@ -233,35 +204,64 @@ impl Configuration {
             )
             .map_err(|err| Error::Default("operator.listen".into(), err))?
             // -----------------------------------------------------------------
-            // Sentry
-            .set_default(
-                "sentry.dsn",
-                env::var("CLEVER_OPERATOR_SENTRY_DSN")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
+            // Files
+            .add_source(
+                File::from(PathBuf::from(format!(
+                    "{}/.config/clever-cloud/clever-tools",
+                    env::var("HOME").map_err(|err| Error::EnvironmentVariable("HOME", err))?,
+                )))
+                .required(false),
             )
-            .map_err(|err| Error::Default("sentry.dsn".into(), err))?
+            .build()
+            .map_err(Error::Build)?
+            .try_deserialize()
+            .map_err(Error::Deserialize)?;
+
+        Ok(Self {
+            api: credentials,
+            operator: Operator::default(),
+        })
+    }
+
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
+    pub fn try_default() -> Result<Self, Error> {
+        let mut builder = Config::builder();
+
+        // -----------------------------------------------------------------
+        // Api
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_TOKEN") {
+            builder = builder
+                .set_default("api.token", value)
+                .map_err(|err| Error::Default("api.token".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_SECRET") {
+            builder = builder
+                .set_default("api.secret", value)
+                .map_err(|err| Error::Default("api.secret".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_KEY") {
+            builder = builder
+                .set_default("api.consumer-key", value)
+                .map_err(|err| Error::Default("api.consumer-key".into(), err))?;
+        }
+
+        if let Ok(value) = env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET") {
+            builder = builder
+                .set_default("api.consumer-secret", value)
+                .map_err(|err| Error::Default("api.consumer-secret".into(), err))?;
+        }
+
+        builder
             // -----------------------------------------------------------------
-            // Jaeger
+            // Operator
             .set_default(
-                "jaeger.endpoint",
-                env::var("CLEVER_OPERATOR_JAEGER_ENDPOINT").unwrap_or_else(|_err| "".to_string()),
+                "operator.listen",
+                env::var("CLEVER_OPERATOR_OPERATOR_LISTEN")
+                    .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
             )
-            .map_err(|err| Error::Default("jaeger.endpoint".into(), err))?
-            .set_default(
-                "jaeger.user",
-                env::var("CLEVER_OPERATOR_JAEGER_USER")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
-            )
-            .map_err(|err| Error::Default("jaeger.user".into(), err))?
-            .set_default(
-                "jaeger.password",
-                env::var("CLEVER_OPERATOR_JAEGER_PASSWORD")
-                    .map(Some)
-                    .unwrap_or_else(|_err| None),
-            )
-            .map_err(|err| Error::Default("jaeger.password".into(), err))?
+            .map_err(|err| Error::Default("operator.listen".into(), err))?
             // -----------------------------------------------------------------
             // Files
             .add_source(

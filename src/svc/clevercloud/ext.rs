@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, fmt::Debug};
 
 use async_trait::async_trait;
 use clevercloud_sdk::{
-    oauth10a::{reqwest::StatusCode, ClientError},
+    oauth10a::{ClientError, reqwest::StatusCode},
     v2::addon::{self, Addon, CreateOpts, Error},
 };
 use tracing::{debug, trace};
@@ -61,8 +61,7 @@ pub trait AddonExt: Into<CreateOpts> + Clone + Debug + Sync + Send {
                     );
 
                     return Ok(addon::list(client, &self.organisation())
-                        .await
-                        .map_err(Into::into)?
+                        .await?
                         .iter()
                         .find(|addon| addon.name == Some(self.name()))
                         .map(ToOwned::to_owned));

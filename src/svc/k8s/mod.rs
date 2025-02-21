@@ -11,16 +11,17 @@ use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
 use k8s_openapi::NamespaceResourceScope;
 use kube::{
-    runtime::{
-        controller::{self, Action},
-        watcher, Controller,
-    },
     CustomResourceExt, Resource, ResourceExt,
+    runtime::{
+        Controller,
+        controller::{self, Action},
+        watcher,
+    },
 };
 #[cfg(feature = "metrics")]
-use prometheus::{opts, register_counter_vec, CounterVec};
+use prometheus::{CounterVec, opts, register_counter_vec};
 use serde::de::DeserializeOwned;
-use tokio::time::{sleep_until, Instant};
+use tokio::time::{Instant, sleep_until};
 #[cfg(feature = "tracing")]
 use tracing::Instrument;
 use tracing::{debug, error, info, trace};
@@ -311,8 +312,8 @@ where
                 Ok(Some((obj, _action))) => {
                     info!(
                         kind = &api_resource.kind,
-                        namespace = &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
-                        name = &obj.name,
+                        namespace = obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        name = obj.name,
                         "Successfully reconcile resource",
                     );
 
@@ -324,8 +325,8 @@ where
                 Err(controller::Error::ObjectNotFound(obj)) => {
                     debug!(
                         kind = &api_resource.kind,
-                        namespace = &obj.namespace.unwrap_or_else(|| "<none>".to_string()),
-                        name = &obj.name,
+                        namespace = obj.namespace.unwrap_or_else(|| "<none>".to_string()),
+                        name = obj.name,
                         "Received an event about an already deleted resource",
                     );
 

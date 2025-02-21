@@ -7,19 +7,19 @@ use std::fmt::Debug;
 use std::{sync::LazyLock, time::Instant};
 
 use k8s_openapi::{
-    api::core::v1::ObjectReference, apimachinery::pkg::apis::meta::v1::OwnerReference,
-    NamespaceResourceScope,
+    NamespaceResourceScope, api::core::v1::ObjectReference,
+    apimachinery::pkg::apis::meta::v1::OwnerReference,
 };
 use kube::{
-    api::{ListParams, Patch, PatchParams, PostParams},
     Api, Client, CustomResourceExt, Resource, ResourceExt,
+    api::{ListParams, Patch, PatchParams, PostParams},
 };
 #[cfg(feature = "metrics")]
-use prometheus::{opts, register_counter_vec, CounterVec};
-use serde::{de::DeserializeOwned, Serialize};
+use prometheus::{CounterVec, opts, register_counter_vec};
+use serde::{Serialize, de::DeserializeOwned};
 #[cfg(feature = "tracing")]
 use tracing::Instrument;
-use tracing::{debug, level_enabled, trace, Level};
+use tracing::{Level, debug, level_enabled, trace};
 
 // -----------------------------------------------------------------------------
 // Telemetry

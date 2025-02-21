@@ -6,7 +6,7 @@
 use std::net::SocketAddr;
 
 use axum::routing::{any, get};
-use axum::{middleware, Router};
+use axum::{Router, middleware};
 use tokio::net::TcpListener;
 use tracing::info;
 
