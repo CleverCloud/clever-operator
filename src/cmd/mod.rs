@@ -9,7 +9,7 @@ use paw::ParseArgs;
 use tracing::{error, info};
 
 use crate::{
-    cmd::crd::CustomResourceDefinitionError,
+    cmd::{configmap::ConfigMapError, crd::CustomResourceDefinitionError, secret::SecretError},
     svc::{
         cfg::Configuration,
         clevercloud,
@@ -19,7 +19,9 @@ use crate::{
     },
 };
 
+pub mod configmap;
 pub mod crd;
+pub mod secret;
 
 // -----------------------------------------------------------------------------
 // Executor trait
@@ -40,7 +42,11 @@ pub enum Error {
     Execution(String, Arc<Error>),
     #[error("failed to execute command, {0}")]
     CustomResourceDefinition(CustomResourceDefinitionError),
-    #[error("failed to handle termintion signal, {0}")]
+    #[error("failed to execute command, {0}")]
+    ConfigMap(ConfigMapError),
+    #[error("failed to execute command, {0}")]
+    Secret(SecretError),
+    #[error("failed to handle termination signal, {0}")]
     SigTerm(io::Error),
     #[error("failed to create kubernetes client, {0}")]
     Client(client::Error),
@@ -73,8 +79,12 @@ pub enum Error {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    #[clap(name = "custom-resource-definition", aliases= &["crd"], subcommand, about = "Interact with custom resource definition")]
+    #[clap(name = "custom-resource-definition", aliases = &["crd"], subcommand, about = "Interact with custom resource definition")]
     CustomResourceDefinition(crd::CustomResourceDefinition),
+    #[clap(name = "configmap", aliases = &["cm"], subcommand, about = "Generate configmap from clever-operator configuration")]
+    ConfigMap(configmap::ConfigMap),
+    #[clap(name = "secret", aliases = &["s"], subcommand, about = "Generate secret from clever-operator configuration")]
+    Secret(secret::Secret),
 }
 
 #[async_trait]
@@ -91,6 +101,16 @@ impl Executor for Command {
                 .map_err(|err| {
                     Error::Execution("custom-resource-definition".into(), Arc::new(err))
                 }),
+            Self::ConfigMap(cm) => cm
+                .execute(config)
+                .await
+                .map_err(Error::ConfigMap)
+                .map_err(|err| Error::Execution("config-map".into(), Arc::new(err))),
+            Self::Secret(s) => s
+                .execute(config)
+                .await
+                .map_err(Error::Secret)
+                .map_err(|err| Error::Execution("secret".into(), Arc::new(err))),
         }
     }
 }
