@@ -5,10 +5,10 @@
 
 use std::{convert::TryFrom, sync::Arc};
 
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::{
-    cmd::{daemon, Args, Executor},
+    cmd::{Args, Executor, daemon},
     svc::cfg::Configuration,
 };
 
@@ -55,12 +55,21 @@ impl From<svc::cfg::Error> for Error {
 pub(crate) async fn main(args: Args) -> Result<(), Error> {
     let config = Arc::new(match &args.config {
         Some(path) => Configuration::try_from(path.to_owned())?,
-        None => Configuration::try_default()?,
+        None => {
+            let mut config = Configuration::try_default();
+            if config.is_err() {
+                warn!("Could not find a proper configuration falling back on clever tools one");
+                config = Configuration::try_from_clever_tools();
+            }
+
+            config?
+        }
     });
 
     config.help();
     logging::initialize(&config, args.verbosity as usize)?;
     if args.check {
+        debug!("Configuration is {:#?}", config);
         println!("{} configuration is healthy!", env!("CARGO_PKG_NAME"));
         return Ok(());
     }

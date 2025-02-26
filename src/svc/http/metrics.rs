@@ -4,7 +4,7 @@
 
 use axum::{
     body::Body,
-    http::{header, HeaderValue, Request, Response, StatusCode},
+    http::{HeaderValue, Request, Response, StatusCode, header},
 };
 
 use prometheus::{Encoder, TextEncoder};

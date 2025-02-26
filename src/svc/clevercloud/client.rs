@@ -2,7 +2,7 @@
 //!
 //! This module provides helpers to create a clever-cloud client
 
-use base64::{engine::general_purpose::STANDARD as BASE64_ENGINE, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64_ENGINE};
 use clevercloud_sdk::oauth10a::reqwest;
 use k8s_openapi::api::core::v1::Secret;
 use tempfile::NamedTempFile;

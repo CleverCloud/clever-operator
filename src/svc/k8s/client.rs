@@ -5,8 +5,8 @@
 use std::{convert::TryFrom, path::PathBuf};
 
 use kube::{
-    config::{KubeConfigOptions, Kubeconfig, KubeconfigError},
     Config,
+    config::{KubeConfigOptions, Kubeconfig, KubeconfigError},
 };
 
 #[derive(thiserror::Error, Debug)]

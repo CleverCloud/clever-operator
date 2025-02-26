@@ -13,11 +13,11 @@ use std::{
     str::FromStr,
 };
 
-use k8s_openapi::{api::core::v1::Event, NamespaceResourceScope};
+use k8s_openapi::{NamespaceResourceScope, api::core::v1::Event};
 use kube::{Client, CustomResourceExt, Resource, ResourceExt};
-use tracing::debug;
 #[cfg(feature = "tracing")]
 use tracing::Instrument;
+use tracing::debug;
 
 use crate::svc::k8s::resource;
 
@@ -134,8 +134,8 @@ where
 {
     debug!(
         action = action.to_string(),
-        namespace = &obj.namespace().unwrap_or_else(|| "<none>".to_string()),
-        name = &obj.name_any(),
+        namespace = obj.namespace().unwrap_or_else(|| "<none>".to_string()),
+        name = obj.name_any(),
         message = message,
         "Create an event for resource",
     );

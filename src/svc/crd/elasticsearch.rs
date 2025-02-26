@@ -15,14 +15,14 @@ use clevercloud_sdk::{
     },
     v4::{
         self,
-        addon_provider::{elasticsearch, plan, AddonProviderId, Feature},
+        addon_provider::{AddonProviderId, Feature, elasticsearch, plan},
     },
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::Secret;
 use kube::{
-    runtime::{controller, watcher, Controller},
     Api, CustomResource, Resource, ResourceExt,
+    runtime::{Controller, controller, watcher},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -32,9 +32,8 @@ use crate::svc::{
     clevercloud::{self, ext::AddonExt},
     crd::Instance,
     k8s::{
-        self, finalizer, recorder, resource,
+        self, Context, ControllerBuilder, finalizer, recorder, resource,
         secret::{self, OVERRIDE_CONFIGURATION_NAME},
-        Context, ControllerBuilder,
     },
 };
 

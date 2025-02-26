@@ -7,11 +7,11 @@ use std::fmt::Debug;
 
 use chrono::Utc;
 use k8s_openapi::{
+    NamespaceResourceScope,
     api::core::v1::{Event, EventSource},
     apimachinery::pkg::apis::meta::v1::{MicroTime, Time},
-    NamespaceResourceScope,
 };
-use kube::{api::ObjectMeta, CustomResourceExt, Resource, ResourceExt};
+use kube::{CustomResourceExt, Resource, ResourceExt, api::ObjectMeta};
 
 use crate::svc::k8s::{recorder::Level, resource};
 
@@ -52,7 +52,7 @@ where
         last_timestamp: Some(Time(now)),
         message: Some(message.to_string()),
         reason: Some(action.to_string()),
-        reporting_component: Some("clever-operator".to_string()),
+        reporting_component: Some(env!("CARGO_PKG_NAME").to_string()),
         reporting_instance: Some(format!(
             "{}/{}",
             env!("CARGO_PKG_NAME"),
@@ -72,7 +72,7 @@ pub fn source() -> EventSource {
         .map(|host| host.to_string_lossy().to_string());
 
     EventSource {
-        component: Some("clever-operator".to_string()),
+        component: Some(env!("CARGO_PKG_NAME").to_string()),
         host,
     }
 }

@@ -4,8 +4,8 @@
 
 use std::{collections::BTreeMap, fmt::Debug};
 
-use k8s_openapi::{api::core::v1::Secret, NamespaceResourceScope};
-use kube::{api::ObjectMeta, CustomResourceExt, Resource, ResourceExt};
+use k8s_openapi::{NamespaceResourceScope, api::core::v1::Secret};
+use kube::{CustomResourceExt, Resource, ResourceExt, api::ObjectMeta};
 
 use crate::svc::k8s::resource;
 
