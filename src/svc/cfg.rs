@@ -18,7 +18,7 @@ use tracing::warn;
 // Constants
 
 pub const OPERATOR_LISTEN: SocketAddr =
-    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8080);
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 8000);
 
 // -----------------------------------------------------------------------------
 // Operator structure
@@ -90,6 +90,14 @@ impl TryFrom<PathBuf> for NamespaceConfiguration {
                     .unwrap_or_else(|_err| "".to_string()),
             )
             .map_err(|err| Error::Default("api.consumer-secret".into(), err))?
+            // -----------------------------------------------------------------
+            // Operator
+            .set_default(
+                "operator.listen",
+                env::var("CLEVER_OPERATOR_OPERATOR_LISTEN")
+                    .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
+            )
+            .map_err(|err| Error::Default("operator.listen".into(), err))?
             // -----------------------------------------------------------------
             // Files
             .add_source(File::from(path).required(true))
