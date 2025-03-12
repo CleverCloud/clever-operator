@@ -42,9 +42,9 @@ CHMOD				?= $(shell which chmod)
 # ------------------------------------------------------------------------------
 # Build operator
 .PHONY: build
-build: $(DIST)/$(NAME) $(shell $(FIND) -type f -name '*.rs')
+build: $(DIST)/$(NAME) $(shell $(FIND) . -type f -name '*.rs')
 
-$(DIST)/$(NAME): $(shell $(FIND) -type f -name '*.rs')
+$(DIST)/$(NAME): $(shell $(FIND) . -type f -name '*.rs')
 	$(CARGO) build $(CARGO_OPTS) --release
 
 # ------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ install-cli-tools:
 # ------------------------------------------------------------------------------
 # Build docker
 .PHONY: docker-build
-docker-build: $(shell $(FIND) -type f -name '*.rs') Dockerfile
+docker-build: $(shell $(FIND) . -type f -name '*.rs') Dockerfile
 	$(DOCKER) $(DOCKER_OPTS) build -t $(DOCKER_IMG) $(PWD)
 
 .PHONY: docker-push
@@ -97,7 +97,7 @@ $(DEPLOY_OLM)/manifests/clever-operator-config-provider.crd.yaml:
 	$(DIST)/$(NAME) custom-resource-definition view config-provider > $(DEPLOY_OLM)/manifests/clever-operator-config-provider.crd.yaml
 
 .PHONY: validate
-validate: $(shell $(FIND) -type f -name '*.yaml')
+validate: $(shell $(FIND) . -type f -name '*.yaml')
 	$(KUBE_SCORE) score $(shell $(FIND) $(DEPLOY_KUBE) -type f -name '*.yaml')
 	$(OLM_SDK) bundle validate $(DEPLOY_OLM)
 #	$(OCP_VALIDATOR) $(DEPLOY_OLM) --optional-values="file=$(DEPLOY_OLM)/metadata/annotations.yaml" --output json-alpha1
