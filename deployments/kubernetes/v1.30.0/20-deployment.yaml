@@ -49,6 +49,8 @@ rules:
   - elasticsearches/status
   - configproviders
   - configproviders/status
+  - kvs
+  - kvs/status
   verbs:
   - get
   - list
@@ -125,7 +127,7 @@ spec:
     metadata:
       annotations:
         prometheus.io/scrape: 'true'
-        prometheus.io/port: '8000'
+        prometheus.io/port: '8080'
       labels:
         app: clever-operator
     spec:
@@ -136,11 +138,11 @@ spec:
         secret:
           secretName: clever-operator-configuration
       containers:
-        - image: clevercloud/clever-operator:ca53fedf01d1f813df6f061ef511b6e576084531
+        - image: clevercloud/clever-operator:d00868817f70501dc359bb135a7817352a071815
           imagePullPolicy: Always
           name: clever-operator
           command: ["/usr/local/bin/clever-operator"]
-          args: ["-vvvvvvv"]
+          args: ["-vvv"]
           volumeMounts:
           - name: config
             mountPath: "/etc/clever-operator"
@@ -155,7 +157,7 @@ spec:
               cpu: 100m
               ephemeral-storage: 128Mi
           ports:
-            - containerPort: 8000
+            - containerPort: 8080
               protocol: TCP
               name: observability
           readinessProbe:
