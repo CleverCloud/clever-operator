@@ -15,7 +15,8 @@ use crate::{
         cfg::Configuration,
         crd::{
             config_provider::ConfigProvider, elasticsearch::ElasticSearch, kv::KV,
-            mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
+            metabase::Metabase, mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql,
+            pulsar::Pulsar, redis::Redis,
         },
     },
 };
@@ -33,6 +34,7 @@ pub enum CustomResource {
     ConfigProvider,
     ElasticSearch,
     KV,
+    Metabase,
 }
 
 impl FromStr for CustomResource {
@@ -49,7 +51,12 @@ impl FromStr for CustomResource {
             "config-provider" => Ok(Self::ConfigProvider),
             "elasticsearch" => Ok(Self::ElasticSearch),
             "kv" => Ok(Self::KV),
-            _ => Err(format!("failed to parse '{}', available options are 'kv', 'elasticsearch', 'config-provider', 'pulsar', 'postgresql', 'redis', 'mysql' or 'mongodb", s).into()),
+            "metabase" => Ok(Self::Metabase),
+            _ => Err(format!(
+                "failed to parse '{s}', available options are: 'postgresql', 'redis', \
+                'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', and 'metabase'"
+            )
+            .into()),
         }
     }
 }
@@ -113,6 +120,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::KV => serde_yaml::to_string(&KV::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::Metabase => serde_yaml::to_string(&Metabase::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -131,6 +140,8 @@ pub async fn view(
             serde_yaml::to_string(&ElasticSearch::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&KV::crd()).map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&Metabase::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };
 

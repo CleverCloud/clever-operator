@@ -51,6 +51,8 @@ rules:
   - configproviders/status
   - kvs
   - kvs/status
+  - metabases
+  - metabases/status
   verbs:
   - get
   - list

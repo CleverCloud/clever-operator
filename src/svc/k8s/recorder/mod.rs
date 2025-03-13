@@ -190,7 +190,7 @@ where
 }
 
 #[cfg(not(feature = "tracing"))]
-/// shortcut for the [`record`] method witj the 'Warning' [`Level`]
+/// shortcut for the [`record`] method with the 'Warning' [`Level`]
 pub async fn warning<T, U>(
     client: Client,
     obj: &T,
@@ -205,7 +205,7 @@ where
 }
 
 #[cfg(feature = "tracing")]
-/// shortcut for the [`record`] method witj the 'Warning' [`Level`]
+/// shortcut for the [`record`] method with the 'Warning' [`Level`]
 pub async fn warning<T, U>(
     client: Client,
     obj: &T,
@@ -221,7 +221,7 @@ where
         .await
 }
 
-/// shortcut for the [`record`] method witj the 'Warning' [`Level`]
+/// shortcut for the [`record`] method with the 'Warning' [`Level`]
 async fn iwarning<T, U>(
     client: Client,
     obj: &T,

@@ -12,7 +12,7 @@ use k8s_openapi::{ByteString, api::core::v1};
 use crate::{cmd::Executor, svc::cfg::Configuration};
 
 // -----------------------------------------------------------------------------
-// CustomResourceDefinitionError enum
+// Secret enum
 
 #[derive(thiserror::Error, Debug)]
 pub enum SecretError {
@@ -23,7 +23,7 @@ pub enum SecretError {
 }
 
 // -----------------------------------------------------------------------------
-// CustomResourceDefinition enum
+// Secret enum
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Secret {
@@ -51,7 +51,7 @@ impl Executor for Secret {
 }
 
 // -----------------------------------------------------------------------------
-// view function
+// generate function
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip(config)))]
 pub async fn generate(
