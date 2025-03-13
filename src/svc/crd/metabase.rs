@@ -1,6 +1,6 @@
-//! # PostgreSQL addon
+//! # Metabase addon
 //!
-//! This module provide the postgresql custom resource and its definition
+//! This module provide the metabase custom resource and its definition
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -15,7 +15,7 @@ use clevercloud_sdk::{
     },
     v4::{
         self,
-        addon_provider::{AddonProviderId, plan, postgresql},
+        addon_provider::{AddonProviderId, plan},
     },
 };
 use futures::TryFutureExt;
@@ -40,27 +40,18 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/postgresql";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/metabase";
 
 // -----------------------------------------------------------------------------
 // Opts structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Opts {
-    #[serde(rename = "version")]
-    pub version: postgresql::Version,
-    #[serde(rename = "encryption")]
-    pub encryption: bool,
-}
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
+pub struct Opts {}
 
 #[allow(clippy::from_over_into)]
 impl Into<addon::Opts> for Opts {
     fn into(self) -> addon::Opts {
-        addon::Opts {
-            version: Some(self.version.to_string()),
-            encryption: Some(self.encryption.to_string()),
-            ..Default::default()
-        }
+        addon::Opts::default()
     }
 }
 
@@ -70,10 +61,10 @@ impl Into<addon::Opts> for Opts {
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
-#[kube(kind = "PostgreSql")]
-#[kube(singular = "postgresql")]
-#[kube(plural = "postgresqls")]
-#[kube(shortname = "pg")]
+#[kube(kind = "Metabase")]
+#[kube(singular = "metabase")]
+#[kube(plural = "metabases")]
+#[kube(shortname = "mb")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
@@ -90,47 +81,46 @@ impl Into<addon::Opts> for Opts {
     printcolumn = r#"{"name":"instance", "type":"string", "description":"Instance", "jsonPath":".spec.instance.plan"}"#
 )]
 #[kube(
-    printcolumn = r#"{"name":"version", "type":"integer", "description":"Version", "jsonPath":".spec.options.version"}"#
-)]
-#[kube(
-    printcolumn = r#"{"name":"encrypted", "type":"boolean", "description":"Cold encryption", "jsonPath":".spec.options.encryption"}"#
+    printcolumn = r#"{"name":"url", "type":"string", "description":"Url", "jsonPath":".status.url"}"#
 )]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
-    #[serde(rename = "options")]
+    #[serde(default, rename = "options")]
     pub options: Opts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSQLStatus structure
+// Metabase Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
+    #[serde(rename = "url")]
+    pub url: Option<String>,
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSql implementation
+// Metabase implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for PostgreSql {
+impl Into<CreateOpts> for Metabase {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::PostgreSql.to_string(),
+            provider_id: AddonProviderId::Metabase.to_string(),
             plan: self.spec.instance.plan.to_owned(),
             options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for PostgreSql {
+impl AddonExt for Metabase {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
@@ -161,7 +151,7 @@ impl AddonExt for PostgreSql {
     }
 }
 
-impl PostgreSql {
+impl Metabase {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -174,6 +164,21 @@ impl PostgreSql {
     pub fn get_addon_id(&self) -> Option<String> {
         self.status.to_owned().unwrap_or_default().addon
     }
+
+    /// Sets the URL of the metabase instance (`METABASE_URL` secret)
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
+    pub fn set_url(&mut self, url: Option<String>) {
+        let status = self.status.get_or_insert_with(Status::default);
+
+        status.url = url;
+        self.status = Some(status.to_owned());
+    }
+
+    /// Returns the URL of the metabase instance (`METABASE_URL` secret)
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
+    pub fn get_url(&self) -> Option<String> {
+        self.status.to_owned().unwrap_or_default().url
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -184,6 +189,7 @@ pub enum Action {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
+    UpdateUrl,
     OverridesInstancePlan,
     DeleteFinalizer,
     DeleteAddon,
@@ -195,6 +201,7 @@ impl Display for Action {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
             Self::UpsertAddon => write!(f, "UpsertAddon"),
             Self::UpsertSecret => write!(f, "UpsertSecret"),
+            Self::UpdateUrl => write!(f, "UpdateUrl"),
             Self::OverridesInstancePlan => write!(f, "OverridesInstancePlan"),
             Self::DeleteFinalizer => write!(f, "DeleteFinalizer"),
             Self::DeleteAddon => write!(f, "DeleteAddon"),
@@ -266,8 +273,8 @@ impl From<clevercloud::client::Error> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<PostgreSql> for Reconciler {
-    fn build(&self, state: Arc<Context>) -> Controller<PostgreSql> {
+impl ControllerBuilder<Metabase> for Reconciler {
+    fn build(&self, state: Arc<Context>) -> Controller<Metabase> {
         let client = state.kube.to_owned();
         let secret = Api::<Secret>::all(client.to_owned());
 
@@ -277,17 +284,17 @@ impl ControllerBuilder<PostgreSql> for Reconciler {
 }
 
 #[async_trait]
-impl k8s::Reconciler<PostgreSql> for Reconciler {
+impl k8s::Reconciler<Metabase> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<Context>, origin: Arc<PostgreSql>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<Metabase>) -> Result<(), ReconcilerError> {
         let Context {
             kube,
             apis,
             config: _,
         } = ctx.as_ref();
 
-        let kind = PostgreSql::kind(&()).to_string();
+        let kind = Metabase::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -345,6 +352,8 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 2: translate plan
 
+        // FIXME: plan `base` (`plan_2925d534-7155-4521-8052-d068d7ce8915`) is not found
+
         if !modified.spec.instance.plan.starts_with("plan_") {
             info!(
                 kind = &kind,
@@ -356,7 +365,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
 
             let plan = plan::find(
                 &apis,
-                &AddonProviderId::PostgreSql,
+                &AddonProviderId::Metabase,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
             )
@@ -430,7 +439,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         );
 
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
-        let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+        let mut modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
@@ -442,9 +451,19 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 4: create the secret
+        // Step 4: upsert secret
 
         let secrets = modified.secrets(&apis).await?;
+
+        // capture the url to update the status un Step 5
+        let url = match &secrets {
+            None => None,
+            Some(secrets) => match secrets.get("METABASE_URL") {
+                Some(secret) if !secret.is_empty() => Some(secret.to_string()),
+                _ => None,
+            },
+        };
+
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
@@ -469,17 +488,45 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
 
+        // ---------------------------------------------------------------------
+        // Step 5: update the status
+
+        if let Some(url) = url {
+            if modified.get_url().as_deref() != Some(url.as_str()) {
+                let action = &Action::UpdateUrl;
+                let message = &format!("Update url to '{url}'");
+
+                modified.set_url(Some(url));
+
+                let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
+                let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+                    .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
+                    .await?;
+
+                info!(
+                    action = action.to_string(),
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    message = message,
+                    "Create event for custom resource",
+                );
+
+                recorder::normal(kube.to_owned(), &modified, action, message).await?;
+            }
+        }
+
         Ok(())
     }
 
-    async fn delete(ctx: Arc<Context>, origin: Arc<PostgreSql>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<Context>, origin: Arc<Metabase>) -> Result<(), ReconcilerError> {
         let Context {
             apis,
             kube,
             config: _,
         } = ctx.as_ref();
         let mut modified = (*origin).to_owned();
-        let kind = PostgreSql::kind(&()).to_string();
+        let kind = Metabase::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -520,6 +567,7 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
 
         modified.delete(&apis).await?;
         modified.set_addon_id(None);
+        modified.set_url(None);
 
         debug!(
             kind = &kind,

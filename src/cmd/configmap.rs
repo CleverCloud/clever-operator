@@ -12,7 +12,7 @@ use k8s_openapi::api::core::v1;
 use crate::{cmd::Executor, svc::cfg::Configuration};
 
 // -----------------------------------------------------------------------------
-// CustomResourceDefinitionError enum
+// ConfigMapError enum
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigMapError {
@@ -23,7 +23,7 @@ pub enum ConfigMapError {
 }
 
 // -----------------------------------------------------------------------------
-// CustomResourceDefinition enum
+// ConfigMap enum
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum ConfigMap {
@@ -51,7 +51,7 @@ impl Executor for ConfigMap {
 }
 
 // -----------------------------------------------------------------------------
-// view function
+// generate function
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip(config)))]
 pub async fn generate(

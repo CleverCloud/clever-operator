@@ -442,3 +442,22 @@ spec:
 ```
 
 Currently, the materia kv manages services is only available in the one region which name is `par`.
+
+## Metabase
+
+Below, you will find the custom resource in yaml format that you can use to deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: Metabase
+metadata:
+  namespace: default
+  name: metabase
+spec:
+  organisation: orga_<uuid v4>
+  options:
+  instance:
+    plan: base
+...
+```

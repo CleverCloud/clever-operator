@@ -468,9 +468,9 @@ dependencies = [
 
 [[package]]
 name = "clevercloud-sdk"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "833b8f01bf7e15782301fae3dcd63d25b58fd01a6ca66cc7a8da4aad8792a44b"
+checksum = "55980f7546a155a5bf6cffdcaa4ef32510ab1df164e45424d2748ca525743fec"
 dependencies = [
  "async-trait",
  "chrono",
