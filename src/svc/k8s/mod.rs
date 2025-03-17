@@ -72,7 +72,7 @@ static RECONCILIATION_EVENT: LazyLock<CounterVec> = LazyLock::new(|| {
     register_counter_vec!(
         opts!(
             "kubernetes_operator_reconciliation_event",
-            "number of usert event",
+            "number of upsert event",
         ),
         &["kind", "namespace", "event"]
     )
@@ -262,7 +262,7 @@ where
 {
 }
 
-/// Blanklet implementation of [`WatcherError<T>`]
+/// Blanket implementation of [`WatcherError<T>`]
 impl<T> WatcherError for T
 where
     T: From<kube::Error> + From<controller::Error<Self, watcher::Error>> + Error,
@@ -368,7 +368,7 @@ where
     }
 }
 
-/// Blanklet implementation for [`Watcher<T>`]
+/// Blanket implementation for [`Watcher<T>`]
 impl<T, U> Watcher<T> for U
 where
     T: Resource<Scope = NamespaceResourceScope>
