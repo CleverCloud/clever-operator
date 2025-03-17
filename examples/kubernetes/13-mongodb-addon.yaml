@@ -76,41 +76,41 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: MONGODB_ADDON_DB
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets # build using the name of the addon following by -secrets
-                key: MONGODB_ADDON_DB
-          - name: MONGODB_ADDON_HOST
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_HOST
-          - name: MONGODB_ADDON_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_PASSWORD
-          - name: MONGODB_ADDON_PORT
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_PORT
-          - name: MONGODB_ADDON_URI
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_URI
-          - name: MONGODB_ADDON_USER
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_USER
-          - name: MONGODB_ADDON_VERSION
-            valueFrom:
-              secretKeyRef:
-                name: mongodb-secrets
-                key: MONGODB_ADDON_VERSION
+            - name: MONGODB_ADDON_DB
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets # build using the name of the addon following by -secrets
+                  key: MONGODB_ADDON_DB
+            - name: MONGODB_ADDON_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_HOST
+            - name: MONGODB_ADDON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_PASSWORD
+            - name: MONGODB_ADDON_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_PORT
+            - name: MONGODB_ADDON_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_URI
+            - name: MONGODB_ADDON_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_USER
+            - name: MONGODB_ADDON_VERSION
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secrets
+                  key: MONGODB_ADDON_VERSION
           resources:
             requests:
               memory: 64M
