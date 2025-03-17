@@ -2,7 +2,7 @@
 
 > This document will go through main concepts behind the Clever Cloud operator.
 
-## What are a Kubernetes operator and Custome Resources?
+## What are a Kubernetes operator and Custom Resources?
 
 Firstly, if you does not know, what is a Kubernetes operator or Custom
 Resources, you should take a look at those resources:
@@ -18,7 +18,7 @@ find some links below:
 - https://www.youtube.com/watch?v=_aJ1BdaG2n8
 
 Feel free to create a pull request, if you wanna add some resources to help
-people on-board on kubernetes operator and custome resources.
+people on-board on kubernetes operator and custom resources.
 
 ## How it works
 

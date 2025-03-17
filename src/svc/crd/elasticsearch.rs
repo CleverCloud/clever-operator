@@ -115,7 +115,7 @@ impl Into<addon::Opts> for Opts {
     printcolumn = r#"{"name":"kibana", "type":"boolean", "description":"Kibana", "jsonPath":".spec.options.kibana"}"#
 )]
 #[kube(
-    printcolumn = r#"{"name":"apm", "type":"boolean", "description":"Application Perfomance Monitoring", "jsonPath":".spec.options.apm"}"#
+    printcolumn = r#"{"name":"apm", "type":"boolean", "description":"Application Performance Monitoring", "jsonPath":".spec.options.apm"}"#
 )]
 pub struct Spec {
     #[serde(rename = "organisation")]
@@ -385,7 +385,7 @@ impl k8s::Reconciler<ElasticSearch> for Reconciler {
             )
             .await?;
 
-            // Update the spec is not a good practise as it lead to
+            // Update the spec is not a good practice as it lead to
             // no-deterministic and infinite reconciliation loop. It should be
             // avoided or done with caution.
             if let Some(plan) = plan {

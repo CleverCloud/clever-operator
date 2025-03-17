@@ -29,7 +29,7 @@ format.
 | ------------------------------------------- | --------------------------------------------- | ------- | ----------------------------------- |
 | kubernetes_operator_reconciliation_success  | kind: String                                  | Counter | number of successful reconciliation |
 | kubernetes_operator_reconciliation_failed   | kind: String                                  | Counter | number of failed reconciliation     |
-| kubernetes_operator_reconciliation_event    | kind: String, namespace: String, name: String | Counter | number of usert event               |
+| kubernetes_operator_reconciliation_event    | kind: String, namespace: String, name: String | Counter | number of upsert event               |
 | kubernetes_operator_reconciliation_duration | kind: String, unit: String                    | Counter | duration of reconciliation          |
 
 ### Operator http server metrics

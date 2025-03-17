@@ -363,7 +363,7 @@ impl k8s::Reconciler<Redis> for Reconciler {
             )
             .await?;
 
-            // Update the spec is not a good practise as it lead to
+            // Update the spec is not a good practice as it lead to
             // no-deterministic and infinite reconciliation loop. It should be
             // avoided or done with caution.
             if let Some(plan) = plan {

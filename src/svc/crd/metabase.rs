@@ -445,7 +445,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
 
         let action = &Action::UpsertAddon;
         let message = &format!(
-            "Create managed postgresql instance on clever-cloud '{}'",
+            "Create managed metabase instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -582,7 +582,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete managed postgresql instance on clever-cloud";
+        let message = "Delete managed metabase instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
