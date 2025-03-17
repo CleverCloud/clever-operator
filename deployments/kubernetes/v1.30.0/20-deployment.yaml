@@ -53,6 +53,8 @@ rules:
   - kvs/status
   - metabases
   - metabases/status
+  - keycloaks
+  - keycloaks/status
   verbs:
   - get
   - list

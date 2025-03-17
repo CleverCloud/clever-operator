@@ -14,7 +14,8 @@ use crate::{
         cfg::Configuration,
         clevercloud,
         crd::{
-            config_provider, elasticsearch, kv, metabase, mongodb, mysql, postgresql, pulsar, redis,
+            config_provider, elasticsearch, keycloak, kv, metabase, mongodb, mysql, postgresql,
+            pulsar, redis,
         },
         http,
         k8s::{Context, Watcher, client},
@@ -72,6 +73,8 @@ pub enum Error {
     WatchKV(kv::ReconcilerError),
     #[error("failed to watch kv resources, {0}")]
     WatchMetabase(metabase::ReconcilerError),
+    #[error("failed to watch kv resources, {0}")]
+    WatchKeycloak(keycloak::ReconcilerError),
     #[error("failed to serve http content, {0}")]
     Serve(http::server::Error),
     #[error("failed to spawn task on tokio, {0}")]
@@ -175,6 +178,7 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     let pulsar_ctx = context.to_owned();
     let kv_ctx = context.to_owned();
     let metabase_ctx = context.to_owned();
+    let keycloak_ctx = context.to_owned();
 
     // -------------------------------------------------------------------------
     // Start services
@@ -242,6 +246,13 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
                 .watch(metabase_ctx)
                 .await
                 .map_err(Error::WatchMetabase)
+        }) => r,
+        r = tokio::spawn(async move {
+            info!(kind = "Keycloak", "Start to listen for events of custom resource");
+            keycloak::Reconciler::default()
+                .watch(keycloak_ctx)
+                .await
+                .map_err(Error::WatchKeycloak)
         }) => r,
         r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
         r = tokio::spawn(async move { http::server::serve(http::server::router(), context.config.operator.listen).await.map_err(Error::Serve) }) => r,
