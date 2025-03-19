@@ -57,6 +57,8 @@ rules:
   - keycloaks/status
   - matomos
   - matomos/status
+  - otoroshis
+  - otoroshis/status
   verbs:
   - get
   - list

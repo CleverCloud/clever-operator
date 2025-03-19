@@ -480,3 +480,42 @@ spec:
     plan: plan_3819e4b3-cc6d-4847-9f02-0db93212956c # corresponds to the 'base' plan
 ...
 ```
+
+## Matomo
+
+Below, you will find the custom resource in yaml format that you can use to deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: Matomo
+metadata:
+  namespace: default
+  name: matomo
+spec:
+  organisation: orga_<uuid v4>
+  options:
+  instance:
+    region: par
+    plan: plan_87283ba6-617c-420d-8e37-3350a2fcdd66 # corresponds to the 'base' plan
+...
+```
+
+## Otoroshi
+
+Below, you will find the custom resource in yaml format that you can use to deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: Otoroshi
+metadata:
+  namespace: default
+  name: otoroshi
+spec:
+  organisation: orga_<uuid v4>
+  instance:
+    region: par
+    plan: plan_d738ee0f-8720-499a-8067-2fca53a2665a # corresponds to the 'base' plan
+...
+```

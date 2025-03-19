@@ -96,7 +96,7 @@ pub struct Spec {
 }
 
 // -----------------------------------------------------------------------------
-// PostgreSQLStatus structure
+// Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
