@@ -72,56 +72,56 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: KV_HOST
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets # build using the name of the addon following by -secrets
-                key: KV_HOST
-          - name: KV_PORT
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: KV_PORT
-          - name: KV_TOKEN_ID
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: KV_TOKEN_ID
-          - name: REDISCLI_AUTH
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDISCLI_AUTH
-          - name: REDIS_HOST
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDIS_HOST
-          - name: REDIS_PORT
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDIS_PORT
-          - name: REDIS_URL
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDIS_URL
-          - name: KV_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: KV_TOKEN
-          - name: REDIS_CLI_URL
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDIS_CLI_URL
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: kv-secrets
-                key: REDIS_PASSWORD
+            - name: KV_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets # build using the name of the addon following by -secrets
+                  key: KV_HOST
+            - name: KV_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: KV_PORT
+            - name: KV_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: KV_TOKEN_ID
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDISCLI_AUTH
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDIS_PORT
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDIS_URL
+            - name: KV_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: KV_TOKEN
+            - name: REDIS_CLI_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDIS_CLI_URL
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kv-secrets
+                  key: REDIS_PASSWORD
           resources:
             requests:
               memory: 64M

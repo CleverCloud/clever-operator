@@ -1,43 +1,43 @@
 ---
 apiVersion: api.clever-cloud.com/v1
-kind: Metabase
+kind: Matomo
 metadata:
   namespace: default
-  name: metabase
+  name: matomo
 spec:
   organisation: orga_<uuid v4>
   instance:
     region: par
-    plan: plan_2925d534-7155-4521-8052-d068d7ce8915 # corresponds to the 'base' plan
+    plan: plan_87283ba6-617c-420d-8e37-3350a2fcdd66 # corresponds to the 'beta' plan
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app: debian-metabase
-  name: debian-metabase
+    app: debian-matomo
+  name: debian-matomo
   namespace: default
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: debian-metabase
+  name: debian-matomo
   namespace: default
 spec:
   minAvailable: 0
   selector:
     matchLabels:
-      app: debian-metabase
+      app: debian-matomo
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: debian-metabase
+  name: debian-matomo
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: debian-metabase
+      app: debian-matomo
   policyTypes:
     - Ingress
     - Egress
@@ -50,34 +50,34 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: default
-  name: debian-metabase
+  name: debian-matomo
   labels:
-    app: debian-metabase
+    app: debian-matomo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: debian-metabase
+      app: debian-matomo
   template:
     metadata:
       labels:
-        app: debian-metabase
+        app: debian-matomo
     spec:
-      serviceAccountName: debian-metabase
+      serviceAccountName: debian-matomo
       automountServiceAccountToken: true
       containers:
         - image: debian:bullseye-slim
           imagePullPolicy: Always
-          name: debian-metabase
+          name: debian-matomo
           command:
             - "sleep"
             - "3600"
           env:
-            - name: METABASE_URL
+            - name: MATOMO_URL
               valueFrom:
                 secretKeyRef:
-                  name: metabase-secrets
-                  key: METABASE_URL
+                  name: matomo-secrets
+                  key: MATOMO_URL
           resources:
             requests:
               memory: 64M

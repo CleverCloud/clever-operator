@@ -76,41 +76,41 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: MYSQL_ADDON_DB
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets # build using the name of the addon following by -secrets
-                key: MYSQL_ADDON_DB
-          - name: MYSQL_ADDON_HOST
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_HOST
-          - name: MYSQL_ADDON_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_PASSWORD
-          - name: MYSQL_ADDON_PORT
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_PORT
-          - name: MYSQL_ADDON_URI
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_URI
-          - name: MYSQL_ADDON_USER
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_USER
-          - name: MYSQL_ADDON_VERSION
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secrets
-                key: MYSQL_ADDON_VERSION
+            - name: MYSQL_ADDON_DB
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets # build using the name of the addon following by -secrets
+                  key: MYSQL_ADDON_DB
+            - name: MYSQL_ADDON_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_HOST
+            - name: MYSQL_ADDON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_PASSWORD
+            - name: MYSQL_ADDON_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_PORT
+            - name: MYSQL_ADDON_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_URI
+            - name: MYSQL_ADDON_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_USER
+            - name: MYSQL_ADDON_VERSION
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_ADDON_VERSION
           resources:
             requests:
               memory: 64M

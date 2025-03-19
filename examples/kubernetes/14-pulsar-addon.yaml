@@ -72,46 +72,46 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: ADDON_PULSAR_BINARY_PORT
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets # build using the name of the addon following by -secrets
-                key: ADDON_PULSAR_BINARY_PORT
-          - name: ADDON_PULSAR_BINARY_URL
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_BINARY_URL
-          - name: ADDON_PULSAR_HTTP_URL
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_HTTP_URL
-          - name: ADDON_PULSAR_HOSTNAME
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_HOSTNAME
-          - name: ADDON_PULSAR_HTTP_PORT
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_HTTP_PORT
-          - name: ADDON_PULSAR_NAMESPACE
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_NAMESPACE
-          - name: ADDON_PULSAR_TENANT
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_TENANT
-          - name: ADDON_PULSAR_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: pulsar-secrets
-                key: ADDON_PULSAR_TOKEN
+            - name: ADDON_PULSAR_BINARY_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets # build using the name of the addon following by -secrets
+                  key: ADDON_PULSAR_BINARY_PORT
+            - name: ADDON_PULSAR_BINARY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_BINARY_URL
+            - name: ADDON_PULSAR_HTTP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_HTTP_URL
+            - name: ADDON_PULSAR_HOSTNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_HOSTNAME
+            - name: ADDON_PULSAR_HTTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_HTTP_PORT
+            - name: ADDON_PULSAR_NAMESPACE
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_NAMESPACE
+            - name: ADDON_PULSAR_TENANT
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_TENANT
+            - name: ADDON_PULSAR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: ADDON_PULSAR_TOKEN
           resources:
             requests:
               memory: 64M

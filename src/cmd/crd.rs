@@ -15,8 +15,8 @@ use crate::{
         cfg::Configuration,
         crd::{
             config_provider::ConfigProvider, elasticsearch::ElasticSearch, keycloak::Keycloak,
-            kv::KV, metabase::Metabase, mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql,
-            pulsar::Pulsar, redis::Redis,
+            kv::KV, matomo::Matomo, metabase::Metabase, mongodb::MongoDb, mysql::MySql,
+            postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
         },
     },
 };
@@ -36,6 +36,7 @@ pub enum CustomResource {
     KV,
     Metabase,
     Keycloak,
+    Matomo,
 }
 
 impl FromStr for CustomResource {
@@ -54,10 +55,11 @@ impl FromStr for CustomResource {
             "kv" => Ok(Self::KV),
             "metabase" => Ok(Self::Metabase),
             "keycloak" => Ok(Self::Keycloak),
+            "matomo" => Ok(Self::Matomo),
             _ => Err(format!(
                 "failed to parse '{s}', available options are: 'postgresql', 'redis', \
-                'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', 'metabase', \
-                and 'keycloak'"
+                'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', \
+                'metabase', 'keycloak' and 'matomo'"
             )
             .into()),
         }
@@ -127,6 +129,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::Keycloak => serde_yaml::to_string(&Keycloak::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::Matomo => serde_yaml::to_string(&Matomo::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -148,6 +152,8 @@ pub async fn view(
             serde_yaml::to_string(&Metabase::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&Keycloak::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&Matomo::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };

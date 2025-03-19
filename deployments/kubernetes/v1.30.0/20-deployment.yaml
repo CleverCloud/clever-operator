@@ -55,6 +55,8 @@ rules:
   - metabases/status
   - keycloaks
   - keycloaks/status
+  - matomos
+  - matomos/status
   verbs:
   - get
   - list

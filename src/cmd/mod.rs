@@ -14,8 +14,8 @@ use crate::{
         cfg::Configuration,
         clevercloud,
         crd::{
-            config_provider, elasticsearch, keycloak, kv, metabase, mongodb, mysql, postgresql,
-            pulsar, redis,
+            config_provider, elasticsearch, keycloak, kv, matomo, metabase, mongodb, mysql,
+            postgresql, pulsar, redis,
         },
         http,
         k8s::{Context, Watcher, client},
@@ -71,10 +71,12 @@ pub enum Error {
     WatchPulsar(pulsar::ReconcilerError),
     #[error("failed to watch kv resources, {0}")]
     WatchKV(kv::ReconcilerError),
-    #[error("failed to watch kv resources, {0}")]
+    #[error("failed to watch metabase resources, {0}")]
     WatchMetabase(metabase::ReconcilerError),
     #[error("failed to watch kv resources, {0}")]
     WatchKeycloak(keycloak::ReconcilerError),
+    #[error("failed to watch matomo resources, {0}")]
+    WatchMatomo(matomo::ReconcilerError),
     #[error("failed to serve http content, {0}")]
     Serve(http::server::Error),
     #[error("failed to spawn task on tokio, {0}")]
@@ -179,6 +181,7 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     let kv_ctx = context.to_owned();
     let metabase_ctx = context.to_owned();
     let keycloak_ctx = context.to_owned();
+    let matomo_ctx = context.to_owned();
 
     // -------------------------------------------------------------------------
     // Start services
@@ -253,6 +256,13 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
                 .watch(keycloak_ctx)
                 .await
                 .map_err(Error::WatchKeycloak)
+        }) => r,
+        r = tokio::spawn(async move {
+            info!(kind = "Matomo", "Start to listen for events of custom resource");
+            matomo::Reconciler::default()
+                .watch(matomo_ctx)
+                .await
+                .map_err(Error::WatchMatomo)
         }) => r,
         r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
         r = tokio::spawn(async move { http::server::serve(http::server::router(), context.config.operator.listen).await.map_err(Error::Serve) }) => r,

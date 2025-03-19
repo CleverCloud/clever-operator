@@ -76,41 +76,41 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: POSTGRESQL_ADDON_DB
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets # build using the name of the addon following by -secrets
-                key: POSTGRESQL_ADDON_DB
-          - name: POSTGRESQL_ADDON_HOST
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_HOST
-          - name: POSTGRESQL_ADDON_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PASSWORD
-          - name: POSTGRESQL_ADDON_PORT
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_PORT
-          - name: POSTGRESQL_ADDON_URI
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_URI
-          - name: POSTGRESQL_ADDON_USER
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_USER
-          - name: POSTGRESQL_ADDON_VERSION
-            valueFrom:
-              secretKeyRef:
-                name: postgresql-secrets
-                key: POSTGRESQL_ADDON_VERSION
+            - name: POSTGRESQL_ADDON_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets # build using the name of the addon following by -secrets
+                  key: POSTGRESQL_ADDON_DB
+            - name: POSTGRESQL_ADDON_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_HOST
+            - name: POSTGRESQL_ADDON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_PASSWORD
+            - name: POSTGRESQL_ADDON_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_PORT
+            - name: POSTGRESQL_ADDON_URI
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_URI
+            - name: POSTGRESQL_ADDON_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_USER
+            - name: POSTGRESQL_ADDON_VERSION
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secrets
+                  key: POSTGRESQL_ADDON_VERSION
           resources:
             requests:
               memory: 64M

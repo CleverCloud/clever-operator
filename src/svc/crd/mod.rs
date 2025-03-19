@@ -10,6 +10,7 @@ pub mod config_provider;
 pub mod elasticsearch;
 pub mod keycloak;
 pub mod kv;
+pub mod matomo;
 pub mod metabase;
 pub mod mongodb;
 pub mod mysql;
