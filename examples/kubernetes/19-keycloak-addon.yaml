@@ -73,41 +73,41 @@ spec:
             - "sleep"
             - "3600"
           env:
-          - name: CC_KEYCLOAK_ADMIN
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_ADMIN
-          - name: CC_KEYCLOAK_FSBUCKET_ID
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_FSBUCKET_ID
-          - name: CC_KEYCLOAK_URL
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_URL
-          - name: CC_KEYCLOAK_POSTGRES_ID
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_POSTGRES_ID
-          - name: CC_KEYCLOAK_ADMIN_URL
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_ADMIN_URL
-          - name: CC_KEYCLOAK_ADMIN_DEFAULT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_ADMIN_DEFAULT_PASSWORD
-          - name: CC_KEYCLOAK_JAVA_APPID
-            valueFrom:
-              secretKeyRef:
-                name: keycloak-secrets
-                key: CC_KEYCLOAK_JAVA_APPID
+            - name: CC_KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_ADMIN
+            - name: CC_KEYCLOAK_FSBUCKET_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_FSBUCKET_ID
+            - name: CC_KEYCLOAK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_URL
+            - name: CC_KEYCLOAK_POSTGRES_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_POSTGRES_ID
+            - name: CC_KEYCLOAK_ADMIN_URL
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_ADMIN_URL
+            - name: CC_KEYCLOAK_ADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_ADMIN_DEFAULT_PASSWORD
+            - name: CC_KEYCLOAK_JAVA_APPID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: CC_KEYCLOAK_JAVA_APPID
           resources:
             requests:
               memory: 64M
