@@ -61,12 +61,13 @@ spec:
                     type: boolean
                   version:
                     enum:
-                    - 10
                     - 11
                     - 12
                     - 13
                     - 14
                     - 15
+                    - 16
+                    - 17
                     type: integer
                 required:
                 - encryption
@@ -159,8 +160,6 @@ spec:
                     type: boolean
                   version:
                     enum:
-                    - 626
-                    - 704
                     - 724
                     type: integer
                 required:
@@ -578,7 +577,6 @@ spec:
                     type: boolean
                   version:
                     enum:
-                    - 6
                     - 7
                     - 8
                     type: integer

@@ -40,28 +40,29 @@ spec:
 
 | Version | Code |
 |---------|------|
-| `10`    | 10   |
 | `11`    | 11   |
 | `12`    | 12   |
 | `13`    | 13   |
 | `14`    | 14   |
 | `15`    | 15   |
+| `16`    | 16   |
+| `17`    | 17   |
 
 ### Supported region
 
 For region, the code could be used to select the desired region.
 
-| Name                             | Code     |
-|----------------------------------|----------|
-| Jeddah                           | `jed`    |
-| Paris                            | `par`    |
-| Singapore                        | `sgp`    |
-| Montreal                         | `mtl`    |
-| Roubaix                          | `rbx`    |
-| Warsaw                           | `wsw`    |
-| Roubaix (with hds certification) | `rbxhds` |
-| Sydney                           | `syd`    |
-| New Yord                         | `nyc`    |
+| Name                                | Code     |
+|-------------------------------------|----------|
+| Paris                               | `par`    |
+| Gravelines (with HDS certification) | `grahds` |
+| Roubaix                             | `rbx`    |
+| Roubaix (with HDS certification)    | `rbxhds` |
+| Scaleway                            | `scw`    |
+| Montreal                            | `mtl`    |
+| Singapore                           | `sgp`    |
+| Sydney                              | `syd`    |
+| Warsaw                              | `wsw`    |
 
 ### Supported plan
 
@@ -134,17 +135,17 @@ spec:
 
 For region, the code could be used to select the desired region.
 
-| Name                             | Code     |
-|----------------------------------|----------|
-| Jeddah                           | `jed`    |
-| Paris                            | `par`    |
-| Singapore                        | `sgp`    |
-| Montreal                         | `mtl`    |
-| Roubaix                          | `rbx`    |
-| Warsaw                           | `wsw`    |
-| Roubaix (with hds certification) | `rbxhds` |
-| Sydney                           | `syd`    |
-| New Yord                         | `nyc`    |
+| Name                                | Code     |
+|-------------------------------------|----------|
+| Paris                               | `par`    |
+| Gravelines (with HDS certification) | `grahds` |
+| Roubaix                             | `rbx`    |
+| Roubaix (with HDS certification)    | `rbxhds` |
+| Scaleway                            | `scw`    |
+| Montreal                            | `mtl`    |
+| Singapore                           | `sgp`    |
+| Sydney                              | `syd`    |
+| Warsaw                              | `wsw`    |
 
 ### Supported plan
 
@@ -204,25 +205,23 @@ spec:
 
 | Version | Code |
 |---------|------|
-| `6.2.6` | 626  |
-| `7.0.4` | 704  |
 | `7.2.4` | 724  |
 
 ### Supported region
 
 For region, the code could be used to select the desired region.
 
-| Name                             | Code     |
-|----------------------------------|----------|
-| Jeddah                           | `jed`    |
-| Paris                            | `par`    |
-| Singapore                        | `sgp`    |
-| Montreal                         | `mtl`    |
-| Roubaix                          | `rbx`    |
-| Warsaw                           | `wsw`    |
-| Roubaix (with hds certification) | `rbxhds` |
-| Sydney                           | `syd`    |
-| New Yord                         | `nyc`    |
+| Name                                | Code     |
+|-------------------------------------|----------|
+| Paris                               | `par`    |
+| Gravelines (with HDS certification) | `grahds` |
+| Roubaix                             | `rbx`    |
+| Roubaix (with HDS certification)    | `rbxhds` |
+| Scaleway                            | `scw`    |
+| Montreal                            | `mtl`    |
+| Singapore                           | `sgp`    |
+| Sydney                              | `syd`    |
+| Warsaw                              | `wsw`    |
 
 ### Supported plan
 
@@ -271,17 +270,17 @@ spec:
 
 For region, the code could be used to select the desired region.
 
-| Name                             | Code     |
-|----------------------------------|----------|
-| Jeddah                           | `jed`    |
-| Paris                            | `par`    |
-| Singapore                        | `sgp`    |
-| Montreal                         | `mtl`    |
-| Roubaix                          | `rbx`    |
-| Warsaw                           | `wsw`    |
-| Roubaix (with hds certification) | `rbxhds` |
-| Sydney                           | `syd`    |
-| New Yord                         | `nyc`    |
+| Name                                | Code     |
+|-------------------------------------|----------|
+| Paris                               | `par`    |
+| Gravelines (with HDS certification) | `grahds` |
+| Roubaix                             | `rbx`    |
+| Roubaix (with HDS certification)    | `rbxhds` |
+| Scaleway                            | `scw`    |
+| Montreal                            | `mtl`    |
+| Singapore                           | `sgp`    |
+| Sydney                              | `syd`    |
+| Warsaw                              | `wsw`    |
 
 ### Supported plan
 
@@ -380,7 +379,6 @@ spec:
 
 | Version | Code |
 |---------|------|
-| `6`     | 6    |
 | `7`     | 7    |
 | `8`     | 8    |
 
@@ -388,17 +386,17 @@ spec:
 
 For region, the code could be used to select the desired region.
 
-| Name                             | Code     |
-|----------------------------------|----------|
-| Jeddah                           | `jed`    |
-| Paris                            | `par`    |
-| Singapore                        | `sgp`    |
-| Montreal                         | `mtl`    |
-| Roubaix                          | `rbx`    |
-| Warsaw                           | `wsw`    |
-| Roubaix (with hds certification) | `rbxhds` |
-| Sydney                           | `syd`    |
-| New Yord                         | `nyc`    |
+| Name                                | Code     |
+|-------------------------------------|----------|
+| Paris                               | `par`    |
+| Gravelines (with HDS certification) | `grahds` |
+| Roubaix                             | `rbx`    |
+| Roubaix (with HDS certification)    | `rbxhds` |
+| Scaleway                            | `scw`    |
+| Montreal                            | `mtl`    |
+| Singapore                           | `sgp`    |
+| Sydney                              | `syd`    |
+| Warsaw                              | `wsw`    |
 
 ### Supported plan
 
