@@ -14,8 +14,8 @@ use crate::{
     svc::{
         cfg::Configuration,
         crd::{
-            config_provider::ConfigProvider, elasticsearch::ElasticSearch, kv::KV,
-            metabase::Metabase, mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql,
+            config_provider::ConfigProvider, elasticsearch::ElasticSearch, keycloak::Keycloak,
+            kv::KV, metabase::Metabase, mongodb::MongoDb, mysql::MySql, postgresql::PostgreSql,
             pulsar::Pulsar, redis::Redis,
         },
     },
@@ -35,6 +35,7 @@ pub enum CustomResource {
     ElasticSearch,
     KV,
     Metabase,
+    Keycloak,
 }
 
 impl FromStr for CustomResource {
@@ -52,9 +53,11 @@ impl FromStr for CustomResource {
             "elasticsearch" => Ok(Self::ElasticSearch),
             "kv" => Ok(Self::KV),
             "metabase" => Ok(Self::Metabase),
+            "keycloak" => Ok(Self::Keycloak),
             _ => Err(format!(
                 "failed to parse '{s}', available options are: 'postgresql', 'redis', \
-                'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', and 'metabase'"
+                'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', 'metabase', \
+                and 'keycloak'"
             )
             .into()),
         }
@@ -122,6 +125,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::Metabase => serde_yaml::to_string(&Metabase::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::Keycloak => serde_yaml::to_string(&Keycloak::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -141,6 +146,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&KV::crd()).map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&Metabase::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&Keycloak::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };

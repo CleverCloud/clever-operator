@@ -456,6 +456,27 @@ spec:
   organisation: orga_<uuid v4>
   options:
   instance:
-    plan: base
+    region: par
+    plan: plan_2925d534-7155-4521-8052-d068d7ce8915 # corresponds to the 'base' plan
+...
+```
+
+## Keycloak
+
+Below, you will find the custom resource in yaml format that you can use to deploy a managed services.
+
+```yaml
+---
+apiVersion: api.clever-cloud.com/v1
+kind: Keycloak
+metadata:
+  namespace: default
+  name: keycloak
+spec:
+  organisation: orga_<uuid v4>
+  options:
+  instance:
+    region: par
+    plan: plan_3819e4b3-cc6d-4847-9f02-0db93212956c # corresponds to the 'base' plan
 ...
 ```
