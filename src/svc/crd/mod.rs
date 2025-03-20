@@ -14,6 +14,7 @@ pub mod matomo;
 pub mod metabase;
 pub mod mongodb;
 pub mod mysql;
+pub mod otoroshi;
 pub mod postgresql;
 pub mod pulsar;
 pub mod redis;

@@ -86,7 +86,7 @@ pub struct Status {
 }
 
 // -----------------------------------------------------------------------------
-// Pulsar implementation
+// KV implementation
 
 #[allow(clippy::from_over_into)]
 impl Into<CreateOpts> for KV {
@@ -344,10 +344,7 @@ impl k8s::Reconciler<KV> for Reconciler {
             .await?;
 
         let action = &Action::UpsertAddon;
-        let message = &format!(
-            "Create managed pulsar instance on clever-cloud '{}'",
-            addon.id
-        );
+        let message = &format!("Create managed KV instance on clever-cloud '{}'", addon.id);
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
@@ -445,7 +442,7 @@ impl k8s::Reconciler<KV> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete managed pulsar instance on clever-cloud";
+        let message = "Delete managed KV instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------

@@ -1,0 +1,107 @@
+---
+apiVersion: api.clever-cloud.com/v1
+kind: Otoroshi
+metadata:
+  namespace: default
+  name: otoroshi
+spec:
+  organisation: orga_<uuid v4>
+  instance:
+    region: par
+    plan: plan_d738ee0f-8720-499a-8067-2fca53a2665a # corresponds to the 'base' plan
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: debian-otoroshi
+  name: debian-otoroshi
+  namespace: default
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: debian-otoroshi
+  namespace: default
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: debian-otoroshi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: debian-otoroshi
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: debian-otoroshi
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: default
+  name: debian-otoroshi
+  labels:
+    app: debian-otoroshi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debian-otoroshi
+  template:
+    metadata:
+      labels:
+        app: debian-otoroshi
+    spec:
+      serviceAccountName: debian-otoroshi
+      automountServiceAccountToken: true
+      containers:
+        - image: debian:bullseye-slim
+          imagePullPolicy: Always
+          name: debian-otoroshi
+          command:
+            - "sleep"
+            - "3600"
+          env:
+            - name: CC_OTOROSHI_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: otoroshi-secrets
+                  key: CC_OTOROSHI_API_URL
+            - name: CC_OTOROSHI_INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: otoroshi-secrets
+                  key: CC_OTOROSHI_INITIAL_ADMIN_PASSWORD
+            - name: CC_OTOROSHI_SSO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: otoroshi-secrets
+                  key: CC_OTOROSHI_SSO_URL
+            - name: CC_OTOROSHI_URL
+              valueFrom:
+                secretKeyRef:
+                  name: otoroshi-secrets
+                  key: CC_OTOROSHI_URL
+            - name: CC_OTOROSHI_INITIAL_ADMIN_LOGIN
+              valueFrom:
+                secretKeyRef:
+                  name: otoroshi-secrets
+                  key: CC_OTOROSHI_INITIAL_ADMIN_LOGIN
+          resources:
+            requests:
+              memory: 64M
+              cpu: 100m
+            limits:
+              memory: 64M
+              cpu: 100m

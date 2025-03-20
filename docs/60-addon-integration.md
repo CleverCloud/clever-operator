@@ -6,12 +6,16 @@ Clever Cloud operator.
 ## clever-cloud operator
 
 * Create new custom resource definition module in `src/svc/crd/<ADDON>`
-* Insert custom resource definition in `deployments/kubernetes/<KUBE_VERSION>/10-custom-resource-definition.yml`
-* Define resources in `deployments/kubernetes/<KUBE_VERSION>/20-deployment.yml`
-* Insert section in `docs/40-custom-resources.md`
 * Create new `CustomResource::<ADDON>` variant at `src/cmd.rs`
 * Create new `Error::Watch<ADDON>` variant at `src/cmd/mod.rs`
+* Insert new section in `docs/40-custom-resources.md`
 * Create new exemplar configuration in `examples/kubernetes/<INCREMENT>-<ADDON>-addon.yml`
+* Define resources in `deployments/kubernetes/<KUBE_VERSION>/20-deployment.yml`
+* Generate custom resource definition with:
+
+```sh
+cargo run -- crd view > deployments/kubernetes/<KUBE_VERSION>/10-custom-resource-definition.yml
+```
 
 ## clevercloud-sdk-rust
 

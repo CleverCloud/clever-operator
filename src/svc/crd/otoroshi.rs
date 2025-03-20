@@ -1,6 +1,6 @@
-//! # Metabase addon
+//! # Otoroshi addon
 //!
-//! This module provide the metabase custom resource and its definition
+//! This module provide the otoroshi custom resource and its definition
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -40,7 +40,7 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/metabase";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/otoroshi";
 
 // -----------------------------------------------------------------------------
 // Opts structure
@@ -61,10 +61,9 @@ impl Into<addon::Opts> for Opts {
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
-#[kube(kind = "Metabase")]
-#[kube(singular = "metabase")]
-#[kube(plural = "metabases")]
-#[kube(shortname = "mb")]
+#[kube(kind = "Otoroshi")]
+#[kube(singular = "otoroshi")]
+#[kube(plural = "otoroshis")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
@@ -93,7 +92,7 @@ pub struct Spec {
 }
 
 // -----------------------------------------------------------------------------
-// Status structure
+// Otoroshi Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
@@ -104,23 +103,23 @@ pub struct Status {
 }
 
 // -----------------------------------------------------------------------------
-// Metabase implementation
+// Otoroshi implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for Metabase {
+impl Into<CreateOpts> for Otoroshi {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::Metabase.to_string(),
+            provider_id: AddonProviderId::Otoroshi.to_string(),
             plan: self.spec.instance.plan.to_owned(),
             options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for Metabase {
+impl AddonExt for Otoroshi {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
@@ -151,7 +150,7 @@ impl AddonExt for Metabase {
     }
 }
 
-impl Metabase {
+impl Otoroshi {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -165,7 +164,7 @@ impl Metabase {
         self.status.to_owned().unwrap_or_default().addon
     }
 
-    /// Sets the URL of the metabase instance (`METABASE_URL` secret)
+    /// Sets the URL of the otoroshi instance (`CC_OTOROSHI_URL` secret)
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_url(&mut self, url: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -174,7 +173,7 @@ impl Metabase {
         self.status = Some(status.to_owned());
     }
 
-    /// Returns the URL of the metabase instance (`METABASE_URL` secret)
+    /// Returns the URL of the otoroshi instance (`CC_OTOROSHI_URL` secret)
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn get_url(&self) -> Option<String> {
         self.status.to_owned().unwrap_or_default().url
@@ -273,8 +272,8 @@ impl From<clevercloud::client::Error> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<Metabase> for Reconciler {
-    fn build(&self, state: Arc<Context>) -> Controller<Metabase> {
+impl ControllerBuilder<Otoroshi> for Reconciler {
+    fn build(&self, state: Arc<Context>) -> Controller<Otoroshi> {
         let client = state.kube.to_owned();
         let secret = Api::<Secret>::all(client.to_owned());
 
@@ -284,17 +283,17 @@ impl ControllerBuilder<Metabase> for Reconciler {
 }
 
 #[async_trait]
-impl k8s::Reconciler<Metabase> for Reconciler {
+impl k8s::Reconciler<Otoroshi> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<Context>, origin: Arc<Metabase>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<Otoroshi>) -> Result<(), ReconcilerError> {
         let Context {
             kube,
             apis,
             config: _,
         } = ctx.as_ref();
 
-        let kind = Metabase::kind(&()).to_string();
+        let kind = Otoroshi::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -352,8 +351,6 @@ impl k8s::Reconciler<Metabase> for Reconciler {
         // ---------------------------------------------------------------------
         // Step 2: translate plan
 
-        // FIXME: plan `base` (`plan_2925d534-7155-4521-8052-d068d7ce8915`) is not found
-
         if !modified.spec.instance.plan.starts_with("plan_") {
             info!(
                 kind = &kind,
@@ -365,7 +362,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
 
             let plan = plan::find(
                 &apis,
-                &AddonProviderId::Metabase,
+                &AddonProviderId::Otoroshi,
                 &modified.spec.organisation,
                 &modified.spec.instance.plan,
             )
@@ -445,7 +442,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
 
         let action = &Action::UpsertAddon;
         let message = &format!(
-            "Create managed metabase instance on clever-cloud '{}'",
+            "Create managed otoroshi instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
@@ -458,7 +455,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
         // capture the url to update the status un Step 5
         let url = match &secrets {
             None => None,
-            Some(secrets) => match secrets.get("METABASE_URL") {
+            Some(secrets) => match secrets.get("CC_OTOROSHI_URL") {
                 Some(secret) if !secret.is_empty() => Some(secret.to_string()),
                 _ => None,
             },
@@ -519,14 +516,14 @@ impl k8s::Reconciler<Metabase> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: Arc<Context>, origin: Arc<Metabase>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<Context>, origin: Arc<Otoroshi>) -> Result<(), ReconcilerError> {
         let Context {
             apis,
             kube,
             config: _,
         } = ctx.as_ref();
         let mut modified = (*origin).to_owned();
-        let kind = Metabase::kind(&()).to_string();
+        let kind = Otoroshi::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -582,7 +579,7 @@ impl k8s::Reconciler<Metabase> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete managed metabase instance on clever-cloud";
+        let message = "Delete managed otoroshi instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
