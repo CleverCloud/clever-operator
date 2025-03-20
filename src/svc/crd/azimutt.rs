@@ -1,6 +1,6 @@
-//! # Redis addon
+//! # Azimutt addon
 //!
-//! This module provide the redis custom resource and its definition
+//! This module provide the azimutt custom resource and its definition
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -14,7 +14,7 @@ use clevercloud_sdk::{
         addon::{self, CreateOpts},
         plan,
     },
-    v4::addon_provider::{AddonProviderId, redis},
+    v4::addon_provider::AddonProviderId,
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::Secret;
@@ -38,27 +38,18 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/redis";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/azimutt";
 
 // -----------------------------------------------------------------------------
 // Opts structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Opts {
-    #[serde(rename = "version")]
-    pub version: redis::Version,
-    #[serde(rename = "encryption")]
-    pub encryption: bool,
-}
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
+pub struct Opts {}
 
 #[allow(clippy::from_over_into)]
 impl Into<addon::Opts> for Opts {
     fn into(self) -> addon::Opts {
-        addon::Opts {
-            version: Some(self.version.to_string()),
-            encryption: Some(self.encryption.to_string()),
-            ..Default::default()
-        }
+        addon::Opts::default()
     }
 }
 
@@ -68,10 +59,9 @@ impl Into<addon::Opts> for Opts {
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
 #[kube(version = "v1")]
-#[kube(kind = "Redis")]
-#[kube(singular = "redis")]
-#[kube(plural = "redis")]
-#[kube(shortname = "r")]
+#[kube(kind = "Azimutt")]
+#[kube(singular = "azimutt")]
+#[kube(plural = "azimutts")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
@@ -87,23 +77,17 @@ impl Into<addon::Opts> for Opts {
 #[kube(
     printcolumn = r#"{"name":"instance", "type":"string", "description":"Instance", "jsonPath":".spec.instance.plan"}"#
 )]
-#[kube(
-    printcolumn = r#"{"name":"version", "type":"integer", "description":"Version", "jsonPath":".spec.options.version"}"#
-)]
-#[kube(
-    printcolumn = r#"{"name":"encrypted", "type":"boolean", "description":"Cold encryption", "jsonPath":".spec.options.encryption"}"#
-)]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
-    #[serde(rename = "options")]
+    #[serde(default, rename = "options")]
     pub options: Opts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// Status structure
+// Azimutt Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
@@ -112,23 +96,23 @@ pub struct Status {
 }
 
 // -----------------------------------------------------------------------------
-// Redis implementation
+// Azimutt implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for Redis {
+impl Into<CreateOpts> for Azimutt {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::Redis.to_string(),
+            provider_id: AddonProviderId::Azimutt.to_string(),
             plan: self.spec.instance.plan.to_owned(),
             options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for Redis {
+impl AddonExt for Azimutt {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
@@ -159,7 +143,7 @@ impl AddonExt for Redis {
     }
 }
 
-impl Redis {
+impl Azimutt {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -175,7 +159,7 @@ impl Redis {
 }
 
 // -----------------------------------------------------------------------------
-// RedisAction structure
+// Action structure
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub enum Action {
@@ -264,8 +248,8 @@ impl From<clevercloud::client::Error> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<Redis> for Reconciler {
-    fn build(&self, state: Arc<Context>) -> Controller<Redis> {
+impl ControllerBuilder<Azimutt> for Reconciler {
+    fn build(&self, state: Arc<Context>) -> Controller<Azimutt> {
         let client = state.kube.to_owned();
         let secret = Api::<Secret>::all(client.to_owned());
 
@@ -275,17 +259,17 @@ impl ControllerBuilder<Redis> for Reconciler {
 }
 
 #[async_trait]
-impl k8s::Reconciler<Redis> for Reconciler {
+impl k8s::Reconciler<Azimutt> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<Context>, origin: Arc<Redis>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<Azimutt>) -> Result<(), ReconcilerError> {
         let Context {
             kube,
             apis,
             config: _,
         } = ctx.as_ref();
 
-        let kind = Redis::kind(&()).to_string();
+        let kind = Azimutt::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -298,7 +282,6 @@ impl k8s::Reconciler<Redis> for Reconciler {
 
         let secret: Option<Secret> =
             resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
-
         let apis = match secret {
             Some(secret) => {
                 info!(
@@ -353,8 +336,12 @@ impl k8s::Reconciler<Redis> for Reconciler {
                 "Resolve plan for resource'",
             );
 
-            let plan =
-                plan::find(&apis, &AddonProviderId::Redis, &modified.spec.instance.plan).await?;
+            let plan = plan::find(
+                &apis,
+                &AddonProviderId::Azimutt,
+                &modified.spec.instance.plan,
+            )
+            .await?;
 
             // Update the spec is not a good practice as it lead to
             // no-deterministic and infinite reconciliation loop. It should be
@@ -430,16 +417,16 @@ impl k8s::Reconciler<Redis> for Reconciler {
 
         let action = &Action::UpsertAddon;
         let message = &format!(
-            "Create managed redis instance on clever-cloud '{}'",
+            "Create managed azimutt instance on clever-cloud '{}'",
             addon.id
         );
-
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 4: create the secret
+        // Step 4: upsert secret
 
         let secrets = modified.secrets(&apis).await?;
+
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
@@ -467,41 +454,16 @@ impl k8s::Reconciler<Redis> for Reconciler {
         Ok(())
     }
 
-    async fn delete(ctx: Arc<Context>, origin: Arc<Redis>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<Context>, origin: Arc<Azimutt>) -> Result<(), ReconcilerError> {
         let Context {
             apis,
             kube,
             config: _,
         } = ctx.as_ref();
+
         let mut modified = (*origin).to_owned();
-        let kind = Redis::kind(&()).to_string();
+        let kind = Azimutt::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
-
-        // ---------------------------------------------------------------------
-        // Step 0: verify if there is a clever cloud client override
-        debug!(
-            namespace = namespace,
-            secret = OVERRIDE_CONFIGURATION_NAME,
-            "Try to retrieve the optional secret",
-        );
-
-        let secret: Option<Secret> =
-            resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
-        let apis = match secret {
-            Some(secret) => {
-                info!(
-                    namespace = namespace,
-                    secret = OVERRIDE_CONFIGURATION_NAME,
-                    "Use custom Clever Cloud client to connect the api using secret",
-                );
-
-                clevercloud::client::try_from(secret).await?
-            }
-            None => {
-                info!("Use default Clever Cloud client to connect the api");
-                apis.to_owned()
-            }
-        };
 
         // ---------------------------------------------------------------------
         // Step 1: delete the addon
@@ -513,7 +475,7 @@ impl k8s::Reconciler<Redis> for Reconciler {
             "Delete addon for custom resource",
         );
 
-        modified.delete(&apis).await?;
+        modified.delete(apis).await?;
         modified.set_addon_id(None);
 
         debug!(
@@ -529,7 +491,7 @@ impl k8s::Reconciler<Redis> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete managed redis instance on clever-cloud";
+        let message = "Delete managed azimutt instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------

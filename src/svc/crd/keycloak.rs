@@ -12,11 +12,9 @@ use clevercloud_sdk::{
     v2::{
         self,
         addon::{self, CreateOpts},
+        plan,
     },
-    v4::{
-        self,
-        addon_provider::{AddonProviderId, plan},
-    },
+    v4::addon_provider::AddonProviderId,
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::Secret;
@@ -269,9 +267,9 @@ impl From<v2::addon::Error> for ReconcilerError {
     }
 }
 
-impl From<v4::addon_provider::plan::Error> for ReconcilerError {
+impl From<v2::plan::Error> for ReconcilerError {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn from(err: v4::addon_provider::plan::Error) -> Self {
+    fn from(err: v2::plan::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
@@ -386,7 +384,6 @@ impl k8s::Reconciler<Keycloak> for Reconciler {
             let plan = plan::find(
                 &apis,
                 &AddonProviderId::Keycloak,
-                &modified.spec.organisation,
                 &modified.spec.instance.plan,
             )
             .await?;
