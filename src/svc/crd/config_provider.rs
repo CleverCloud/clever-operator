@@ -13,11 +13,11 @@ use clevercloud_sdk::{
     v2::{
         self,
         addon::{self, CreateOpts},
+        plan,
     },
     v4::addon_provider::{
         AddonProviderId,
         config_provider::addon::environment::{self, Variable},
-        plan,
     },
 };
 use futures::TryFutureExt;
