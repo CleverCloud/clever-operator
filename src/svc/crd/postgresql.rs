@@ -7,7 +7,6 @@ use std::{
     sync::Arc,
 };
 
-use async_trait::async_trait;
 use clevercloud_sdk::{
     v2::{
         self,
@@ -274,7 +273,6 @@ impl ControllerBuilder<PostgreSql> for Reconciler {
     }
 }
 
-#[async_trait]
 impl k8s::Reconciler<PostgreSql> for Reconciler {
     type Error = ReconcilerError;
 
