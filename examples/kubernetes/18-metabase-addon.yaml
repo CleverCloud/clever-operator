@@ -8,7 +8,7 @@ spec:
   organisation: orga_<uuid v4>
   instance:
     region: par
-    plan: plan_2925d534-7155-4521-8052-d068d7ce8915 # corresponds to the 'base' plan
+    plan: base
 ---
 apiVersion: v1
 kind: ServiceAccount

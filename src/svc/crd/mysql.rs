@@ -12,11 +12,9 @@ use clevercloud_sdk::{
     v2::{
         self,
         addon::{self, CreateOpts},
+        plan,
     },
-    v4::{
-        self,
-        addon_provider::{AddonProviderId, mysql, plan},
-    },
+    v4::addon_provider::{AddonProviderId, mysql},
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::Secret;
@@ -240,9 +238,9 @@ impl From<v2::addon::Error> for ReconcilerError {
     }
 }
 
-impl From<v4::addon_provider::plan::Error> for ReconcilerError {
+impl From<v2::plan::Error> for ReconcilerError {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn from(err: v4::addon_provider::plan::Error) -> Self {
+    fn from(err: v2::plan::Error) -> Self {
         Self::from(clevercloud::Error::from(err))
     }
 }
@@ -354,13 +352,8 @@ impl k8s::Reconciler<MySql> for Reconciler {
                 "Resolve plan for resource'",
             );
 
-            let plan = plan::find(
-                &apis,
-                &AddonProviderId::MySql,
-                &modified.spec.organisation,
-                &modified.spec.instance.plan,
-            )
-            .await?;
+            let plan =
+                plan::find(&apis, &AddonProviderId::MySql, &modified.spec.instance.plan).await?;
 
             // Update the spec is not a good practice as it lead to
             // no-deterministic and infinite reconciliation loop. It should be

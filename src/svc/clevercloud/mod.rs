@@ -4,8 +4,8 @@
 //! and the `clevercloud-sdk` crate.
 
 use clevercloud_sdk::{
-    v2,
-    v4::addon_provider::{config_provider::addon::environment, plan},
+    v2::{self, plan},
+    v4::addon_provider::config_provider::addon::environment,
 };
 
 pub mod client;

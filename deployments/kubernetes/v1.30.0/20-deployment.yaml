@@ -59,6 +59,8 @@ rules:
   - matomos/status
   - otoroshis
   - otoroshis/status
+  - azimutts
+  - azimutts/status
   verbs:
   - get
   - list
