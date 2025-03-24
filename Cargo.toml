@@ -30,8 +30,8 @@ clevercloud-sdk = { version = "^0.13.6", features = ["jsonschemas"] }
 config = "^0.15.9"
 futures = "^0.3.31"
 hostname = "^0.4.0"
-json-patch = "^3.0.1"
-kube = { version = "^0.98.0", default-features = false, features = [
+json-patch = "^4.0.0"
+kube = { version = "^0.99.0", default-features = false, features = [
     "client",
     "rustls-tls",
     "ws",
