@@ -61,6 +61,8 @@ rules:
   - otoroshis/status
   - azimutts
   - azimutts/status
+  - cellars
+  - cellars/status
   verbs:
   - get
   - list

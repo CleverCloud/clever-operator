@@ -13,7 +13,6 @@ readme = "README.md"
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
-async-trait = "^0.1.87"
 axum = { version = "^0.8.1", default-features = false, features = [
     "http1",
     "tokio",

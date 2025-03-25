@@ -1,6 +1,6 @@
-//! # Pulsar addon
+//! # Cellar addon
 //!
-//! This module provide the puslar custom resource and its definition
+//! This module provide the cellar custom resource and its definition
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -11,6 +11,7 @@ use clevercloud_sdk::{
     v2::{
         self,
         addon::{self, CreateOpts},
+        plan,
     },
     v4::addon_provider::AddonProviderId,
 };
@@ -26,6 +27,7 @@ use tracing::{debug, error, info};
 
 use crate::svc::{
     clevercloud::{self, ext::AddonExt},
+    crd::Instance,
     k8s::{
         self, Context, ControllerBuilder, finalizer, recorder, resource,
         secret::{self, OVERRIDE_CONFIGURATION_NAME},
@@ -35,16 +37,19 @@ use crate::svc::{
 // -----------------------------------------------------------------------------
 // Constants
 
-pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/pulsar";
-pub const ADDON_BETA_PLAN: &str = "plan_3ad3c5be-5c1e-4dae-bf9a-87120b88fc13";
+pub const ADDON_FINALIZER: &str = "api.clever-cloud.com/cellar";
 
 // -----------------------------------------------------------------------------
-// Instance structure
+// Opts structure
 
-#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct Instance {
-    #[serde(rename = "region")]
-    pub region: String,
+#[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
+pub struct Opts {}
+
+#[allow(clippy::from_over_into)]
+impl Into<addon::Opts> for Opts {
+    fn into(self) -> addon::Opts {
+        addon::Opts::default()
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -52,12 +57,10 @@ pub struct Instance {
 
 #[derive(CustomResource, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[kube(group = "api.clever-cloud.com")]
-#[kube(version = "v1beta1")]
-#[kube(kind = "Pulsar")]
-#[kube(singular = "pulsar")]
-#[kube(plural = "pulsars")]
-#[kube(shortname = "pulse")]
-#[kube(shortname = "pul")]
+#[kube(version = "v1")]
+#[kube(kind = "Cellar")]
+#[kube(singular = "cellar")]
+#[kube(plural = "cellars")]
 #[kube(status = "Status")]
 #[kube(namespaced)]
 #[kube(derive = "PartialEq")]
@@ -70,40 +73,50 @@ pub struct Instance {
 #[kube(
     printcolumn = r#"{"name":"region", "type":"string", "description":"Region", "jsonPath":".spec.instance.region"}"#
 )]
+#[kube(
+    printcolumn = r#"{"name":"instance", "type":"string", "description":"Instance", "jsonPath":".spec.instance.plan"}"#
+)]
+#[kube(
+    printcolumn = r#"{"name":"url", "type":"string", "description":"Url", "jsonPath":".status.url"}"#
+)]
 pub struct Spec {
     #[serde(rename = "organisation")]
     pub organisation: String,
+    #[serde(default, rename = "options")]
+    pub options: Opts,
     #[serde(rename = "instance")]
     pub instance: Instance,
 }
 
 // -----------------------------------------------------------------------------
-// Status structure
+// Cellar Status structure
 
 #[derive(JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Debug, Default)]
 pub struct Status {
     #[serde(rename = "addon")]
     pub addon: Option<String>,
+    #[serde(rename = "url")]
+    pub url: Option<String>,
 }
 
 // -----------------------------------------------------------------------------
-// Pulsar implementation
+// Cellar implementation
 
 #[allow(clippy::from_over_into)]
-impl Into<CreateOpts> for Pulsar {
+impl Into<CreateOpts> for Cellar {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     fn into(self) -> CreateOpts {
         CreateOpts {
             name: AddonExt::name(&self),
             region: self.spec.instance.region.to_owned(),
-            provider_id: AddonProviderId::Pulsar.to_string(),
-            plan: ADDON_BETA_PLAN.to_string(),
-            options: addon::Opts::default(),
+            provider_id: AddonProviderId::Cellar.to_string(),
+            plan: self.spec.instance.plan.to_owned(),
+            options: self.spec.options.into(),
         }
     }
 }
 
-impl AddonExt for Pulsar {
+impl AddonExt for Cellar {
     type Error = ReconcilerError;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
@@ -134,7 +147,7 @@ impl AddonExt for Pulsar {
     }
 }
 
-impl Pulsar {
+impl Cellar {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
     pub fn set_addon_id(&mut self, id: Option<String>) {
         let status = self.status.get_or_insert_with(Status::default);
@@ -147,6 +160,21 @@ impl Pulsar {
     pub fn get_addon_id(&self) -> Option<String> {
         self.status.to_owned().unwrap_or_default().addon
     }
+
+    /// Sets the URL of the cellar instance (`CELLAR_ADDON_HOST` secret)
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
+    pub fn set_url(&mut self, url: Option<String>) {
+        let status = self.status.get_or_insert_with(Status::default);
+
+        status.url = url;
+        self.status = Some(status.to_owned());
+    }
+
+    /// Returns the URL of the cellar instance (`CELLAR_ADDON_HOST` secret)
+    #[cfg_attr(feature = "tracing", tracing::instrument)]
+    pub fn get_url(&self) -> Option<String> {
+        self.status.to_owned().unwrap_or_default().url
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -157,6 +185,8 @@ pub enum Action {
     UpsertFinalizer,
     UpsertAddon,
     UpsertSecret,
+    UpdateUrl,
+    OverridesInstancePlan,
     DeleteFinalizer,
     DeleteAddon,
 }
@@ -167,6 +197,8 @@ impl Display for Action {
             Self::UpsertFinalizer => write!(f, "UpsertFinalizer"),
             Self::UpsertAddon => write!(f, "UpsertAddon"),
             Self::UpsertSecret => write!(f, "UpsertSecret"),
+            Self::UpdateUrl => write!(f, "UpdateUrl"),
+            Self::OverridesInstancePlan => write!(f, "OverridesInstancePlan"),
             Self::DeleteFinalizer => write!(f, "DeleteFinalizer"),
             Self::DeleteAddon => write!(f, "DeleteAddon"),
         }
@@ -237,8 +269,8 @@ impl From<clevercloud::client::Error> for ReconcilerError {
 #[derive(Clone, Default, Debug)]
 pub struct Reconciler {}
 
-impl ControllerBuilder<Pulsar> for Reconciler {
-    fn build(&self, state: Arc<Context>) -> Controller<Pulsar> {
+impl ControllerBuilder<Cellar> for Reconciler {
+    fn build(&self, state: Arc<Context>) -> Controller<Cellar> {
         let client = state.kube.to_owned();
         let secret = Api::<Secret>::all(client.to_owned());
 
@@ -247,17 +279,17 @@ impl ControllerBuilder<Pulsar> for Reconciler {
     }
 }
 
-impl k8s::Reconciler<Pulsar> for Reconciler {
+impl k8s::Reconciler<Cellar> for Reconciler {
     type Error = ReconcilerError;
 
-    async fn upsert(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn upsert(ctx: Arc<Context>, origin: Arc<Cellar>) -> Result<(), ReconcilerError> {
         let Context {
             kube,
             apis,
             config: _,
         } = ctx.as_ref();
 
-        let kind = Pulsar::kind(&()).to_string();
+        let kind = Cellar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -313,9 +345,69 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 2:
+        // Step 2: translate plan
 
-        // This is not the step that you are looking for.
+        if !modified.spec.instance.plan.starts_with("plan_") {
+            info!(
+                kind = &kind,
+                namespace = &namespace,
+                name = &name,
+                plan = &modified.spec.instance.plan,
+                "Resolve plan for resource'",
+            );
+
+            let plan = plan::find(
+                &apis,
+                &AddonProviderId::Cellar,
+                &modified.spec.instance.plan,
+            )
+            .await?;
+
+            // Update the spec is not a good practice as it lead to
+            // no-deterministic and infinite reconciliation loop. It should be
+            // avoided or done with caution.
+            if let Some(plan) = plan {
+                info!(
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    plan = &plan.id,
+                    "Override plan for custom resource",
+                );
+
+                let oplan = modified.spec.instance.plan.to_owned();
+                plan.id.clone_into(&mut modified.spec.instance.plan);
+
+                debug!(
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    "Update information of custom resource",
+                );
+
+                let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
+                let modified =
+                    resource::patch(kube.to_owned(), &modified, patch.to_owned()).await?;
+
+                let action = &Action::OverridesInstancePlan;
+                let message = &format!("Overrides instance plan from '{}' to '{}'", oplan, plan.id);
+
+                info!(
+                    action = action.to_string(),
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    message = message,
+                    "Create event for custom resource",
+                );
+
+                recorder::normal(kube.to_owned(), &modified, action, message).await?;
+            }
+
+            // Stop reconciliation here and wait for next iteration, already
+            // triggered by the above patch request
+            return Ok(());
+        }
 
         // ---------------------------------------------------------------------
         // Step 3: upsert addon
@@ -339,21 +431,31 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         );
 
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
-        let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+        let mut modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
             .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
             .await?;
 
         let action = &Action::UpsertAddon;
         let message = &format!(
-            "Create managed pulsar instance on clever-cloud '{}'",
+            "Create managed cellar instance on clever-cloud '{}'",
             addon.id
         );
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
-        // Step 4: create the secret
+        // Step 4: upsert secret
 
         let secrets = modified.secrets(&apis).await?;
+
+        // capture the url to update the status un Step 5
+        let url = match &secrets {
+            None => None,
+            Some(secrets) => match secrets.get("CELLAR_ADDON_HOST") {
+                Some(secret) if !secret.is_empty() => Some(secret.to_string()),
+                _ => None,
+            },
+        };
+
         if let Some(secrets) = secrets {
             let s = secret::new(&modified, secrets);
             let (s_ns, s_name) = resource::namespaced_name(&s);
@@ -378,18 +480,45 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             recorder::normal(kube.to_owned(), &modified, action, message).await?;
         }
 
+        // ---------------------------------------------------------------------
+        // Step 5: update the status
+
+        if let Some(url) = url {
+            if modified.get_url().as_deref() != Some(url.as_str()) {
+                let action = &Action::UpdateUrl;
+                let message = &format!("Update url to '{url}'");
+
+                modified.set_url(Some(url));
+
+                let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
+                let modified = resource::patch(kube.to_owned(), &modified, patch.to_owned())
+                    .and_then(|modified| resource::patch_status(kube.to_owned(), modified, patch))
+                    .await?;
+
+                info!(
+                    action = action.to_string(),
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    message = message,
+                    "Create event for custom resource",
+                );
+
+                recorder::normal(kube.to_owned(), &modified, action, message).await?;
+            }
+        }
+
         Ok(())
     }
 
-    async fn delete(ctx: Arc<Context>, origin: Arc<Pulsar>) -> Result<(), ReconcilerError> {
+    async fn delete(ctx: Arc<Context>, origin: Arc<Cellar>) -> Result<(), ReconcilerError> {
         let Context {
             apis,
             kube,
             config: _,
         } = ctx.as_ref();
-
         let mut modified = (*origin).to_owned();
-        let kind = Pulsar::kind(&()).to_string();
+        let kind = Cellar::kind(&()).to_string();
         let (namespace, name) = resource::namespaced_name(&*origin);
 
         // ---------------------------------------------------------------------
@@ -402,7 +531,6 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
 
         let secret: Option<Secret> =
             resource::get(kube.to_owned(), &namespace, OVERRIDE_CONFIGURATION_NAME).await?;
-
         let apis = match secret {
             Some(secret) => {
                 info!(
@@ -431,6 +559,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
 
         modified.delete(&apis).await?;
         modified.set_addon_id(None);
+        modified.set_url(None);
 
         debug!(
             kind = &kind,
@@ -445,7 +574,7 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
             .await?;
 
         let action = &Action::DeleteAddon;
-        let message = "Delete managed pulsar instance on clever-cloud";
+        let message = "Delete managed cellar instance on clever-cloud";
         recorder::normal(kube.to_owned(), &modified, action, message).await?;
 
         // ---------------------------------------------------------------------
