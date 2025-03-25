@@ -5,7 +5,6 @@
 
 use std::{error::Error, str::FromStr, sync::Arc};
 
-use async_trait::async_trait;
 use clap::Subcommand;
 use kube::CustomResourceExt;
 
@@ -91,7 +90,6 @@ pub enum CustomResourceDefinition {
     },
 }
 
-#[async_trait]
 impl Executor for CustomResourceDefinition {
     type Error = CustomResourceDefinitionError;
 

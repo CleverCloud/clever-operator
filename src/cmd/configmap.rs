@@ -5,7 +5,6 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use async_trait::async_trait;
 use clap::Subcommand;
 use k8s_openapi::api::core::v1;
 
@@ -36,7 +35,6 @@ pub enum ConfigMap {
     },
 }
 
-#[async_trait]
 impl Executor for ConfigMap {
     type Error = ConfigMapError;
 

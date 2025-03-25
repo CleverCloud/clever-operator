@@ -7,7 +7,6 @@ use std::{
     sync::Arc,
 };
 
-use async_trait::async_trait;
 use clevercloud_sdk::{
     v2::{
         self,
@@ -248,7 +247,6 @@ impl ControllerBuilder<Pulsar> for Reconciler {
     }
 }
 
-#[async_trait]
 impl k8s::Reconciler<Pulsar> for Reconciler {
     type Error = ReconcilerError;
 

@@ -1,9 +1,8 @@
 //! # Command module
 //!
 //! This module provides command line interface structures and helpers
-use std::{io, path::PathBuf, sync::Arc};
+use std::{future::Future, io, path::PathBuf, sync::Arc};
 
-use async_trait::async_trait;
 use clap::{ArgAction, Parser, Subcommand};
 use paw::ParseArgs;
 use tracing::{error, info};
@@ -29,11 +28,13 @@ pub mod secret;
 // -----------------------------------------------------------------------------
 // Executor trait
 
-#[async_trait]
 pub trait Executor {
     type Error;
 
-    async fn execute(&self, config: Arc<Configuration>) -> Result<(), Self::Error>;
+    fn execute(
+        &self,
+        config: Arc<Configuration>,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
 }
 
 // -----------------------------------------------------------------------------
@@ -100,7 +101,6 @@ pub enum Command {
     Secret(secret::Secret),
 }
 
-#[async_trait]
 impl Executor for Command {
     type Error = Error;
 

@@ -3,10 +3,7 @@
 //! This module provide structures, traits and helpers related to Clever-Cloud
 //! and the `clevercloud-sdk` crate.
 
-use clevercloud_sdk::{
-    v2::{self, plan},
-    v4::addon_provider::config_provider::addon::environment,
-};
+use clevercloud_sdk::{v2, v4::addon_provider::config_provider::addon::environment};
 
 pub mod client;
 pub mod ext;
@@ -19,7 +16,7 @@ pub enum Error {
     #[error("{0}")]
     Addon(v2::addon::Error),
     #[error("{0}")]
-    Plan(plan::Error),
+    Plan(v2::plan::Error),
     #[error("{0}")]
     Environment(environment::Error),
 }
@@ -31,9 +28,9 @@ impl From<v2::addon::Error> for Error {
     }
 }
 
-impl From<plan::Error> for Error {
+impl From<v2::plan::Error> for Error {
     #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn from(err: plan::Error) -> Self {
+    fn from(err: v2::plan::Error) -> Self {
         Self::Plan(err)
     }
 }
