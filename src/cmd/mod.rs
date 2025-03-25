@@ -13,8 +13,8 @@ use crate::{
         cfg::Configuration,
         clevercloud,
         crd::{
-            azimutt, config_provider, elasticsearch, keycloak, kv, matomo, metabase, mongodb,
-            mysql, otoroshi, postgresql, pulsar, redis,
+            azimutt, cellar, config_provider, elasticsearch, keycloak, kv, matomo, metabase,
+            mongodb, mysql, otoroshi, postgresql, pulsar, redis,
         },
         http,
         k8s::{Context, Watcher, client},
@@ -82,6 +82,8 @@ pub enum Error {
     WatchOtoroshi(otoroshi::ReconcilerError),
     #[error("failed to watch Azimutt resources, {0}")]
     WatchAzimutt(azimutt::ReconcilerError),
+    #[error("failed to watch Cellar resources, {0}")]
+    WatchCellar(cellar::ReconcilerError),
     #[error("failed to serve http content, {0}")]
     Serve(http::server::Error),
     #[error("failed to spawn task on tokio, {0}")]
@@ -188,6 +190,7 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     let matomo_ctx = context.to_owned();
     let otoroshi_ctx = context.to_owned();
     let azimutt_ctx = context.to_owned();
+    let cellar_ctx = context.to_owned();
 
     // -------------------------------------------------------------------------
     // Start services
@@ -283,6 +286,13 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
                 .watch(azimutt_ctx)
                 .await
                 .map_err(Error::WatchAzimutt)
+        }) => r,
+        r = tokio::spawn(async move {
+            info!(kind = "Cellar", "Start to listen for events of custom resource");
+            cellar::Reconciler::default()
+                .watch(cellar_ctx)
+                .await
+                .map_err(Error::WatchCellar)
         }) => r,
         r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
         r = tokio::spawn(async move { http::server::serve(http::server::router(), context.config.operator.listen).await.map_err(Error::Serve) }) => r,

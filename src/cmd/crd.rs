@@ -13,9 +13,10 @@ use crate::{
     svc::{
         cfg::Configuration,
         crd::{
-            azimutt::Azimutt, config_provider::ConfigProvider, elasticsearch::ElasticSearch,
-            keycloak::Keycloak, kv::KV, matomo::Matomo, metabase::Metabase, mongodb::MongoDb,
-            mysql::MySql, otoroshi::Otoroshi, postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
+            azimutt::Azimutt, cellar::Cellar, config_provider::ConfigProvider,
+            elasticsearch::ElasticSearch, keycloak::Keycloak, kv::KV, matomo::Matomo,
+            metabase::Metabase, mongodb::MongoDb, mysql::MySql, otoroshi::Otoroshi,
+            postgresql::PostgreSql, pulsar::Pulsar, redis::Redis,
         },
     },
 };
@@ -38,6 +39,7 @@ pub enum CustomResource {
     Matomo,
     Otoroshi,
     Azimutt,
+    Cellar,
 }
 
 impl FromStr for CustomResource {
@@ -59,10 +61,11 @@ impl FromStr for CustomResource {
             "matomo" => Ok(Self::Matomo),
             "otoroshi" => Ok(Self::Otoroshi),
             "azimutt" => Ok(Self::Azimutt),
+            "cellar" => Ok(Self::Cellar),
             _ => Err(format!(
                 "failed to parse '{s}', available options are: 'postgresql', 'redis', \
                 'mysql', 'mongodb, 'pulsar', 'config-server', 'elasticsearch', 'kv', \
-                'metabase', 'keycloak', 'matomo', 'otoroshi' and 'azimutt'"
+                'metabase', 'keycloak', 'matomo', 'otoroshi', 'azimutt' and 'cellar'"
             )
             .into()),
         }
@@ -137,6 +140,8 @@ pub async fn view(
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             CustomResource::Azimutt => serde_yaml::to_string(&Azimutt::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
+            CustomResource::Cellar => serde_yaml::to_string(&Cellar::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
         }]
     } else {
         vec![
@@ -164,6 +169,8 @@ pub async fn view(
             serde_yaml::to_string(&Otoroshi::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
             serde_yaml::to_string(&Azimutt::crd())
+                .map_err(CustomResourceDefinitionError::Serialize)?,
+            serde_yaml::to_string(&Cellar::crd())
                 .map_err(CustomResourceDefinitionError::Serialize)?,
         ]
     };
