@@ -1,7 +1,7 @@
 FROM redhat/ubi9:9.8@sha256:46d19c10caf9888e8a01131283eaaf50c7f5d4eddab02cd92a66f8adf2e15407 AS builder
 
 WORKDIR /usr/src/clever-kubernetes-operator
-ADD src src
+ADD crates crates
 ADD Cargo.toml .
 ADD Cargo.lock .
 ADD rust-toolchain .
