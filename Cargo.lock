@@ -371,6 +371,7 @@ dependencies = [
  "base64",
  "chrono",
  "clap",
+ "clever-kubernetes-operator-core",
  "clevercloud-sdk",
  "config",
  "futures",
@@ -396,6 +397,10 @@ dependencies = [
 [[package]]
 name = "clever-kubernetes-operator-core"
 version = "0.8.0"
+dependencies = [
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "clevercloud-sdk"

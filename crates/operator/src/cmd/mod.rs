@@ -4,8 +4,8 @@
 use std::{future::Future, io, path::PathBuf, sync::Arc};
 
 use clap::{ArgAction, Parser, Subcommand};
+use clever_kubernetes_operator_core::{BoxError, FutureController, Registry};
 use paw::ParseArgs;
-use tracing::info;
 
 use crate::{
     cmd::{configmap::ConfigMapError, crd::CustomResourceDefinitionError, secret::SecretError},
@@ -56,38 +56,12 @@ pub enum Error {
     Client(client::Error),
     #[error("failed to create clevercloud client, {0}")]
     CleverClient(clevercloud::client::Error),
-    #[error("failed to watch PostgreSql resources, {0}")]
-    WatchPostgreSql(postgresql::ReconcilerError),
-    #[error("failed to watch Redis resources, {0}")]
-    WatchRedis(redis::ReconcilerError),
-    #[error("failed to watch MySql resources, {0}")]
-    WatchMySql(mysql::ReconcilerError),
-    #[error("failed to watch ElasticSearch resources, {0}")]
-    WatchElasticSearch(elasticsearch::ReconcilerError),
-    #[error("failed to watch MongoDb resources, {0}")]
-    WatchMongoDb(mongodb::ReconcilerError),
-    #[error("failed to watch ConfigProvider resources, {0}")]
-    WatchConfigProvider(config_provider::ReconcilerError),
-    #[error("failed to watch Pulsar resources, {0}")]
-    WatchPulsar(pulsar::ReconcilerError),
-    #[error("failed to watch KV resources, {0}")]
-    WatchKV(kv::ReconcilerError),
-    #[error("failed to watch Metabase resources, {0}")]
-    WatchMetabase(metabase::ReconcilerError),
-    #[error("failed to watch Keycloak resources, {0}")]
-    WatchKeycloak(keycloak::ReconcilerError),
-    #[error("failed to watch Matomo resources, {0}")]
-    WatchMatomo(matomo::ReconcilerError),
-    #[error("failed to watch Otoroshi resources, {0}")]
-    WatchOtoroshi(otoroshi::ReconcilerError),
-    #[error("failed to watch Azimutt resources, {0}")]
-    WatchAzimutt(azimutt::ReconcilerError),
-    #[error("failed to watch Cellar resources, {0}")]
-    WatchCellar(cellar::ReconcilerError),
+    #[error("failed to run a controller, {0}")]
+    Controller(BoxError),
+    #[error("refusing to start the daemon with no controller registered")]
+    NoController,
     #[error("failed to serve http content, {0}")]
     Serve(http::server::Error),
-    #[error("failed to spawn task on tokio, {0}")]
-    Join(tokio::task::JoinError),
 }
 
 // -----------------------------------------------------------------------------
@@ -177,126 +151,55 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     // Create context to give to each reconciler
     let context = Arc::new(Context::new(kube_client, clever_client, config));
 
-    let postgresql_ctx = context.to_owned();
-    let mysql_ctx = context.to_owned();
-    let mongodb_ctx = context.to_owned();
-    let redis_ctx = context.to_owned();
-    let elasticsearch_ctx = context.to_owned();
-    let config_provider_ctx = context.to_owned();
-    let pulsar_ctx = context.to_owned();
-    let kv_ctx = context.to_owned();
-    let metabase_ctx = context.to_owned();
-    let keycloak_ctx = context.to_owned();
-    let matomo_ctx = context.to_owned();
-    let otoroshi_ctx = context.to_owned();
-    let azimutt_ctx = context.to_owned();
-    let cellar_ctx = context.to_owned();
+    // -------------------------------------------------------------------------
+    // Build the registry of controllers. Every add-on controller is registered
+    // here; running only a subset will come later with configurable modules.
+    let mut registry = Registry::new();
+
+    macro_rules! register {
+        ($($kind:literal => $module:ident),+ $(,)?) => {{
+            $(
+                let ctx = context.to_owned();
+                registry.register(FutureController::boxed($kind, async move {
+                    $module::Reconciler::default()
+                        .watch(ctx)
+                        .await
+                        .map_err(|err| Box::new(err) as BoxError)
+                }));
+            )+
+        }};
+    }
+
+    register! {
+        "PostgreSql" => postgresql,
+        "Redis" => redis,
+        "MySql" => mysql,
+        "MongoDb" => mongodb,
+        "Pulsar" => pulsar,
+        "ConfigProvider" => config_provider,
+        "ElasticSearch" => elasticsearch,
+        "KV" => kv,
+        "Metabase" => metabase,
+        "Keycloak" => keycloak,
+        "Matomo" => matomo,
+        "Otoroshi" => otoroshi,
+        "Azimutt" => azimutt,
+        "Cellar" => cellar,
+    }
+
+    // A registry with no controller would make `run()` resolve immediately and
+    // the daemon exit cleanly without watching anything — fail loudly instead.
+    // This becomes reachable once modules are configurable.
+    if registry.is_empty() {
+        return Err(Error::NoController);
+    }
 
     // -------------------------------------------------------------------------
-    // Start services
-
+    // Run the controllers alongside the termination signal and the http server;
+    // resolve as soon as any of them stops.
     tokio::select! {
-        r = tokio::spawn(async move {
-            info!(kind = "PostgreSql", "Start to listen for events of custom resource");
-            postgresql::Reconciler::default()
-                .watch(postgresql_ctx)
-                .await
-                .map_err(Error::WatchPostgreSql)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Redis", "Start to listen for events of custom resource");
-            redis::Reconciler::default()
-                .watch(redis_ctx)
-                .await
-                .map_err(Error::WatchRedis)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "MySql", "Start to listen for events of custom resource");
-            mysql::Reconciler::default()
-                .watch(mysql_ctx)
-                .await
-                .map_err(Error::WatchMySql)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "MongoDb", "Start to listen for events of custom resource");
-            mongodb::Reconciler::default()
-                .watch(mongodb_ctx)
-                .await
-                .map_err(Error::WatchMongoDb)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Pulsar", "Start to listen for events of custom resource");
-            pulsar::Reconciler::default()
-                .watch(pulsar_ctx)
-                .await
-                .map_err(Error::WatchPulsar)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "ConfigProvider", "Start to listen for events of custom resource");
-            config_provider::Reconciler::default()
-                .watch(config_provider_ctx)
-                .await
-                .map_err(Error::WatchConfigProvider)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "ElasticSearch", "Start to listen for events of custom resource");
-            elasticsearch::Reconciler::default()
-                .watch(elasticsearch_ctx)
-                .await
-                .map_err(Error::WatchElasticSearch)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "KV", "Start to listen for events of custom resource");
-            kv::Reconciler::default()
-                .watch(kv_ctx)
-                .await
-                .map_err(Error::WatchKV)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Metabase", "Start to listen for events of custom resource");
-            metabase::Reconciler::default()
-                .watch(metabase_ctx)
-                .await
-                .map_err(Error::WatchMetabase)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Keycloak", "Start to listen for events of custom resource");
-            keycloak::Reconciler::default()
-                .watch(keycloak_ctx)
-                .await
-                .map_err(Error::WatchKeycloak)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Matomo", "Start to listen for events of custom resource");
-            matomo::Reconciler::default()
-                .watch(matomo_ctx)
-                .await
-                .map_err(Error::WatchMatomo)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Otoroshi", "Start to listen for events of custom resource");
-            otoroshi::Reconciler::default()
-                .watch(otoroshi_ctx)
-                .await
-                .map_err(Error::WatchOtoroshi)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Azimutt", "Start to listen for events of custom resource");
-            azimutt::Reconciler::default()
-                .watch(azimutt_ctx)
-                .await
-                .map_err(Error::WatchAzimutt)
-        }) => r,
-        r = tokio::spawn(async move {
-            info!(kind = "Cellar", "Start to listen for events of custom resource");
-            cellar::Reconciler::default()
-                .watch(cellar_ctx)
-                .await
-                .map_err(Error::WatchCellar)
-        }) => r,
-        r = tokio::spawn(async move { tokio::signal::ctrl_c().await.map_err(Error::SigTerm) }) => r,
-        r = tokio::spawn(async move { http::server::serve(http::server::router(), context.config.operator.listen).await.map_err(Error::Serve) }) => r,
-    }.map_err(Error::Join)??;
-
-    Ok(())
+        res = registry.run() => res.map_err(Error::Controller),
+        res = tokio::signal::ctrl_c() => res.map_err(Error::SigTerm),
+        res = http::server::serve(http::server::router(), context.config.operator.listen) => res.map_err(Error::Serve),
+    }
 }

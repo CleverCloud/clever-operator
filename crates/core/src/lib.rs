@@ -2,7 +2,13 @@
 //!
 //! Shared building blocks for the Clever Cloud Kubernetes operator.
 //!
-//! This crate is meant to host the code reused across the operator: the
-//! controller runtime/registry, leader election, Kubernetes primitives and the
-//! Clever Cloud client wiring. It is intentionally minimal for now and is
-//! populated incrementally as the operator is refactored onto a common core.
+//! For now this crate hosts the controller abstraction ([`Controller`]) and the
+//! [`Registry`] used by the operator daemon to run a dynamic set of controllers.
+//! It will grow with leader election, Kubernetes primitives and Clever Cloud
+//! client wiring as the operator is refactored onto a common core.
+
+pub mod controller;
+pub mod registry;
+
+pub use controller::{BoxError, Controller, ControllerFuture, FutureController};
+pub use registry::Registry;
