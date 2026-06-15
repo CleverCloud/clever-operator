@@ -13,6 +13,7 @@ readme.workspace = true
 keywords = ["kubernetes", "operator", "clevercloud", "openshift"]
 
 [dependencies]
+clever-kubernetes-operator-core = { path = "../core", version = "0.8.0" }
 axum = { version = "^0.8.1", default-features = false, features = [
     "http1",
     "tokio",

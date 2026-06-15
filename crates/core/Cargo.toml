@@ -9,3 +9,5 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
+tokio = { version = "^1.44.0", features = ["rt"] }
+tracing = "^0.1.41"
