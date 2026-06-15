@@ -394,6 +394,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "clever-kubernetes-operator-core"
+version = "0.8.0"
+
+[[package]]
 name = "clevercloud-sdk"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

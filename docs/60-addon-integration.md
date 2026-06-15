@@ -5,9 +5,9 @@ Clever Cloud operator.
 
 ## clever-cloud operator
 
-* Create new custom resource definition module in `src/svc/crd/<ADDON>`
-* Create new `CustomResource::<ADDON>` variant at `src/cmd.rs`
-* Create new `Error::Watch<ADDON>` variant at `src/cmd/mod.rs`
+* Create new custom resource definition module in `crates/operator/src/svc/crd/<ADDON>`
+* Create new `CustomResource::<ADDON>` variant at `crates/operator/src/cmd.rs`
+* Create new `Error::Watch<ADDON>` variant at `crates/operator/src/cmd/mod.rs`
 * Insert new section in `docs/40-custom-resources.md`
 * Create new exemplar configuration in `examples/kubernetes/<INCREMENT>-<ADDON>-addon.yml`
 * Define resources in `deployments/kubernetes/<KUBE_VERSION>/20-deployment.yml`
