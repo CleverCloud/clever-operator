@@ -150,7 +150,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: piraces/kube-score-ga@8d395d46cc68e3445353dcacc16fb2b2ae263082 # v0.1.2
         with:
-          manifests-folders: 'deployments/kubernetes/v1.30.0/*.yml'
+          manifests-folders: 'deployments/kubernetes/v1.30.0/*.yaml'
   kubernetes-deployment:
     name: Create a minikube and install the operator
     runs-on: ubuntu-latest

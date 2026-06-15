@@ -44,7 +44,12 @@ impl Registry {
         let mut set = JoinSet::new();
         for controller in self.controllers {
             let kind = controller.kind();
-            info!(kind, "Start to listen for events of custom resource");
+            let strategy = controller.strategy();
+            info!(
+                kind,
+                strategy = %strategy,
+                "Start to listen for events of custom resource"
+            );
             let future = controller.run();
             // Carry the kind into the spawned future so a controller error
             // remains tied to the resource it came from (kind is `Copy`).
@@ -56,5 +61,35 @@ impl Registry {
             Some(Err(err)) => Err(Box::new(err)),
             None => Ok(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{BoxError, SyncStrategy, controller::FutureController};
+
+    use super::Registry;
+
+    #[test]
+    fn registry_tracks_registered_controllers() {
+        let mut registry = Registry::new();
+        assert!(registry.is_empty());
+        assert_eq!(registry.len(), 0);
+
+        registry.register(FutureController::boxed("Foo", async {
+            Ok::<(), BoxError>(())
+        }));
+        registry.register(FutureController::boxed("Bar", async {
+            Ok::<(), BoxError>(())
+        }));
+
+        assert!(!registry.is_empty());
+        assert_eq!(registry.len(), 2);
+    }
+
+    #[test]
+    fn future_controller_defaults_to_export_owned() {
+        let controller = FutureController::boxed("Foo", async { Ok::<(), BoxError>(()) });
+        assert_eq!(controller.strategy(), SyncStrategy::ExportOwned);
     }
 }
