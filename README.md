@@ -73,7 +73,7 @@ Then, push it to your registry.
 $ DOCKER_IMG=<your-registry>/<your-namespace>/clever-kubernetes-operator:latest make docker-push
 ```
 
-Then, update the kubernetes deployment script located in `deployments/kubernetes/v1.24.0/20-deployment.yaml` to deploy
+Then, update the kubernetes deployment script located in `deployments/kubernetes/v1.36.0/20-deployment.yaml` to deploy
 your docker image in your kubernetes cluster. Finally, apply the deployment script.
 
 ```
@@ -81,7 +81,7 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f deployments/kubernetes/v1.30.0
+$ kubectl apply -f deployments/kubernetes/v1.36.0
 ```
 
 #### From the helm chart
@@ -102,8 +102,8 @@ $ make deploy-kubernetes
 ```
 or
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-kubernetes-operator/main/deployments/kubernetes/v1.30.0/10-custom-resource-definition.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-kubernetes-operator/main/deployments/kubernetes/v1.30.0/20-deployment.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-kubernetes-operator/main/deployments/kubernetes/v1.36.0/10-custom-resource-definition.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/CleverCloud/clever-kubernetes-operator/main/deployments/kubernetes/v1.36.0/20-deployment.yaml
 ```
 
 ## Credentials
@@ -167,7 +167,7 @@ For most users, Option 2 (token and secret only) provides the best balance of se
 To work properly, the operator needs to be configured with at least credentials to connect the Clever Cloud's API.
 Those configurations could be provided through a `ConfigMap`, a `Secret` or by the environment.
 
-An example of deployment using a `Secret` is located at [deployments/kubernetes/v1.30.0/20-deployment.yaml](./deployments/kubernetes/v1.30.0/20-deployment.yaml).
+An example of deployment using a `Secret` is located at [deployments/kubernetes/v1.36.0/20-deployment.yaml](./deployments/kubernetes/v1.36.0/20-deployment.yaml).
 An example of deployment using a `ConfigMap` is located at [deployments/helm/](./deployments/kubernetes/helm/templates/configmap.yaml).
 
 Environment variables are:
