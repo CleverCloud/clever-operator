@@ -9,6 +9,8 @@
 
 pub mod controller;
 pub mod registry;
+pub mod strategy;
 
 pub use controller::{BoxError, Controller, ControllerFuture, FutureController};
 pub use registry::Registry;
+pub use strategy::SyncStrategy;

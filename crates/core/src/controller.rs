@@ -6,6 +6,8 @@
 
 use std::{future::Future, pin::Pin};
 
+use crate::strategy::SyncStrategy;
+
 /// A type-erased error returned by a controller.
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -19,6 +21,15 @@ pub type ControllerFuture = Pin<Box<dyn Future<Output = Result<(), BoxError>> + 
 pub trait Controller: Send + 'static {
     /// Human-readable kind, used for logging (e.g. `"PostgreSql"`).
     fn kind(&self) -> &'static str;
+
+    /// The synchronization strategy of this controller.
+    ///
+    /// Defaults to [`SyncStrategy::ExportOwned`], matching the add-on
+    /// controllers. A `Bidirectional` controller (e.g. NodeGroups) overrides it
+    /// once that lifecycle is implemented.
+    fn strategy(&self) -> SyncStrategy {
+        SyncStrategy::default()
+    }
 
     /// Consume the controller and return the future driving its watch loop.
     fn run(self: Box<Self>) -> ControllerFuture;
