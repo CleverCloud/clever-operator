@@ -308,9 +308,11 @@ impl k8s::Reconciler<Pulsar> for Reconciler {
         let patch = resource::diff(&*origin, &modified).map_err(ReconcilerError::Diff)?;
         let mut modified = resource::patch(kube.to_owned(), &modified, patch).await?;
 
-        let action = &Action::UpsertFinalizer;
-        let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
-        recorder::normal(kube.to_owned(), &modified, action, message).await?;
+        if !finalizer::contains(&*origin, ADDON_FINALIZER) {
+            let action = &Action::UpsertFinalizer;
+            let message = &format!("Create finalizer '{}'", ADDON_FINALIZER);
+            recorder::normal(kube.to_owned(), &modified, action, message).await?;
+        }
 
         // ---------------------------------------------------------------------
         // Step 2:
