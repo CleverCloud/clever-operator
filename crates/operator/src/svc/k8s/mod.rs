@@ -171,10 +171,11 @@ where
 
     /// returns a [`Action`] to perform following the given error
     fn retry(_obj: Arc<T>, err: &Self::Error, _ctx: Arc<Context>) -> Action {
-        // Implements a basic reconciliation which always re-schedule the event
-        // 500 ms later
-        trace!("Requeue failed reconciliation for 500ms, {}", err);
-        Action::requeue(Duration::from_millis(500))
+        // Re-schedule the reconciliation after a pause. A persistent failure
+        // (e.g. an unreachable or rejecting upstream api) would otherwise
+        // hammer both the kubernetes and clever-cloud apis in a tight loop
+        trace!("Requeue failed reconciliation for 30s, {}", err);
+        Action::requeue(Duration::from_secs(30))
     }
 
     /// process the object and perform actions on kubernetes and/or
