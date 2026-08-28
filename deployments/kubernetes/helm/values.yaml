@@ -21,6 +21,8 @@ image:
 config:
   token: ""
   secret: ""
+  # Leave both empty to use the public Clever Tools consumer, set them to use
+  # your own OAuth consumer application.
   consumerKey: ""
   consumerSecret: ""
 
