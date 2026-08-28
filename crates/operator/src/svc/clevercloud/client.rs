@@ -2,11 +2,10 @@
 //!
 //! This module provides helpers to create a clever-cloud client
 
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64_ENGINE};
 use clevercloud_sdk::oauth10a::reqwest;
 use k8s_openapi::api::core::v1::Secret;
-use tempfile::NamedTempFile;
-use tokio::{fs::File, io::AsyncWriteExt, task::spawn_blocking as blocking};
+
+use std::string::FromUtf8Error;
 
 use crate::svc::{
     cfg::{self, NamespaceConfiguration},
@@ -29,28 +28,10 @@ pub enum Error {
     SecretData(String, String),
     #[error("failed to find key '{0}' in secret '{1}/{2}")]
     SecretKey(&'static str, String, String),
-    #[error("failed to decode configuration from key '{0}' in secret '{1}/{2}', {3}")]
-    Base64Decode(&'static str, String, String, base64::DecodeError),
-    #[error("failed to spawn blocking task, {0}")]
-    Join(tokio::task::JoinError),
-    #[error("failed to write configuration in temporary file, {0}")]
-    Io(std::io::Error),
+    #[error("failed to read key '{0}' of secret '{1}/{2}' as utf-8, {3}")]
+    Utf8(&'static str, String, String, FromUtf8Error),
     #[error("failed to parse configuration file, {0}")]
     Configuration(Box<cfg::Error>),
-}
-
-impl From<tokio::task::JoinError> for Error {
-    #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn from(err: tokio::task::JoinError) -> Self {
-        Self::Join(err)
-    }
-}
-
-impl From<std::io::Error> for Error {
-    #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn from(err: std::io::Error) -> Self {
-        Self::Io(err)
-    }
 }
 
 impl From<cfg::Error> for Error {
@@ -64,35 +45,55 @@ impl From<cfg::Error> for Error {
 
 #[cfg_attr(feature = "tracing", tracing::instrument(skip(secret)))]
 pub async fn try_from(secret: Secret) -> Result<Client, Error> {
-    let buf = blocking(move || {
-        let (namespace, name) = resource::namespaced_name(&secret);
-        let data = match &secret.data {
-            Some(data) => data,
-            None => {
-                return Err(Error::SecretData(namespace, name));
-            }
-        };
+    let (namespace, name) = resource::namespaced_name(&secret);
 
-        match data.get("config") {
-            Some(bytestr) => BASE64_ENGINE
-                .decode(&bytestr.0)
-                .map_err(|err| Error::Base64Decode("config", namespace, name, err)),
-            None => Err(Error::SecretKey("config", namespace, name)),
+    let data = match &secret.data {
+        Some(data) => data,
+        None => {
+            return Err(Error::SecretData(namespace, name));
         }
-    })
-    .await??;
+    };
 
-    // The file will be automatically deleted when it is dropped
-    // See:
-    // - https://docs.rs/tempfile/latest/tempfile/struct.NamedTempFile.html
-    let named_file = NamedTempFile::new()?;
-    let path = named_file.path().to_path_buf();
-    let mut file = File::from(named_file.into_file());
+    let Some(bytestr) = data.get("config") else {
+        return Err(Error::SecretKey("config", namespace, name));
+    };
 
-    file.write_all(&buf).await?;
-    file.sync_all().await?;
+    // The api server is the one doing the base64 round trip: `ByteString` already
+    // holds the content of the key.
+    let content = String::from_utf8(bytestr.0.to_owned())
+        .map_err(|err| Error::Utf8("config", namespace, name, err))?;
 
-    let configuration = NamespaceConfiguration::try_from(path)?;
+    let configuration = NamespaceConfiguration::try_from(content.as_str())?;
 
     Ok(Client::from(configuration.api))
+}
+
+// -----------------------------------------------------------------------------
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use k8s_openapi::{ByteString, api::core::v1::Secret};
+
+    use super::try_from;
+
+    /// The content of the key is what the api server decoded, building the
+    /// client must not expect a second layer of encoding.
+    #[tokio::test]
+    async fn secret_content_is_read_as_the_api_server_hands_it_over() {
+        let mut secret = Secret::default();
+
+        secret.metadata.namespace = Some("namespace".to_string());
+        secret.metadata.name = Some("clever-kubernetes-operator".to_string());
+        secret.data = Some(BTreeMap::from([(
+            "config".to_string(),
+            ByteString(b"[api]\ntoken = \"token\"\n".to_vec()),
+        )]));
+
+        try_from(secret)
+            .await
+            .expect("to build a client from the secret");
+    }
 }

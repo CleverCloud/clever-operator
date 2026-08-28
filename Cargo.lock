@@ -368,7 +368,6 @@ name = "clever-kubernetes-operator"
 version = "0.8.0"
 dependencies = [
  "axum",
- "base64",
  "chrono",
  "clap",
  "clever-kubernetes-operator-core",
@@ -386,7 +385,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "toml 0.8.23",
