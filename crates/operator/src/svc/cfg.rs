@@ -10,7 +10,7 @@ use std::{
 };
 
 use clevercloud_sdk::Credentials;
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError, File, FileFormat};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -61,46 +61,16 @@ pub struct NamespaceConfiguration {
     pub api: Credentials,
 }
 
-impl TryFrom<PathBuf> for NamespaceConfiguration {
+impl TryFrom<&str> for NamespaceConfiguration {
     type Error = Error;
 
     #[cfg_attr(feature = "tracing", tracing::instrument)]
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+    fn try_from(content: &str) -> Result<Self, Self::Error> {
+        // No default is set here on purpose: the secret carries the credentials
+        // of the namespace on its own, so the same content resolves to the same
+        // kind of credentials as it would in the global configuration file.
         Config::builder()
-            // -----------------------------------------------------------------
-            // Api
-            .set_default(
-                "api.token",
-                env::var("CLEVER_OPERATOR_API_TOKEN").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.token".into(), err))?
-            .set_default(
-                "api.secret",
-                env::var("CLEVER_OPERATOR_API_SECRET").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.secret".into(), err))?
-            .set_default(
-                "api.consumer-key",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_KEY").unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumer-key".into(), err))?
-            .set_default(
-                "api.consumer-secret",
-                env::var("CLEVER_OPERATOR_API_CONSUMER_SECRET")
-                    .unwrap_or_else(|_err| "".to_string()),
-            )
-            .map_err(|err| Error::Default("api.consumer-secret".into(), err))?
-            // -----------------------------------------------------------------
-            // Operator
-            .set_default(
-                "operator.listen",
-                env::var("CLEVER_OPERATOR_OPERATOR_LISTEN")
-                    .unwrap_or_else(|_err| OPERATOR_LISTEN.to_string()),
-            )
-            .map_err(|err| Error::Default("operator.listen".into(), err))?
-            // -----------------------------------------------------------------
-            // Files
-            .add_source(File::from(path).required(true))
+            .add_source(File::from_str(content, FileFormat::Toml))
             .build()
             .map_err(Error::Build)?
             .try_deserialize()
@@ -365,5 +335,55 @@ impl Configuration {
                 }
             }
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use super::{Credentials, NamespaceConfiguration};
+
+    /// A lone token means the oauthless auth backend, exactly as it does in the
+    /// global configuration file.
+    #[test]
+    fn a_lone_token_is_a_bearer_credential() {
+        let configuration = NamespaceConfiguration::try_from(
+            r#"
+            [api]
+            token = "token"
+            "#,
+        )
+        .expect("to parse the namespace configuration");
+
+        assert_eq!(
+            configuration.api,
+            Credentials::Bearer {
+                token: "token".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn a_token_and_a_secret_are_oauth1_credentials() {
+        let configuration = NamespaceConfiguration::try_from(
+            r#"
+            [api]
+            token = "token"
+            secret = "secret"
+            "#,
+        )
+        .expect("to parse the namespace configuration");
+
+        assert_eq!(
+            configuration.api,
+            Credentials::OAuth1 {
+                token: "token".to_string(),
+                secret: "secret".to_string(),
+                consumer_key: clevercloud_sdk::DEFAULT_CONSUMER_KEY.to_string(),
+                consumer_secret: clevercloud_sdk::DEFAULT_CONSUMER_SECRET.to_string(),
+            }
+        );
     }
 }
