@@ -9,9 +9,9 @@ use std::{
     path::PathBuf,
 };
 
-use clevercloud_sdk::Credentials;
+use clevercloud_sdk::{Credentials, oauth10a::url::Url};
 use config::{Config, ConfigError, File, FileFormat};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tracing::warn;
 
 // -----------------------------------------------------------------------------
@@ -50,6 +50,99 @@ pub enum Error {
     Default(String, ConfigError),
     #[error("failed to retrieve environment variable '{0}', {1}")]
     EnvironmentVariable(&'static str, VarError),
+    #[error("invalid value for configuration key '{0}', {1}")]
+    InvalidValue(&'static str, String),
+}
+
+// -----------------------------------------------------------------------------
+// Api structure
+
+/// Returns the endpoint stripped from its trailing slashes, or a message
+/// explaining why the value cannot be used.
+///
+/// The sdk joins paths to the endpoint as-is, so a trailing slash would send
+/// every request to a doubled separator, and the http client can only reach
+/// `http` and `https` urls.
+fn normalise_endpoint(endpoint: &str) -> Result<String, String> {
+    let url = Url::parse(endpoint).map_err(|err| format!("expected a valid url, {err}"))?;
+
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(format!(
+            "expected an 'http' or 'https' url, found scheme '{}'",
+            url.scheme()
+        ));
+    }
+
+    if url.query().is_some() || url.fragment().is_some() {
+        return Err("expected an url without query string nor fragment".to_string());
+    }
+
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err("expected an url without embedded credentials".to_string());
+    }
+
+    // Return the parsed form rather than the input, so nothing the parser
+    // tolerates but the concatenation would break survives, and strip the
+    // trailing slash the url normalisation adds back.
+    Ok(url.as_str().trim_end_matches('/').to_string())
+}
+
+/// Returns the endpoint given by the environment, treating a blank value as
+/// unset: an empty variable is how a `ConfigMap` or a chart expresses "not
+/// configured", it must not be a start-up failure.
+fn endpoint_from_env() -> Option<String> {
+    env::var("CLEVER_OPERATOR_API_ENDPOINT")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn deserialize_endpoint<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match Option::<String>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(endpoint) => normalise_endpoint(&endpoint)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
+}
+
+/// How to reach the Clever Cloud api: where to send the requests and how to
+/// authenticate them.
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+pub struct Api {
+    /// Base url of the Clever Cloud api, without any trailing slash, e.g.
+    /// `https://api.clever-cloud.com`.
+    ///
+    /// It is optional on purpose. When it is not set, the sdk falls back on the
+    /// public api that matches the kind of credentials, which is the api bridge
+    /// for a bare bearer token and [`clevercloud_sdk::PUBLIC_ENDPOINT`]
+    /// otherwise.
+    #[serde(
+        rename = "endpoint",
+        default,
+        deserialize_with = "deserialize_endpoint",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub endpoint: Option<String>,
+    /// Credentials used to sign the requests, the variant is picked from the
+    /// keys that are present, see [`Credentials`].
+    #[serde(flatten)]
+    pub credentials: Credentials,
+}
+
+impl Api {
+    /// Falls back on `endpoint` when this section does not declare one.
+    ///
+    /// A per-namespace secret overrides the credentials of a namespace, not the
+    /// installation they belong to: without this it would silently target the
+    /// public api while the operator talks to another one.
+    pub fn inherit_endpoint(&mut self, endpoint: Option<&str>) {
+        if self.endpoint.is_none() {
+            self.endpoint = endpoint.map(ToOwned::to_owned);
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -58,7 +151,7 @@ pub enum Error {
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct NamespaceConfiguration {
     #[serde(rename = "api")]
-    pub api: Credentials,
+    pub api: Api,
 }
 
 impl TryFrom<&str> for NamespaceConfiguration {
@@ -68,7 +161,9 @@ impl TryFrom<&str> for NamespaceConfiguration {
     fn try_from(content: &str) -> Result<Self, Self::Error> {
         // No default is set here on purpose: the secret carries the credentials
         // of the namespace on its own, so the same content resolves to the same
-        // kind of credentials as it would in the global configuration file.
+        // kind of credentials as it would in the global configuration file, and
+        // an absent endpoint means "inherit the global one", see
+        // [`Api::inherit_endpoint`].
         Config::builder()
             .add_source(File::from_str(content, FileFormat::Toml))
             .build()
@@ -84,7 +179,7 @@ impl TryFrom<&str> for NamespaceConfiguration {
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Configuration {
     #[serde(rename = "api")]
-    pub api: Credentials,
+    pub api: Api,
     #[serde(rename = "operator")]
     pub operator: Operator,
 }
@@ -120,6 +215,12 @@ impl TryFrom<PathBuf> for Configuration {
             builder = builder
                 .set_default("api.consumer-secret", value)
                 .map_err(|err| Error::Default("api.consumer-secret".into(), err))?;
+        }
+
+        if let Some(value) = endpoint_from_env() {
+            builder = builder
+                .set_default("api.endpoint", value)
+                .map_err(|err| Error::Default("api.endpoint".into(), err))?;
         }
 
         builder
@@ -195,8 +296,21 @@ impl Configuration {
             .try_deserialize()
             .map_err(Error::Deserialize)?;
 
+        // The clever-tools file only carries credentials, the endpoint can
+        // solely come from the environment here.
+        let endpoint = match endpoint_from_env() {
+            Some(value) => Some(
+                normalise_endpoint(&value)
+                    .map_err(|err| Error::InvalidValue("api.endpoint", err))?,
+            ),
+            None => None,
+        };
+
         Ok(Self {
-            api: credentials,
+            api: Api {
+                endpoint,
+                credentials,
+            },
             operator: Operator::default(),
         })
     }
@@ -229,6 +343,12 @@ impl Configuration {
             builder = builder
                 .set_default("api.consumer-secret", value)
                 .map_err(|err| Error::Default("api.consumer-secret".into(), err))?;
+        }
+
+        if let Some(value) = endpoint_from_env() {
+            builder = builder
+                .set_default("api.endpoint", value)
+                .map_err(|err| Error::Default("api.endpoint".into(), err))?;
         }
 
         builder
@@ -291,7 +411,7 @@ impl Configuration {
         #[cfg(feature = "tracing")]
         tracing::info!(feature = "tracing", "Build with feature flag");
 
-        match &self.api {
+        match &self.api.credentials {
             Credentials::OAuth1 {
                 consumer_key,
                 consumer_secret,
@@ -343,7 +463,208 @@ impl Configuration {
 
 #[cfg(test)]
 mod tests {
-    use super::{Credentials, NamespaceConfiguration};
+    use config::{Config, ConfigError, File, FileFormat};
+
+    use super::{Configuration, Credentials, NamespaceConfiguration, OPERATOR_LISTEN};
+
+    /// Deserializes a toml payload the same way the file sources do, without
+    /// reading the environment so the tests stay independent from it.
+    fn try_deserialize(content: &str) -> Result<Configuration, ConfigError> {
+        Config::builder()
+            .set_default("operator.listen", OPERATOR_LISTEN.to_string())
+            .expect("to set a default for the listen address")
+            .add_source(File::from_str(content, FileFormat::Toml))
+            .build()
+            .expect("to build the configuration")
+            .try_deserialize()
+    }
+
+    fn deserialize(content: &str) -> Configuration {
+        try_deserialize(content).expect("to deserialize the configuration")
+    }
+
+    #[test]
+    fn endpoint_is_none_when_the_key_is_absent() {
+        let config = deserialize(
+            r#"
+            [api]
+            token = "token"
+            secret = "secret"
+            "#,
+        );
+
+        assert_eq!(config.api.endpoint, None);
+        assert_eq!(
+            config.api.credentials,
+            Credentials::OAuth1 {
+                token: "token".into(),
+                secret: "secret".into(),
+                consumer_key: clevercloud_sdk::DEFAULT_CONSUMER_KEY.into(),
+                consumer_secret: clevercloud_sdk::DEFAULT_CONSUMER_SECRET.into(),
+            }
+        );
+    }
+
+    #[test]
+    fn endpoint_is_read_from_the_api_section() {
+        let config = deserialize(
+            r#"
+            [api]
+            endpoint = "https://api.example.com"
+            token = "token"
+            secret = "secret"
+            consumer-key = "consumer-key"
+            consumer-secret = "consumer-secret"
+            "#,
+        );
+
+        assert_eq!(
+            config.api.endpoint.as_deref(),
+            Some("https://api.example.com")
+        );
+        assert_eq!(
+            config.api.credentials,
+            Credentials::OAuth1 {
+                token: "token".into(),
+                secret: "secret".into(),
+                consumer_key: "consumer-key".into(),
+                consumer_secret: "consumer-secret".into(),
+            }
+        );
+    }
+
+    /// The endpoint key must not take part in the untagged deserialization of
+    /// the credentials, a lone token still means the oauthless backend.
+    #[test]
+    fn endpoint_does_not_shadow_the_bearer_credentials() {
+        let config = deserialize(
+            r#"
+            [api]
+            endpoint = "https://api-bridge.example.com"
+            token = "token"
+            "#,
+        );
+
+        assert_eq!(
+            config.api.credentials,
+            Credentials::Bearer {
+                token: "token".into()
+            }
+        );
+    }
+
+    /// The sdk joins paths to the endpoint as-is, so what is stored must be the
+    /// parsed url: a trailing slash would double the separator, and anything the
+    /// parser merely tolerates would reach the request builder untouched.
+    #[test]
+    fn endpoints_are_normalised_through_the_parsed_url() {
+        for (raw, expected) in [
+            ("https://api.example.com//", "https://api.example.com"),
+            ("https://api.example.com ", "https://api.example.com"),
+            (" https://api.example.com/", "https://api.example.com"),
+            (
+                "https://api.example.com/base/",
+                "https://api.example.com/base",
+            ),
+            ("HTTPS://API.EXAMPLE.COM", "https://api.example.com"),
+        ] {
+            let config = deserialize(&format!(
+                r#"
+                [api]
+                endpoint = "{raw}"
+                token = "token"
+                "#
+            ));
+
+            assert_eq!(
+                config.api.endpoint.as_deref(),
+                Some(expected),
+                "unexpected normalisation of '{raw}'"
+            );
+        }
+    }
+
+    /// A per-namespace secret overrides the credentials of a namespace, not the
+    /// installation they belong to.
+    #[test]
+    fn namespace_endpoint_is_inherited_unless_overridden() {
+        let mut api = deserialize(
+            r#"
+            [api]
+            token = "token"
+            "#,
+        )
+        .api;
+
+        api.inherit_endpoint(Some("https://api.example.com"));
+        assert_eq!(api.endpoint.as_deref(), Some("https://api.example.com"));
+
+        let mut api = deserialize(
+            r#"
+            [api]
+            endpoint = "https://api.namespace.example.com"
+            token = "token"
+            "#,
+        )
+        .api;
+
+        api.inherit_endpoint(Some("https://api.example.com"));
+        assert_eq!(
+            api.endpoint.as_deref(),
+            Some("https://api.namespace.example.com"),
+            "an explicit endpoint must win over the inherited one"
+        );
+    }
+
+    /// A value the http client could not reach must be rejected at load time,
+    /// rather than failing on every reconciliation with an opaque error.
+    #[test]
+    fn unusable_endpoints_are_rejected() {
+        for endpoint in [
+            "api.example.com:8080",
+            "ftp://api.example.com",
+            "not an url",
+            "https://api.example.com/?token=leaked",
+            "https://api.example.com/#fragment",
+            "https://user:password@api.example.com",
+        ] {
+            let content = format!(
+                r#"
+                [api]
+                endpoint = "{endpoint}"
+                token = "token"
+                "#
+            );
+
+            assert!(
+                try_deserialize(&content).is_err(),
+                "endpoint '{endpoint}' should have been rejected"
+            );
+        }
+    }
+
+    /// `configmap generate` and `secret generate` encode the configuration back
+    /// to toml, both the endpoint and the flattened credentials must survive it.
+    #[test]
+    fn configuration_round_trips_through_toml() {
+        for content in [
+            r#"
+            [api]
+            endpoint = "https://api.example.com"
+            token = "token"
+            secret = "secret"
+            "#,
+            r#"
+            [api]
+            token = "token"
+            "#,
+        ] {
+            let config = deserialize(content);
+            let encoded = toml::to_string(&config).expect("to encode the configuration as toml");
+
+            assert_eq!(deserialize(&encoded), config, "encoded as: {encoded}");
+        }
+    }
 
     /// A lone token means the oauthless auth backend, exactly as it does in the
     /// global configuration file.
@@ -358,7 +679,7 @@ mod tests {
         .expect("to parse the namespace configuration");
 
         assert_eq!(
-            configuration.api,
+            configuration.api.credentials,
             Credentials::Bearer {
                 token: "token".to_string()
             }
@@ -377,7 +698,7 @@ mod tests {
         .expect("to parse the namespace configuration");
 
         assert_eq!(
-            configuration.api,
+            configuration.api.credentials,
             Credentials::OAuth1 {
                 token: "token".to_string(),
                 secret: "secret".to_string(),

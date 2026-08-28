@@ -25,6 +25,8 @@ config:
   # your own OAuth consumer application.
   consumerKey: ""
   consumerSecret: ""
+  # Base url of the Clever Cloud API. Leave it empty to use the public one.
+  endpoint: ""
 
 podDisruptionBudget:
   enabled: false
