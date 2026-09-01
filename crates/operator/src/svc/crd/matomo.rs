@@ -310,7 +310,7 @@ impl k8s::Reconciler<Matomo> for Reconciler {
                     "Use custom Clever Cloud client to connect the api using secret",
                 );
 
-                clevercloud::client::try_from(secret).await?
+                clevercloud::client::try_from(secret, ctx.config.api.endpoint.as_deref()).await?
             }
             None => {
                 info!("Use default Clever Cloud client to connect the api");
@@ -543,7 +543,7 @@ impl k8s::Reconciler<Matomo> for Reconciler {
                     "Use custom Clever Cloud client to connect the api using secret",
                 );
 
-                clevercloud::client::try_from(secret).await?
+                clevercloud::client::try_from(secret, ctx.config.api.endpoint.as_deref()).await?
             }
             None => {
                 info!("Use default Clever Cloud client to connect the api");

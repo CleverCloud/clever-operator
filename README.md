@@ -179,6 +179,36 @@ Environment variables are:
 | `CLEVER_OPERATOR_API_TOKEN`           | `String`        | none                           | yes      | if used alone, we assume that we are using oauthless auth backend |
 | `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | false    |                                                                   |
 | `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | false    |                                                                   |
+| `CLEVER_OPERATOR_API_ENDPOINT`        | `String`        | none                           | false    | base url of the Clever Cloud API, see below                       |
+
+### API endpoint
+
+By default, the operator talks to the public Clever Cloud API, `https://api.clever-cloud.com` — or
+`https://api-bridge.clever-cloud.com` when a bare bearer token is used, as this is the endpoint the
+oauthless auth backend lives on.
+
+To target another installation, set the `CLEVER_OPERATOR_API_ENDPOINT` environment variable or the
+`endpoint` key of the `api` section:
+
+```toml
+[api]
+endpoint = "https://api.clever-cloud.example.com"
+token = "your-oauth-token"
+secret = "your-oauth-secret"
+```
+
+The value is normalised: a trailing slash is trimmed, and anything the operator could not append a
+path to — another scheme than `http`/`https`, a query string, a fragment, embedded credentials — is
+rejected when the configuration is loaded. Running with `--config <path> --check` reports such a
+value; when the configuration is discovered from the default search paths below, a rejected value
+makes the operator fall back to the clever-tools configuration instead of reporting the problem.
+
+As for the credentials, the environment variable only provides a default: a value set in the
+configuration file takes precedence over it. An empty variable counts as not set.
+
+A per-namespace `clever-kubernetes-operator` `Secret` overrides the credentials of a namespace, not
+the installation they belong to: it inherits this endpoint unless it declares an `endpoint` of its
+own.
 
 By default, if the `--config` flag is not provided to the binary, the operator will look at the following paths to
 retrieve its configuration:

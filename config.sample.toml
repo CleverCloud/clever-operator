@@ -8,6 +8,12 @@
 #
 # In the case, we are using an oauth consumer group, the configuration does not change,
 # we have three additional fields which are secret, consumer-key and consumer-secret.
+#
+# The endpoint is optional, it defaults to the public Clever Cloud api. Set it
+# to target another installation.
+#
+# [api]
+# endpoint = "https://api.clever-cloud.com"
 [api]
 token = ""
 secret = ""
