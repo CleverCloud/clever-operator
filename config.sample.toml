@@ -14,6 +14,13 @@
 #
 # [api]
 # endpoint = "https://api.clever-cloud.com"
+#
+# The ca_bundle is optional too. Set it to the path of a pem file holding the
+# certificate authorities of a self-hosted installation served by a certificate
+# signed by a private authority, they are trusted on top of the built-in ones.
+#
+# [api]
+# ca_bundle = "/etc/clever-kubernetes-operator-ca/ca-bundle.pem"
 [api]
 token = ""
 secret = ""

@@ -31,6 +31,17 @@ spec:
           items:
           - key: "config.toml"
             path: "config.toml"
+    {{- if .Values.config.caBundle }}
+      # A sibling of the config volume rather than a path nested in it, so the
+      # configuration directory stays exactly what the secret projects, and the
+      # search path the operator scans holds no directory it does not own.
+      - name: ca-bundle
+        configMap:
+          name: clever-kubernetes-operator-ca-bundle
+          items:
+          - key: "ca-bundle.pem"
+            path: "ca-bundle.pem"
+    {{- end }}
       containers:
         - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -41,6 +52,11 @@ spec:
           - name: config
             mountPath: "/etc/clever-kubernetes-operator"
             readOnly: true
+        {{- if .Values.config.caBundle }}
+          - name: ca-bundle
+            mountPath: "/etc/clever-kubernetes-operator-ca"
+            readOnly: true
+        {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           ports:
