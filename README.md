@@ -211,6 +211,14 @@ A per-namespace `clever-kubernetes-operator` `Secret` overrides the credentials 
 the installation they belong to: it inherits this endpoint unless it declares an `endpoint` of its
 own.
 
+Another installation does not necessarily offer the same add-ons as the public platform, while the
+custom resources the operator knows are fixed when it is built. When it starts, the operator fetches
+the add-on catalog of the api and logs, at the `warn` level, the providers it has no custom resource
+for as well as the supported kinds the api does not expose — applying a custom resource of such a
+kind fails at reconciliation. This is a diagnostic only: it waits at most ten seconds for the api,
+and an api that cannot be reached or answers something unexpected is logged the same way and does
+not prevent the operator from starting. Run it with at least `-v` to see these messages.
+
 ### Private certificate authorities
 
 The operator trusts the certificate authorities compiled into it — the Mozilla root bundle. It reads
