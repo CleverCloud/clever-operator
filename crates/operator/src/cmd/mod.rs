@@ -145,7 +145,8 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
 
     // -------------------------------------------------------------------------
     // Create a new clever-cloud client
-    let clever_client = clevercloud::client::new(config.api.to_owned());
+    let clever_client =
+        clevercloud::client::new(config.api.to_owned()).map_err(Error::CleverClient)?;
 
     // -------------------------------------------------------------------------
     // Create context to give to each reconciler

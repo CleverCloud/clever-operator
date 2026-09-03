@@ -69,6 +69,7 @@ pub(crate) async fn main(args: Args) -> Result<(), Error> {
     config.help();
     logging::initialize(&config, args.verbosity as usize)?;
     if args.check {
+        config.validate()?;
         debug!("Configuration is {:#?}", config);
         println!("{} configuration is healthy!", env!("CARGO_PKG_NAME"));
         return Ok(());

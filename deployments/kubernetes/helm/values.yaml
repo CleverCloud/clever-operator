@@ -27,6 +27,13 @@ config:
   consumerSecret: ""
   # Base url of the Clever Cloud API. Leave it empty to use the public one.
   endpoint: ""
+  # Certificate authorities to trust on top of the ones compiled into the
+  # operator, as pem. Leave it empty unless the API is a self-hosted
+  # installation served by a certificate signed by a private authority. When it
+  # is set, the chart renders it into a ConfigMap, mounts it at
+  # /etc/clever-kubernetes-operator-ca/ca-bundle.pem and points api.ca_bundle at
+  # that path.
+  caBundle: ""
 
 podDisruptionBudget:
   enabled: false

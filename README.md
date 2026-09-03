@@ -180,6 +180,7 @@ Environment variables are:
 | `CLEVER_OPERATOR_API_CONSUMER_KEY`    | `String`        | none                           | false    |                                                                   |
 | `CLEVER_OPERATOR_API_CONSUMER_SECRET` | `String`        | none                           | false    |                                                                   |
 | `CLEVER_OPERATOR_API_ENDPOINT`        | `String`        | none                           | false    | base url of the Clever Cloud API, see below                       |
+| `CLEVER_OPERATOR_API_CA_BUNDLE`       | `String`        | none                           | false    | path to a pem bundle of certificate authorities, see below        |
 
 ### API endpoint
 
@@ -208,6 +209,48 @@ configuration file takes precedence over it. An empty variable counts as not set
 
 A per-namespace `clever-kubernetes-operator` `Secret` overrides the credentials of a namespace, not
 the installation they belong to: it inherits this endpoint unless it declares an `endpoint` of its
+own.
+
+### Private certificate authorities
+
+The operator trusts the certificate authorities compiled into it — the Mozilla root bundle. It reads
+neither the system trust store nor `SSL_CERT_FILE`, so running `update-ca-certificates` in the image
+has no effect on it.
+
+A self-hosted installation is commonly served by a certificate signed by a private authority, which
+would make every request fail on the TLS handshake. Point `CLEVER_OPERATOR_API_CA_BUNDLE`, or the
+`ca_bundle` key of the `api` section, at a pem file holding that authority — it may hold several,
+concatenated:
+
+```toml
+[api]
+endpoint = "https://api.clever-cloud.example.com"
+ca_bundle = "/etc/clever-kubernetes-operator-ca/ca-bundle.pem"
+token = "your-oauth-token"
+secret = "your-oauth-secret"
+```
+
+The value is a path and not inline pem so it can be mounted from a `ConfigMap` or a `Secret`; the
+Helm chart does exactly that, see its `config.caBundle` value. These authorities are added on top of
+the built-in ones, never in place of them, as such an installation may well be served by a mixed
+chain.
+
+The file is read when the operator builds its client, that is when it starts: a path that does not
+exist, or that holds no pem certificate, makes it refuse to start and names the file at fault,
+instead of failing later on every reconciliation with an opaque handshake error. `--check` reports
+the same thing without starting anything, whether the configuration was named with `--config` or
+discovered from the search paths below. It is not re-read afterwards: rotating the authorities needs
+the pod to be restarted.
+
+`configmap generate` and `secret generate` do not read it, on purpose — the path they encode is the
+one of the pod, not of the machine running them.
+
+The plain manifests under [deployments/kubernetes/](./deployments/kubernetes/) mount nothing of the
+sort: use the Helm chart, or add the volume and its mount to the deployment yourself.
+
+As for the endpoint, the environment variable only provides a default, a value set in the
+configuration file takes precedence over it, and an empty variable counts as not set. A per-namespace
+`clever-kubernetes-operator` `Secret` inherits this bundle unless it declares a `ca_bundle` of its
 own.
 
 By default, if the `--config` flag is not provided to the binary, the operator will look at the following paths to

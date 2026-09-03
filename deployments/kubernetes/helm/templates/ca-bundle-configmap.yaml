@@ -1,0 +1,11 @@
+{{- if .Values.config.caBundle }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+{{ include "cleveroperator.namespace" . | indent 2 }}
+  name: clever-kubernetes-operator-ca-bundle
+data:
+  ca-bundle.pem: |
+{{ .Values.config.caBundle | trimSuffix "\n" | indent 4 }}
+{{- end }}
