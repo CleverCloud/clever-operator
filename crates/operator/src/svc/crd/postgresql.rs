@@ -23,10 +23,10 @@ use kube::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::svc::{
-    clevercloud::{self, ext::AddonExt},
+    clevercloud::{self, ext::AddonExt, zone},
     crd::Instance,
     k8s::{
         self, Context, ControllerBuilder, finalizer, recorder, resource,
@@ -182,6 +182,7 @@ pub enum Action {
     UpsertAddon,
     UpsertSecret,
     OverridesInstancePlan,
+    RejectInstanceRegion,
     DeleteFinalizer,
     DeleteAddon,
 }
@@ -193,6 +194,7 @@ impl Display for Action {
             Self::UpsertAddon => write!(f, "UpsertAddon"),
             Self::UpsertSecret => write!(f, "UpsertSecret"),
             Self::OverridesInstancePlan => write!(f, "OverridesInstancePlan"),
+            Self::RejectInstanceRegion => write!(f, "RejectInstanceRegion"),
             Self::DeleteFinalizer => write!(f, "DeleteFinalizer"),
             Self::DeleteAddon => write!(f, "DeleteAddon"),
         }
@@ -214,6 +216,8 @@ pub enum ReconcilerError {
     KubeClient(kube::Error),
     #[error("failed to compute diff between the original and modified object, {0}")]
     Diff(serde_json::Error),
+    #[error("failed to validate the region of the instance, {0}")]
+    Zone(zone::Rejection),
 }
 
 impl From<kube::Error> for ReconcilerError {
@@ -358,6 +362,44 @@ impl k8s::Reconciler<PostgreSql> for Reconciler {
                 &modified.spec.instance.plan,
             )
             .await?;
+
+            // Reject a region the plan cannot be deployed in before the addon
+            // is created: the api only reports an unknown zone through an
+            // opaque creation error, several reconciliations later. An empty
+            // list of zones, or a provider exposing no plan at all, is not
+            // information to reject on and the region is then accepted.
+            let zones = zone::zones(plan.as_ref());
+
+            if let Err(rejection) = zone::validate(&modified.spec.instance.region, zones) {
+                let action = &Action::RejectInstanceRegion;
+                let message = &format!(
+                    "Reject region '{}' of the instance, available options are {}",
+                    rejection.region,
+                    rejection.options()
+                );
+
+                warn!(
+                    action = action.to_string(),
+                    kind = &kind,
+                    namespace = &namespace,
+                    name = &name,
+                    message = message,
+                    "Create event for custom resource",
+                );
+
+                recorder::warning(kube.to_owned(), &modified, action, message).await?;
+
+                return Err(ReconcilerError::Zone(rejection));
+            }
+
+            debug!(
+                kind = &kind,
+                namespace = &namespace,
+                name = &name,
+                region = &modified.spec.instance.region,
+                zones = zones.len(),
+                "Accept region of custom resource",
+            );
 
             // Update the spec is not a good practice as it lead to
             // no-deterministic and infinite reconciliation loop. It should be

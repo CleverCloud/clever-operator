@@ -8,6 +8,7 @@ use clevercloud_sdk::{v2, v4::addon_provider::config_provider::addon::environmen
 pub mod catalog;
 pub mod client;
 pub mod ext;
+pub mod zone;
 
 // -----------------------------------------------------------------------------
 // Error enumeration

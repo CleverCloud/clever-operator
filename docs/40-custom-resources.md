@@ -31,6 +31,26 @@ To deploy on a specific region, use one of these codes:
 | Sydney                              | `syd`    |
 | Warsaw                              | `wsw`    |
 
+The operator checks the region against the zones the resolved plan can be
+deployed in, and refuses to order the add-on when it is not one of them: the
+reconciliation fails and a `RejectInstanceRegion` warning event listing the
+accepted zones is recorded on the custom resource.
+
+```sh
+kubectl describe postgresql <name>
+# Warning  RejectInstanceRegion  Reject region 'mars' of the instance, available options are 'par', 'grahds'
+```
+
+The comparison ignores the case and the check is skipped when the api answers no
+zone for the plan, so an installation exposing its own zones keeps working.
+
+The check runs while the plan is resolved from its name, which in practice makes
+it a creation-time one. The operator rewrites `spec.instance.plan` to the
+`plan_` identifier it resolved, so a later edit of `spec.instance.region` is not
+validated again, and neither is a resource whose plan was written as a `plan_`
+identifier from the start. Such an edit does not move an add-on that already
+exists either: pick the region at creation time.
+
 ## PostgreSql
 
 Below, you will find the custom resource in yaml format that you can use to
