@@ -5,13 +5,14 @@ use std::{future::Future, io, path::PathBuf, sync::Arc};
 
 use clap::{ArgAction, Parser, Subcommand};
 use clever_kubernetes_operator_core::{BoxError, FutureController, Registry};
+use clevercloud_sdk::v4::addon_provider::AddonProviderId;
 use paw::ParseArgs;
 
 use crate::{
     cmd::{configmap::ConfigMapError, crd::CustomResourceDefinitionError, secret::SecretError},
     svc::{
         cfg::Configuration,
-        clevercloud,
+        clevercloud::{self, catalog},
         crd::{
             azimutt, cellar, config_provider, elasticsearch, keycloak, kv, matomo, metabase,
             mongodb, mysql, otoroshi, postgresql, pulsar, redis,
@@ -155,10 +156,15 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     // -------------------------------------------------------------------------
     // Build the registry of controllers. Every add-on controller is registered
     // here; running only a subset will come later with configurable modules.
+    //
+    // The block below is the one list of supported add-ons: it registers their
+    // controllers and evaluates to their catalog, which the drift check further
+    // down compares to the one of the api. Keeping both on the same line is
+    // what prevents the two from drifting apart.
     let mut registry = Registry::new();
 
     macro_rules! register {
-        ($($kind:literal => $module:ident),+ $(,)?) => {{
+        ($($kind:literal => $module:ident => $provider:expr),+ $(,)?) => {{
             $(
                 let ctx = context.to_owned();
                 registry.register(FutureController::boxed($kind, async move {
@@ -168,25 +174,27 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
                         .map_err(|err| Box::new(err) as BoxError)
                 }));
             )+
+
+            vec![$(catalog::Supported { kind: $kind, provider: $provider }),+]
         }};
     }
 
-    register! {
-        "PostgreSql" => postgresql,
-        "Redis" => redis,
-        "MySql" => mysql,
-        "MongoDb" => mongodb,
-        "Pulsar" => pulsar,
-        "ConfigProvider" => config_provider,
-        "ElasticSearch" => elasticsearch,
-        "KV" => kv,
-        "Metabase" => metabase,
-        "Keycloak" => keycloak,
-        "Matomo" => matomo,
-        "Otoroshi" => otoroshi,
-        "Azimutt" => azimutt,
-        "Cellar" => cellar,
-    }
+    let supported = register! {
+        "PostgreSql" => postgresql => AddonProviderId::PostgreSql,
+        "Redis" => redis => AddonProviderId::Redis,
+        "MySql" => mysql => AddonProviderId::MySql,
+        "MongoDb" => mongodb => AddonProviderId::MongoDb,
+        "Pulsar" => pulsar => AddonProviderId::Pulsar,
+        "ConfigProvider" => config_provider => AddonProviderId::ConfigProvider,
+        "ElasticSearch" => elasticsearch => AddonProviderId::ElasticSearch,
+        "KV" => kv => AddonProviderId::KV,
+        "Metabase" => metabase => AddonProviderId::Metabase,
+        "Keycloak" => keycloak => AddonProviderId::Keycloak,
+        "Matomo" => matomo => AddonProviderId::Matomo,
+        "Otoroshi" => otoroshi => AddonProviderId::Otoroshi,
+        "Azimutt" => azimutt => AddonProviderId::Azimutt,
+        "Cellar" => cellar => AddonProviderId::Cellar,
+    };
 
     // A registry with no controller would make `run()` resolve immediately and
     // the daemon exit cleanly without watching anything — fail loudly instead.
@@ -194,6 +202,13 @@ pub async fn daemon(kubeconfig: Option<PathBuf>, config: Arc<Configuration>) -> 
     if registry.is_empty() {
         return Err(Error::NoController);
     }
+
+    // -------------------------------------------------------------------------
+    // Report the add-ons the api and the operator disagree on, once. This is a
+    // diagnostic: it is bounded in time and never prevents the daemon from
+    // starting, the api of a self-hosted installation may well be slow or
+    // unreachable at this point.
+    catalog::check(&context.apis, &supported).await;
 
     // -------------------------------------------------------------------------
     // Run the controllers alongside the termination signal and the http server;
