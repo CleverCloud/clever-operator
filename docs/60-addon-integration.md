@@ -8,6 +8,10 @@ Clever Cloud operator.
 * Create new custom resource definition module in `crates/operator/src/svc/crd/<ADDON>`
 * Create new `CustomResource::<ADDON>` variant at `crates/operator/src/cmd.rs`
 * Create new `Error::Watch<ADDON>` variant at `crates/operator/src/cmd/mod.rs`
+* Validate the region of the instance in `upsert()`, right after `plan::find`:
+  an `Action::RejectInstanceRegion` variant, a `ReconcilerError::Zone` variant
+  and the `zone::validate(&modified.spec.instance.region, zone::zones(plan.as_ref()))`
+  call, as the other add-on modules do
 * Insert new section in `docs/40-custom-resources.md`
 * Create new exemplar configuration in `examples/kubernetes/<INCREMENT>-<ADDON>-addon.yml`
 * Define resources in `deployments/kubernetes/<KUBE_VERSION>/20-deployment.yml`
